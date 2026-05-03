@@ -1,0 +1,11 @@
+Starting project at C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart pareting assisstant\ParentAI
+Starting Metro Bundler
+Waiting on http://localhost:8082
+Logs for your project will appear below.
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 95.3% (814/834)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94.0% ( 990/1061)
+λ Bundled 4253ms node_modules\expo-router\node\render.js (1511 modules)
+Web Bundled 5156ms node_modules\expo-router\entry.js (1381 modules)
+Firebase Messaging is not supported in this browser.
+Web Bundled 774ms node_modules\expo-router\entry.js (1382 modules)
+ LOG  [web] Logs will appear in the browser console

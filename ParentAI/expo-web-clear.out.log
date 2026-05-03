@@ -1,0 +1,5 @@
+env: load .env
+env: export EXPO_PUBLIC_OPENAI_API_KEY
+Starting project at C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart pareting assisstant\ParentAI
+› Port 8082 is being used by another process
+› Skipping dev server

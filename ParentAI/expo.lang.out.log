@@ -1,0 +1,24 @@
+env: load .env
+env: export EXPO_PUBLIC_OPENAI_API_KEY
+Starting project at C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart pareting assisstant\ParentAI
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8083
+Logs for your project will appear below.
+Web node_modules\expo-router\entry.js ▓▓░░░░░░░░░░░░░░ 16.0% ( 4/10)
+λ node_modules\expo-router\node\render.js ▓░░░░░░░░░░░░░░░  9.6% ( 17/110)
+Web node_modules\expo-router\entry.js ▓▓░░░░░░░░░░░░░░ 16.0% ( 88/257)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓░░░░░░░░░░ 38.2% (400/647)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓░░░░░░░░░░ 38.1% (282/457)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 61.6% ( 784/1014)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 57.8% (561/738)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 70.0% (1047/1251)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 74.8% (840/971)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 76.3% (1277/1462)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 86.5% (1160/1247)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 93.4% (1622/1678)
+| Dynamic import at line 15: require(moduleName). This module may not work as intended when deployed to a runtime.
+λ Bundled 21012ms node_modules\expo-router\node\render.js (1703 modules)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 98.8% (1371/1381)
+Web Bundled 24054ms node_modules\expo-router\entry.js (1389 modules)

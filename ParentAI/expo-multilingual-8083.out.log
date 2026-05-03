@@ -1,0 +1,84 @@
+env: load .env
+env: export EXPO_PUBLIC_OPENAI_API_KEY
+Starting project at C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart pareting assisstant\ParentAI
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8083
+Logs for your project will appear below.
+Web node_modules\expo-router\entry.js ▓▓░░░░░░░░░░░░░░ 16.0% ( 4/10)
+λ node_modules\expo-router\node\render.js ▓░░░░░░░░░░░░░░░  8.2% ( 17/110)
+Web node_modules\expo-router\entry.js ▓▓▓▓░░░░░░░░░░░░ 25.0% (101/260)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓░░░░░░░░░░ 40.4% (305/480)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓░░░░░░░░░░ 38.4% (410/662)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 62.0% (703/893)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 56.3% (653/870)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 70.2% (1008/1203)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 74.7% ( 896/1039)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 78.5% (1249/1410)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 94.9% (1247/1280)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 96.5% (1678/1708)
+| Dynamic import at line 15: require(moduleName). This module may not work as intended when deployed to a runtime.
+λ Bundled 20820ms node_modules\expo-router\node\render.js (1719 modules)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1362/1362)
+Web Bundled 24083ms node_modules\expo-router\entry.js (1362 modules)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 68.2% (807/977)
+Web Bundled 6100ms node_modules\expo-router\entry.js (1363 modules)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 60ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 775ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 56ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 45ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 480ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 48ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 45ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 807ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 53ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 578ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 729ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web Bundled 65ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 45ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 583ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 75ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Unable to resolve "../../src/screens/HomeScreen" from "app\(drawer)\index.tsx"
+[0m [90m 2 |[39m [36mimport[39m { useRouter } [36mfrom[39m [32m'expo-router'[39m[33m;[39m
+ [90m 3 |[39m [36mimport[39m { useAuthStore } [36mfrom[39m [32m'../../src/stores/auth-store'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { [33mHomeScreen[39m } [36mfrom[39m [32m'../../src/screens/HomeScreen'[39m[33m;[39m
+ [90m   |[39m                             [31m[1m^[22m[39m
+ [90m 5 |[39m
+ [90m 6 |[39m [36mexport[39m [36mdefault[39m [36mfunction[39m [33mDashboardScreen[39m() {
+ [90m 7 |[39m   [36mconst[39m router [33m=[39m useRouter()[33m;[39m[0m
+
+Import stack:
+
+ app\(drawer)\index.tsx
+ | import "../../src/screens/HomeScreen"
+
+ app (require.context)
+
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 108ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 3128ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 51ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console

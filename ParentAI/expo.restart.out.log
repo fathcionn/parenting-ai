@@ -1,0 +1,41 @@
+env: load .env
+env: export GEMINI_API_KEY
+Starting project at C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart pareting assisstant\ParentAI
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8083
+Logs for your project will appear below.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ node_modules\expo-router\node\render.js ▓░░░░░░░░░░░░░░░  6.7% ( 33/143)
+Web node_modules\expo-router\entry.js ▓▓▓▓░░░░░░░░░░░░ 25.0% (108/270)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓░░░░░░░░░ 46.6% (405/650)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓░░░░░░░░░░ 39.8% (377/654)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓░░░░░░░░ 53.1% ( 734/1053)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 48.5% (669/961)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 65.4% (1128/1395)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 65.2% ( 985/1220)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 71.1% (1498/1780)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 79.7% (1433/1605)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 85.0% (1923/2103)
+| Dynamic import at line 15: require(moduleName). This module may not work as intended when deployed to a runtime.
+λ Bundled 22770ms node_modules\expo-router\node\render.js (2281 modules)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1940/1940)
+Web Bundled 26315ms node_modules\expo-router\entry.js (1940 modules)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 49.5% ( 853/1234)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 96.3% (1887/1923)
+Web Bundled 7326ms node_modules\expo-router\entry.js (1941 modules)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 148ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 218ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web Bundled 73ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 187ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 1333ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 97ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console

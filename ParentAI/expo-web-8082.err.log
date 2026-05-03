@@ -1,0 +1,17 @@
+The following packages should be updated for best compatibility with the installed expo version:
+  @react-native-async-storage/async-storage@3.0.2 - expected version: 2.2.0
+  expo-file-system@16.0.9 - expected version: ~19.0.22
+Your project may not work correctly until you install the expected versions of the packages.
+"shadow*" style props are deprecated. Use "boxShadow".
+[expo-av]: Expo AV has been deprecated and will be removed in SDK 54. Use the `expo-audio` and `expo-video` packages to replace the required functionality.
+Error initializing language: ReferenceError: window is not defined
+    at LegacyAsyncStorageWebImpl.storage (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart pareting assisstant\ParentAI\node_modules\@react-native-async-storage\async-storage\lib\module\createAsyncStorage.js:114:5)
+    at LegacyAsyncStorageWebImpl.getItem (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart pareting assisstant\ParentAI\node_modules\@react-native-async-storage\async-storage\lib\module\createAsyncStorage.js:117:17)
+    at initLanguage (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart pareting assisstant\ParentAI\src\config\i18n.ts:29:42)
+    at factory (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart pareting assisstant\ParentAI\src\config\i18n.ts:64:1)
+    at loadModuleImplementation (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart pareting assisstant\ParentAI\node_modules\@expo\cli\build\metro-require\require.js:248:36)
+    at guardedLoadModule (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart pareting assisstant\ParentAI\node_modules\@expo\cli\build\metro-require\require.js:163:16)
+    at require (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart pareting assisstant\ParentAI\node_modules\@expo\cli\build\metro-require\require.js:74:75)
+    at factory (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart pareting assisstant\ParentAI\app\_layout.tsx:11:1)
+    at loadModuleImplementation (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart pareting assisstant\ParentAI\node_modules\@expo\cli\build\metro-require\require.js:248:36)
+    at guardedLoadModule (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart pareting assisstant\ParentAI\node_modules\@expo\cli\build\metro-require\require.js:156:27)

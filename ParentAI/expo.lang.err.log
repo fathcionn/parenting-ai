@@ -1,0 +1,13 @@
+The following packages should be updated for best compatibility with the installed expo version:
+  @react-native-async-storage/async-storage@3.0.2 - expected version: 2.2.0
+  expo-file-system@16.0.9 - expected version: ~19.0.22
+Your project may not work correctly until you install the expected versions of the packages.
+"shadow*" style props are deprecated. Use "boxShadow".
+Error: Cannot pipe to a closed or destroyed stream
+    at pipelineImpl (node:internal/streams/pipeline:264:15)
+    at node:stream/promises:31:5
+    at new Promise (<anonymous>)
+    at pipeline (node:stream/promises:20:10)
+    at respond (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart pareting assisstant\ParentAI\node_modules\expo-server\src\vendor\http.ts:138:19)
+    at C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart pareting assisstant\ParentAI\node_modules\expo-server\src\vendor\http.ts:68:13
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
