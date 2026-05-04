@@ -12,36 +12,28 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import {
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+} from 'firebase/auth';
 import { auth } from '../config/firebase-config';
 import { useAuthStore } from '../stores/auth-store';
 import { theme } from '../styles/theme';
 import { Container, Card } from '../components/Layout';
 import { TextField } from '../components/TextField';
 import { Button } from '../components/Button';
+import { getStorageItem, setStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 
 const languages = [
-  {
-    code: 'en',
-    label: 'English',
-    flagUrl: 'https://flagcdn.com/w40/us.png',
-    flag: '🇺🇸',
-  },
-  {
-    code: 'ar',
-    label: 'العربية',
-    flagUrl: 'https://flagcdn.com/w40/sa.png',
-    flag: '🇸🇦',
-  },
-  {
-    code: 'tr',
-    label: 'Türkçe',
-    flagUrl: 'https://flagcdn.com/w40/tr.png',
-    flag: '🇹🇷',
-  },
+  { code: 'en', label: 'English', flagUrl: 'https://flagcdn.com/w40/us.png' },
+  { code: 'ar', label: 'العربية', flagUrl: 'https://flagcdn.com/w40/sa.png' },
+  { code: 'tr', label: 'Türkçe', flagUrl: 'https://flagcdn.com/w40/tr.png' },
 ];
 
 function setDocumentLanguage(langCode: string) {
@@ -64,7 +56,7 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
   const { setUser } = useAuthStore();
 
   useEffect(() => {
-    AsyncStorage.getItem('parentai_speech_language').then((language) => {
+    getStorageItem(STORAGE_KEYS.speechLanguage).then((language) => {
       const lang = language || 'en';
       setCurrentLang(lang);
       setDocumentLanguage(lang);
@@ -72,8 +64,8 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
   }, []);
 
   async function changeLanguage(langCode: string) {
-    await AsyncStorage.setItem('parentai_speech_language', langCode);
-    await AsyncStorage.setItem('parentai_lang_user_chosen', 'true');
+    await setStorageItem(STORAGE_KEYS.speechLanguage, langCode);
+    await setStorageItem(STORAGE_KEYS.languageChosen, 'true');
     await AsyncStorage.setItem('app-language', langCode);
     await i18n.changeLanguage(langCode);
     setDocumentLanguage(langCode);
@@ -109,7 +101,7 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
       if (email === 'admin' && password === 'admin') {
         setUser({
           uid: 'admin_mock_id',
-          email: 'admin@parentai.app',
+          email: 'admin@talkwise.app',
           displayName: 'Admin User',
           parentingScore: 100,
           isAnonymous: false,
@@ -134,13 +126,24 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
     }
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      useAuthStore.getState().setUser(result.user);
+      router.replace('/(drawer)');
+    } catch (error: any) {
+      Alert.alert(t('auth_google_failed'), error.message);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
       <TouchableOpacity onPress={() => setShowLangModal(true)} style={styles.authGlobeButton}>
-        <Text style={styles.authGlobeText}>🌐</Text>
+        <Ionicons name="globe-outline" size={22} color="#000" />
       </TouchableOpacity>
 
       <Modal visible={showLangModal} transparent animationType="fade">
@@ -161,7 +164,7 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
                 <Text style={[styles.langLabel, currentLang === code && styles.langLabelSelected]}>
                   {label}
                 </Text>
-                {currentLang === code && <Text style={styles.langCheck}>✓</Text>}
+                {currentLang === code && <Ionicons name="checkmark" size={18} color="#fff" />}
               </TouchableOpacity>
             ))}
           </View>
@@ -169,22 +172,25 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
       </Modal>
 
       <Container scroll>
-        <View style={styles.header}>
-          <Card>
-            <View style={styles.titleContainer}>
-              <View style={styles.logo}>
-                <View style={styles.logoDot} />
-                <View style={styles.logoDot} />
-                <View style={styles.logoDot} />
-              </View>
-            </View>
-          </Card>
-        </View>
+        <Card>
+          <View style={styles.logoWrap}>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+            <LinearGradient
+              colors={['transparent', '#ffffff']}
+              style={styles.logoFade}
+            />
+          </View>
+          <Text style={styles.cardTitle}>
+            {mode === 'login' ? t('auth_login') : t('auth_signup')}
+          </Text>
 
-        <Card title={mode === 'login' ? t('auth_login') : t('auth_signup')}>
           <TextField
             label={t('auth_email')}
-            placeholder="you@example.com"
+            placeholder={t('auth_email')}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -195,7 +201,7 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
 
           <TextField
             label={t('auth_password')}
-            placeholder="••••••••"
+            placeholder={t('auth_password')}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -206,7 +212,7 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
           {mode === 'signup' && (
             <TextField
               label={t('auth.confirmPassword')}
-              placeholder="••••••••"
+              placeholder={t('auth.confirmPassword')}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
@@ -238,18 +244,19 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
               <View style={styles.dividerLine} />
             </View>
             <View style={styles.socialButtons}>
-              <TouchableOpacity
-                style={styles.socialButton}
-                onPress={() => Alert.alert(t('auth_notice'), t('auth_google_native_notice'))}
-              >
-                <FontAwesome name="google" size={18} color="#DB4437" />
+              <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin}>
+                <Image
+                  source={{ uri: 'https://www.google.com/favicon.ico' }}
+                  style={styles.googleIcon}
+                  resizeMode="contain"
+                />
                 <Text style={styles.socialButtonText}>{t('auth_google')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.socialButton, { backgroundColor: '#000', borderColor: '#000' }]}
-                onPress={() => Alert.alert(t('auth_notice'), t('auth_apple_native_notice'))}
+                onPress={() => Alert.alert(t('auth_coming_soon'), t('auth_apple_coming_soon'))}
               >
-                <FontAwesome name="apple" size={20} color="#FFF" />
+                <Ionicons name="logo-apple" size={20} color="#FFF" />
                 <Text style={[styles.socialButtonText, { color: '#FFF' }]}>{t('auth_apple')}</Text>
               </TouchableOpacity>
             </View>
@@ -276,9 +283,6 @@ const styles = StyleSheet.create({
     top: 16,
     width: 40,
     zIndex: 100,
-  },
-  authGlobeText: {
-    fontSize: 20,
   },
   langBackdrop: {
     alignItems: 'center',
@@ -324,27 +328,35 @@ const styles = StyleSheet.create({
   langLabelSelected: {
     color: '#fff',
   },
-  langCheck: {
-    color: '#fff',
-    fontSize: 18,
+  logoWrap: {
+    alignSelf: 'center',
+    height: 80,
+    marginBottom: 12,
+    width: 80,
   },
-  header: {
-    marginTop: theme.spacing.xxl,
-    marginBottom: theme.spacing.xl,
+  logoImage: {
+    borderRadius: 16,
+    height: 80,
+    width: 80,
   },
-  titleContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  logoFade: {
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    bottom: 0,
+    height: 35,
+    left: 0,
+    position: 'absolute',
+    right: 0,
   },
-  logo: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
+  cardTitle: {
+    color: theme.colors.text,
+    fontSize: theme.typography.h3.fontSize,
+    fontWeight: '700',
+    marginBottom: theme.spacing.md,
   },
-  logoDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: theme.colors.primary,
+  googleIcon: {
+    height: 18,
+    width: 18,
   },
   socialContainer: {
     marginTop: theme.spacing.lg,

@@ -1,7 +1,7 @@
 /**
- * ParentAI Cloud Functions
+ * TalkWise Cloud Functions
  * 
- * This module exports all Firebase Cloud Functions for the ParentAI app:
+ * This module exports all Firebase Cloud Functions for the TalkWise app:
  * 1. onAudioUploaded - Transcribes audio via Google Speech-to-Text
  * 2. onTranscriptCreated - Analyzes transcript via OpenAI GPT
  * 3. generateDailyReport - Scheduled function for daily reports

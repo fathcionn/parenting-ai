@@ -1,7 +1,7 @@
 // App Configuration
 
 export const APP_CONFIG = {
-  name: 'ParentAI',
+  name: 'TalkWise',
   version: '1.0.0',
   disclaimer:
     'This app provides guidance and insights, not professional or medical diagnosis. Always consult qualified professionals for specific concerns about your child.',

@@ -1,7 +1,7 @@
 {
-  "name": "parentai-functions",
+  "name": "talkwise-functions",
   "version": "1.0.0",
-  "description": "ParentAI Cloud Functions - Speech-to-Text, AI Analysis, Report Generation",
+  "description": "TalkWise Cloud Functions - Speech-to-Text, AI Analysis, Report Generation",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",

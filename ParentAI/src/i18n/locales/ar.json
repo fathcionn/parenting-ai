@@ -140,6 +140,7 @@
   "insights_interaction_trend": "اتجاه التفاعل",
   "insights_no_issues": "لم يتم اكتشاف مشكلات بعد",
   "insights_score_trend": "اتجاه نقاط التربية",
+  "insights_score_label": "النقاط",
   "profile_title": "إعدادات الملف الشخصي",
   "profile_edit": "تعديل الملف الشخصي",
   "profile_child_profile": "ملف الطفل",
@@ -174,9 +175,10 @@
   "auth_password_short": "يجب أن تتكون كلمة المرور من ٦ أحرف على الأقل",
   "auth_password_mismatch": "كلمتا المرور غير متطابقتين",
   "auth_notice": "تنبيه",
-  "auth_google_native_notice": "يتطلب تسجيل الدخول عبر Google إعداداً أصلياً في الإنتاج.",
-  "auth_apple_native_notice": "يتطلب تسجيل الدخول عبر Apple إعداداً أصلياً في الإنتاج.",
   "auth_or_continue": "أو تابع باستخدام",
+  "auth_google_failed": "فشل تسجيل الدخول عبر Google",
+  "auth_coming_soon": "قريباً",
+  "auth_apple_coming_soon": "سيكون تسجيل الدخول عبر Apple متاحاً في التحديث القادم.",
   "error_mic_blocked": "الميكروفون محجوب. اسمح بالوصول من المتصفح.",
   "error_no_speech": "لم يتم اكتشاف كلام. تحدث بوضوح وحاول مجدداً.",
   "error_analysis_failed": "فشل التحليل. حاول مجدداً.",
@@ -201,5 +203,6 @@
   "leaderboard_empty": "اشترك لمقارنة نقاطك ومعرفة ترتيبك بين الآباء الآخرين.",
   "leaderboard_you": "أنت",
   "leaderboard_anonymous_parent": "والد مجهول",
-  "leaderboard_points": "نقطة"
+  "leaderboard_points": "نقطة",
+  "leaderboard_local_note": "تعتمد التصنيفات على سجل جلساتك المحلي. ستتوفر لوحة المتصدرين السحابية قريباً."
 }

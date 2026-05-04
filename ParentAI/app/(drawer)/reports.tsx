@@ -143,7 +143,9 @@ export default function ReportsScreen() {
       : 0;
     const latestScore = scores[0] ?? 0;
     const previousScore = scores[1] ?? latestScore;
-    const trend = latestScore > previousScore ? '↑' : latestScore < previousScore ? '↓' : '→';
+    const trendSymbol = latestScore > previousScore ? '▲' : latestScore < previousScore ? '▼' : '→';
+    const trendColor =
+      latestScore > previousScore ? '#22C55E' : latestScore < previousScore ? '#EF4444' : '#888888';
     const averageIntensity = history.length
       ? Math.round(
           history.reduce((total, item) => total + item.analysis.emotional_intensity, 0) /
@@ -160,7 +162,8 @@ export default function ReportsScreen() {
     return {
       averageScore,
       latestScore,
-      trend,
+      trendSymbol,
+      trendColor,
       averageIntensity,
       mostCommonTone,
     };
@@ -228,7 +231,9 @@ export default function ReportsScreen() {
               <View style={styles.sessionStats}>
                 <Text style={styles.mainValue}>{history.length}</Text>
                 <Text style={styles.statLabel}>{t('insights_sessions')}</Text>
-                <Text style={styles.trendText}>{summary.trend}</Text>
+                <Text style={[styles.trendText, { color: summary.trendColor }]}>
+                  {summary.trendSymbol}
+                </Text>
               </View>
             </View>
           </View>
@@ -273,7 +278,7 @@ export default function ReportsScreen() {
                     <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#888' }} />
                     <Tooltip
                       contentStyle={{ borderRadius: 8, border: '1px solid #E5E5E5', fontSize: 13 }}
-                      formatter={(value) => [`${value}/100`, 'Score']}
+                      formatter={(value) => [`${value}/100`, t('insights_score_label')]}
                     />
                     <Area
                       type="monotone"
@@ -337,7 +342,7 @@ export default function ReportsScreen() {
               <ScrollView style={styles.issueList} nestedScrollEnabled>
                 {issues.map((item) => (
                   <View key={item.id} style={styles.issueItem}>
-                    <Text style={styles.warningIcon}>⚠</Text>
+                    <Text style={styles.warningIcon}>⚠️</Text>
                     <View style={styles.issueTextGroup}>
                       <Text style={styles.issueText}>{item.issue}</Text>
                       <Text style={styles.issueMeta}>{item.sessionLabel}</Text>

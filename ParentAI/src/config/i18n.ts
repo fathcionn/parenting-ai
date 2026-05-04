@@ -7,6 +7,7 @@ import * as Updates from 'expo-updates';
 import enTranslations from '../locales/en.json';
 import arTranslations from '../locales/ar.json';
 import trTranslations from '../locales/tr.json';
+import { getStorageItem, setStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 
 const resources = {
   en: { translation: enTranslations },
@@ -37,15 +38,15 @@ export const initLanguage = async () => {
       return;
     }
 
-    const userChoseLang = await AsyncStorage.getItem('parentai_lang_user_chosen');
+    const userChoseLang = await getStorageItem(STORAGE_KEYS.languageChosen);
 
     if (!userChoseLang) {
-      await AsyncStorage.setItem('parentai_speech_language', 'en');
+      await setStorageItem(STORAGE_KEYS.speechLanguage, 'en');
       await i18next.changeLanguage('en');
       setDocumentLanguage('en');
       if (typeof I18nManager !== 'undefined') I18nManager.forceRTL(false);
     } else {
-      const saved = await AsyncStorage.getItem('parentai_speech_language') || 'en';
+      const saved = await getStorageItem(STORAGE_KEYS.speechLanguage) || 'en';
       await i18next.changeLanguage(saved);
       setDocumentLanguage(saved);
       if (typeof I18nManager !== 'undefined') I18nManager.forceRTL(saved === 'ar');
@@ -58,8 +59,8 @@ export const initLanguage = async () => {
 export const setLanguage = async (lang: string) => {
   try {
     await AsyncStorage.setItem('app-language', lang);
-    await AsyncStorage.setItem('parentai_speech_language', lang);
-    await AsyncStorage.setItem('parentai_lang_user_chosen', 'true');
+    await setStorageItem(STORAGE_KEYS.speechLanguage, lang);
+    await setStorageItem(STORAGE_KEYS.languageChosen, 'true');
     setDocumentLanguage(lang);
     const isRTL = lang === 'ar';
     

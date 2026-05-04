@@ -10,10 +10,10 @@ import {
 } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { historyService } from '../../src/services/history-service';
 import type { CoachingReport } from '../../src/types/analysis';
-import { AnalysisDisplay } from '../../src/components/AnalysisDisplay';
 import { BorderRadius, Colors, Spacing, Typography } from '../../src/constants/theme';
 
 const formatDate = (isoDate: string) =>
@@ -26,9 +26,9 @@ const formatDate = (isoDate: string) =>
 
 export default function HistoryScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [history, setHistory] = useState<CoachingReport[]>([]);
   const [query, setQuery] = useState('');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const loadHistory = useCallback(async () => {
     const records = await historyService.getHistory();
@@ -98,14 +98,12 @@ export default function HistoryScreen() {
         </View>
       ) : (
         filteredHistory.map((record) => {
-          const isExpanded = expandedId === record.id;
-
           return (
             <View key={record.id}>
               <TouchableOpacity
                 style={styles.card}
                 activeOpacity={0.75}
-                onPress={() => setExpandedId(isExpanded ? null : record.id)}
+                onPress={() => router.push(`/history/${record.id}`)}
               >
                 <View style={styles.cardMain}>
                   <Text style={styles.dateText}>{formatDate(record.createdAt)}</Text>
@@ -135,12 +133,6 @@ export default function HistoryScreen() {
                   <FontAwesome name="trash-o" size={18} color={Colors.textSecondary} />
                 </TouchableOpacity>
               </TouchableOpacity>
-
-              {isExpanded && (
-                <View style={styles.expandedReport}>
-                  <AnalysisDisplay analysis={record} />
-                </View>
-              )}
             </View>
           );
         })
@@ -240,9 +232,6 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     width: 36,
-  },
-  expandedReport: {
-    marginBottom: Spacing.md,
   },
   emptyState: {
     alignItems: 'center',

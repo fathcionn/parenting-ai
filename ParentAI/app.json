@@ -1,42 +1,43 @@
 {
   "expo": {
-    "name": "ParentAI",
-    "slug": "ParentAI",
+    "name": "TalkWise",
+    "slug": "talkwise",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "parentai",
-    "userInterfaceStyle": "dark",
+    "icon": "./assets/logo.png",
+    "scheme": "talkwise",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0F0F1A"
+      "backgroundColor": "#ffffff"
     },
     "ios": {
+      "bundleIdentifier": "com.talkwise.app",
       "supportsTablet": true,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "ParentAI needs microphone access to analyze your interactions",
+        "NSMicrophoneUsageDescription": "TalkWise needs microphone access to record and analyse your parenting sessions.",
         "UIBackgroundModes": ["audio"]
       }
     },
     "android": {
+      "package": "com.talkwise.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#0F0F1A"
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
-        "android.permission.INTERNET",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_MICROPHONE"
+        "RECORD_AUDIO",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_EXTERNAL_STORAGE"
       ]
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png",
+      "favicon": "./assets/logo.png",
       "template": "./web/index.html"
     },
     "plugins": [
@@ -44,7 +45,7 @@
       [
         "expo-av",
         {
-          "microphonePermission": "ParentAI needs access to your microphone to record interactions."
+          "microphonePermission": "TalkWise needs access to your microphone to record interactions."
         }
       ]
     ],

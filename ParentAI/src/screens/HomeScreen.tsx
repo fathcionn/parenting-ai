@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Platform,
   ScrollView,
   StyleSheet,
   Switch,
@@ -9,7 +10,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTranslation } from 'react-i18next';
 import {
@@ -18,12 +18,14 @@ import {
   stopRecording,
   transcribeAndAnalyze,
 } from '../services/geminiAudio';
+import { getRecordingMeteringLevel } from '../services/nativeAudio';
 import { saveToHistory } from '../services/history-service';
 import {
   getAutoMonitorPreference,
   setAutoMonitorPreference,
   setMode,
 } from '../services/recordingState';
+import { getStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 import { calculateParentingScore, type ParentingAnalysis } from '../types/analysis';
 
 const formatTime = (seconds: number) => {
@@ -54,6 +56,7 @@ export const HomeScreen: React.FC = () => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const hasAutoStarted = useRef(false);
   const animFrameRef = useRef<number>(0);
+  const meteringIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -113,7 +116,17 @@ export const HomeScreen: React.FC = () => {
     return () => stopWaveform();
   }, []);
 
-  function startWaveform(stream: MediaStream) {
+  function startWaveform(stream: MediaStream | null) {
+    if (Platform.OS !== 'web') {
+      meteringIntervalRef.current = setInterval(async () => {
+        const level = await getRecordingMeteringLevel();
+        const bars = Array.from({ length: 40 }, () => Math.max(3, Math.random() * level * 60));
+        setWaveformBars(bars);
+      }, 100);
+      return;
+    }
+
+    if (!stream) return;
     const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
     const audioContext = new AudioContextCtor();
     audioContextRef.current = audioContext;
@@ -137,6 +150,10 @@ export const HomeScreen: React.FC = () => {
 
   function stopWaveform() {
     cancelAnimationFrame(animFrameRef.current);
+    if (meteringIntervalRef.current) {
+      clearInterval(meteringIntervalRef.current);
+      meteringIntervalRef.current = null;
+    }
     audioContextRef.current?.close();
     audioContextRef.current = null;
     setWaveformBars(Array(40).fill(2));
@@ -147,10 +164,10 @@ export const HomeScreen: React.FC = () => {
     setSuccessMessage('');
     setElapsedSeconds(0);
     try {
-      const micId = await AsyncStorage.getItem('parentai_mic_id') || 'default';
+      const micId = await getStorageItem(STORAGE_KEYS.micId) || 'default';
       await startRecording(micId);
       const stream = getMicStream();
-      if (stream) startWaveform(stream);
+      startWaveform(stream);
       startedAtRef.current = Date.now();
       setMode('background');
       setIsMonitoring(true);
@@ -166,15 +183,15 @@ export const HomeScreen: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const audioBlob = await stopRecording();
-      if (audioBlob.size < 5000) {
+      const audioData = await stopRecording();
+      if (typeof audioData !== 'string' && audioData.size < 1000) {
         setErrorMessage(t('error_no_speech'));
         setIsLoading(false);
         return;
       }
 
-      const lang = await AsyncStorage.getItem('parentai_speech_language') || 'en';
-      const result = await transcribeAndAnalyze(audioBlob, lang);
+      const lang = await getStorageItem(STORAGE_KEYS.speechLanguage) || 'en';
+      const result = await transcribeAndAnalyze(audioData, lang);
       const analysis = normalizeAnalysis(result);
       const transcript = String(result.transcript || '');
 
@@ -182,7 +199,7 @@ export const HomeScreen: React.FC = () => {
         id: `report_${Date.now()}`,
         createdAt: new Date().toISOString(),
         durationSeconds: Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)),
-        audioUri: null,
+        audioUri: typeof audioData === 'string' ? audioData : null,
         transcript,
         language: lang,
         analysis,

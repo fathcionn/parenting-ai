@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { theme } from '../styles/theme';
 import { Button } from './Button';
@@ -17,8 +17,10 @@ import {
   stopRecording,
   transcribeAndAnalyze,
 } from '../services/geminiAudio';
+import { getRecordingMeteringLevel } from '../services/nativeAudio';
 import { saveToHistory } from '../services/history-service';
 import { setMode } from '../services/recordingState';
+import { getStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 import {
   calculateParentingScore,
   type CoachingReport,
@@ -55,6 +57,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
   const cardTitle = title || t('coaching_session_title');
   const { currentAnalysis, setCurrentAnalysis, setIsAnalyzing } = useCoachingStore();
   const animFrameRef = useRef<number>(0);
+  const meteringIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const sessionStartRef = useRef(0);
   const [isRecording, setIsRecording] = useState(false);
@@ -70,7 +73,17 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     };
   }, []);
 
-  function startWaveform(stream: MediaStream) {
+  function startWaveform(stream: MediaStream | null) {
+    if (Platform.OS !== 'web') {
+      meteringIntervalRef.current = setInterval(async () => {
+        const level = await getRecordingMeteringLevel();
+        const bars = Array.from({ length: 40 }, () => Math.max(3, Math.random() * level * 60));
+        setWaveformBars(bars);
+      }, 100);
+      return;
+    }
+
+    if (!stream) return;
     const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
     const audioContext = new AudioContextCtor();
     audioContextRef.current = audioContext;
@@ -94,6 +107,10 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
 
   function stopWaveform() {
     cancelAnimationFrame(animFrameRef.current);
+    if (meteringIntervalRef.current) {
+      clearInterval(meteringIntervalRef.current);
+      meteringIntervalRef.current = null;
+    }
     audioContextRef.current?.close();
     audioContextRef.current = null;
     setWaveformBars(Array(40).fill(2));
@@ -104,12 +121,14 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     setAnalysis(null);
     setCurrentAnalysis(null);
     setTranscript('');
+    setIsLoading(false);
+    setIsAnalyzing(false);
 
     try {
-      const micId = await AsyncStorage.getItem('parentai_mic_id') || 'default';
+      const micId = await getStorageItem(STORAGE_KEYS.micId) || 'default';
       await startRecording(micId);
       const stream = getMicStream();
-      if (stream) startWaveform(stream);
+      startWaveform(stream);
       sessionStartRef.current = Date.now();
       setMode('coaching');
       setIsRecording(true);
@@ -130,16 +149,16 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     setIsAnalyzing(true);
 
     try {
-      const audioBlob = await stopRecording();
+      const audioData = await stopRecording();
 
-      if (audioBlob.size < 5000) {
+      if (typeof audioData !== 'string' && audioData.size < 1000) {
         setError(t('error_no_speech'));
         setIsLoading(false);
         return;
       }
 
-      const lang = await AsyncStorage.getItem('parentai_speech_language') || 'en';
-      const result = await transcribeAndAnalyze(audioBlob, lang);
+      const lang = await getStorageItem(STORAGE_KEYS.speechLanguage) || 'en';
+      const result = await transcribeAndAnalyze(audioData, lang);
       const normalizedAnalysis = normalizeAnalysis(result);
       const transcriptText = String(result.transcript || '');
 
@@ -150,7 +169,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
         id: `report_${Date.now()}`,
         createdAt: new Date().toISOString(),
         durationSeconds: Math.max(1, Math.round((Date.now() - sessionStartRef.current) / 1000)),
-        audioUri: null,
+        audioUri: typeof audioData === 'string' ? audioData : null,
         transcript: transcriptText,
         language: lang,
         mode: 'coaching',

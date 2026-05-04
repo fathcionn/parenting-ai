@@ -140,6 +140,7 @@
   "insights_interaction_trend": "Etkileşim Trendi",
   "insights_no_issues": "Henüz sorun tespit edilmedi",
   "insights_score_trend": "Ebeveynlik Puanı Trendi",
+  "insights_score_label": "Puan",
   "profile_title": "Profil Ayarları",
   "profile_edit": "Profili Düzenle",
   "profile_child_profile": "Çocuk Profili",
@@ -174,9 +175,10 @@
   "auth_password_short": "Şifre en az 6 karakter olmalı",
   "auth_password_mismatch": "Şifreler eşleşmiyor",
   "auth_notice": "Bilgi",
-  "auth_google_native_notice": "Google girişi üretimde yerel yapılandırma gerektirir.",
-  "auth_apple_native_notice": "Apple girişi üretimde yerel yapılandırma gerektirir.",
   "auth_or_continue": "veya şununla devam edin",
+  "auth_google_failed": "Google Girişi Başarısız",
+  "auth_coming_soon": "Yakında",
+  "auth_apple_coming_soon": "Apple ile giriş sonraki güncellemede kullanılabilir olacak.",
   "error_mic_blocked": "Mikrofon engellendi. Tarayıcı ayarlarından izin verin.",
   "error_no_speech": "Konuşma algılanamadı. Net konuşun ve tekrar deneyin.",
   "error_analysis_failed": "Analiz başarısız. Lütfen tekrar deneyin.",
@@ -201,5 +203,6 @@
   "leaderboard_empty": "Puanınızı karşılaştırmak ve diğer ebeveynler arasındaki sıranızı görmek için katılın.",
   "leaderboard_you": "Siz",
   "leaderboard_anonymous_parent": "Anonim Ebeveyn",
-  "leaderboard_points": "puan"
+  "leaderboard_points": "puan",
+  "leaderboard_local_note": "Sıralamalar yerel oturum geçmişinize dayanır. Bulut liderlik tablosu yakında."
 }

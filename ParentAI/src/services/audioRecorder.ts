@@ -1,3 +1,4 @@
+// LEGACY FILE — Not used by current Gemini/MediaRecorder flow. Safe to delete.
 import { Platform } from 'react-native';
 
 export type RecordingHandle = any;

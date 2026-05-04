@@ -1,3 +1,4 @@
+// LEGACY FILE — Not used by current Gemini/MediaRecorder flow. Safe to delete.
 /**
  * Firebase Configuration
  * 

@@ -1,6 +1,7 @@
+// LEGACY FILE — Not used by current Gemini/MediaRecorder flow. Safe to delete.
 import { Audio } from 'expo-av';
 import type { RecordingStatus } from 'expo-av/build/Audio/Recording.types';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 
 export interface AudioRecording {
@@ -87,7 +88,7 @@ class AudioService {
       throw new Error('Native file-system recording checks are not available on web.');
     }
 
-    const fileInfo = await FileSystem.getInfoAsync(uri, { size: true });
+    const fileInfo = await FileSystem.getInfoAsync(uri);
     const formatMatch = uri.split('?')[0].match(/\.[a-z0-9]+$/i);
     const format = formatMatch?.[0]?.toLowerCase() || 'unknown';
     const size = fileInfo.exists && 'size' in fileInfo ? fileInfo.size || 0 : 0;

@@ -1,4 +1,4 @@
-// Shared TypeScript types for ParentAI
+// Shared TypeScript types for TalkWise
 
 export interface User {
   id: string;

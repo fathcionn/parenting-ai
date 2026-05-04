@@ -1,4 +1,4 @@
-// ParentAI Design System
+// TalkWise Design System
 // Minimalist Black & White palette for a calm, professional, and elegant UI
 
 export const Colors = {

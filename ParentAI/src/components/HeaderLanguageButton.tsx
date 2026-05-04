@@ -11,28 +11,14 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
+import { getStorageItem, setStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 
 type SpeechLanguage = 'en' | 'ar' | 'tr';
 
 const languages = [
-  {
-    code: 'en',
-    label: 'English',
-    flagUrl: 'https://flagcdn.com/w40/us.png',
-    flag: '🇺🇸',
-  },
-  {
-    code: 'ar',
-    label: 'العربية',
-    flagUrl: 'https://flagcdn.com/w40/sa.png',
-    flag: '🇸🇦',
-  },
-  {
-    code: 'tr',
-    label: 'Türkçe',
-    flagUrl: 'https://flagcdn.com/w40/tr.png',
-    flag: '🇹🇷',
-  },
+  { code: 'en', label: 'English', flagUrl: 'https://flagcdn.com/w40/us.png' },
+  { code: 'ar', label: 'العربية', flagUrl: 'https://flagcdn.com/w40/sa.png' },
+  { code: 'tr', label: 'Türkçe', flagUrl: 'https://flagcdn.com/w40/tr.png' },
 ];
 
 function normalizeLanguage(language: string | undefined): SpeechLanguage {
@@ -56,7 +42,7 @@ export function HeaderLanguageButton() {
   );
 
   useEffect(() => {
-    AsyncStorage.getItem('parentai_speech_language').then((savedLang) => {
+    getStorageItem(STORAGE_KEYS.speechLanguage).then((savedLang) => {
       const lang = normalizeLanguage(savedLang || i18n.language);
       setSelectedLanguage(lang);
       setDocumentLanguage(lang);
@@ -65,8 +51,8 @@ export function HeaderLanguageButton() {
 
   const selectLanguage = async (langCode: SpeechLanguage) => {
     setSelectedLanguage(langCode);
-    await AsyncStorage.setItem('parentai_speech_language', langCode);
-    await AsyncStorage.setItem('parentai_lang_user_chosen', 'true');
+    await setStorageItem(STORAGE_KEYS.speechLanguage, langCode);
+    await setStorageItem(STORAGE_KEYS.languageChosen, 'true');
     await AsyncStorage.setItem('app-language', langCode);
     await i18n.changeLanguage(langCode);
     setDocumentLanguage(langCode);

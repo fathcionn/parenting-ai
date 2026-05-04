@@ -28,7 +28,7 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  isAuthenticated: true, // Default to true for demo
+  isAuthenticated: false, // Firebase auth-store controls real authentication
   hasCompletedOnboarding: true,
 
   children: MOCK_CHILDREN,

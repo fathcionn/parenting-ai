@@ -1,0 +1,60 @@
+◇ injected env (7) from .env // tip: ⌘ enable debugging { debug: true }
+Proxy running on http://localhost:3001
+RAW GEMINI RESPONSE: {
+  "transcript": "يا ابني أنا قلت لك 100 مرة لأن أنت لو ما نظفتش الأوضة أنا مش عايز أشوف وشك قاعد معانا. سامعني ولا مش سامعني؟",
+  "tone": "Authoritative",
+  "confidence": 95,
+  "emotionalIntensity": "high",
+  "parentingStyle": "Authoritarian",
+  "detectedIssues": [
+    "تهديد مباشر",
+    "لغة قاسية",
+    "غياب الحوار"
+  ],
+  "suggestions": [
+    "تواصل إيجابي",
+    "وضع قواعد واضحة",
+    "تشجيع التعاون"
+  ],
+  "impactAnalysis": "يؤثر سلباً على ثقة الطفل وعلاقته بالوالدين، ويولد الخوف بدلاً من الاحترام.",
+  "positiveNotes": [
+    "محاولة وضع حدود",
+    "اهتمام بالنظام"
+  ],
+  "language": "Ara
+Gemini raw response: {
+  "transcript": "يا ابني أنا قلت لك 100 مرة لأن أنت لو ما نظفتش الأوضة أنا مش عايز أشوف وشك قاعد معانا. سامعني ولا مش سامعني؟",
+  "tone": "Authoritative",
+  "confidence": 95,
+  "emotionalIntensity": "high",
+  "parentingStyle": "Authoritarian",
+  "detectedIssues": [
+    "تهديد مباشر",
+    "لغة قاسي
+RAW GEMINI RESPONSE: {
+  "transcript": "I told you so many times to clean up the room and you still sitting without doing it. So next time, I will smash your body. Okay?",
+  "tone": "Angry",
+  "confidence": 80,
+  "emotionalIntensity": "high",
+  "parentingStyle": "Authoritarian",
+  "detectedIssues": [
+    "Threatening language",
+    "Verbal abuse",
+    "Lack of respect"
+  ],
+  "suggestions": [
+    "Use positive language",
+    "Set clear expectations",
+    "Offer choices"
+  ],
+  "impactAnalysis": "Fosters fear, damages trust, hinders child's self-esteem and cooperation.",
+  "positiveNotes": [],
+  "language": "Englis
+Gemini raw response: {
+  "transcript": "I told you so many times to clean up the room and you still sitting without doing it. So next time, I will smash your body. Okay?",
+  "tone": "Angry",
+  "confidence": 80,
+  "emotionalIntensity": "high",
+  "parentingStyle": "Authoritarian",
+  "detectedIssues": [
+    "Threatening la

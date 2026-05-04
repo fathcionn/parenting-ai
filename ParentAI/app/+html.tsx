@@ -19,7 +19,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <style dangerouslySetInnerHTML={{
           __html: `
             body { margin: 0; padding: 0; font-family: 'Noto Sans', 'Noto Sans Arabic', sans-serif; }
-            /* Do NOT use !important on * — it breaks icon fonts */
+            /* Keep icon font families intact. */
           `
         }} />
       </head>

@@ -1,10 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CoachingReport } from '../types/analysis';
+import { migrateStorageKey, STORAGE_KEYS } from './storageKeys';
 
-const HISTORY_KEY = 'parentai_history';
+const HISTORY_KEY = STORAGE_KEYS.history;
 
 class HistoryService {
   async getHistory(): Promise<CoachingReport[]> {
+    await migrateStorageKey(HISTORY_KEY);
     const raw = await AsyncStorage.getItem(HISTORY_KEY);
     if (!raw) return [];
 

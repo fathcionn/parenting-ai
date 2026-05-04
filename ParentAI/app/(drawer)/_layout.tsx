@@ -46,7 +46,7 @@ export default function DrawerLayout() {
           name="index"
           options={{
             drawerLabel: t('nav_home'),
-            title: 'ParentAI',
+            title: 'TalkWise',
             drawerIcon: ({ color, size }) => (
               <DrawerIcon name="home-outline" color={color} size={size} />
             ),

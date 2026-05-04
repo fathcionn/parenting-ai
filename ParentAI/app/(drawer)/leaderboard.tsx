@@ -1,23 +1,53 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Switch } from 'react-native';
-import { Colors, Spacing, Typography, BorderRadius } from '../../src/constants/theme';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useTranslation } from 'react-i18next';
+import { Colors, Spacing, Typography, BorderRadius } from '../../src/constants/theme';
+import { historyService } from '../../src/services/history-service';
+import { calculateParentingScore } from '../../src/types/analysis';
+import { useAuthStore } from '../../src/stores/auth-store';
 
-// Mock data for the leaderboard
-const MOCK_LEADERBOARD = [
-  { id: '1', displayName: 'CalmParent88', score: 98, rank: 1, trend: 'up' },
-  { id: '2', displayName: 'Anonymous', score: 95, rank: 2, trend: 'flat' },
-  { id: '3', displayName: 'ZenMother', score: 92, rank: 3, trend: 'up' },
-  { id: '4', displayName: 'Anonymous', score: 89, rank: 4, trend: 'down' },
-  { id: '5', displayName: 'You', score: 85, rank: 5, trend: 'up' },
-  { id: '6', displayName: 'HappyDad', score: 84, rank: 6, trend: 'down' },
-];
+type LeaderboardItem = {
+  rank: number;
+  name: string;
+  score: number;
+  isMe?: boolean;
+};
 
 export default function LeaderboardScreen() {
   const { t } = useTranslation();
+  const { user } = useAuthStore();
   const [isOptedIn, setIsOptedIn] = useState(true);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [myScore, setMyScore] = useState(0);
+
+  useEffect(() => {
+    const loadScore = async () => {
+      const history = await historyService.getHistory();
+      if (history.length === 0) {
+        setMyScore(0);
+        return;
+      }
+
+      const scores = history.map((report) => calculateParentingScore(report.analysis));
+      const average = Math.round(scores.reduce((total, score) => total + score, 0) / scores.length);
+      setMyScore(average);
+    };
+
+    loadScore();
+  }, []);
+
+  const localLeaderboard: LeaderboardItem[] = [
+    {
+      rank: 1,
+      name: isAnonymous ? t('leaderboard_anonymous_parent') : user?.displayName || user?.email || t('leaderboard_you'),
+      score: myScore,
+      isMe: true,
+    },
+    { rank: 2, name: 'Parent A', score: Math.max(0, myScore - 5) },
+    { rank: 3, name: 'Parent B', score: Math.max(0, myScore - 12) },
+    { rank: 4, name: 'Parent C', score: Math.max(0, myScore - 18) },
+    { rank: 5, name: 'Parent D', score: Math.max(0, myScore - 25) },
+  ].filter((item) => item.score >= 0);
 
   return (
     <View style={styles.container}>
@@ -25,7 +55,7 @@ export default function LeaderboardScreen() {
 
       <View style={styles.settingsCard}>
         <View style={styles.settingRow}>
-          <View>
+          <View style={styles.settingTextGroup}>
             <Text style={styles.settingLabel}>{t('leaderboard_participate')}</Text>
             <Text style={styles.settingSubLabel}>{t('leaderboard_compare')}</Text>
           </View>
@@ -38,7 +68,7 @@ export default function LeaderboardScreen() {
 
         {isOptedIn && (
           <View style={[styles.settingRow, styles.settingRowBorder]}>
-            <View>
+            <View style={styles.settingTextGroup}>
               <Text style={styles.settingLabel}>{t('profile_stay_anonymous')}</Text>
               <Text style={styles.settingSubLabel}>{t('leaderboard_hide_name')}</Text>
             </View>
@@ -52,34 +82,28 @@ export default function LeaderboardScreen() {
       </View>
 
       {isOptedIn ? (
-        <FlatList
-          data={MOCK_LEADERBOARD}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContainer}
-          renderItem={({ item }) => (
-            <View style={[styles.rankCard, item.displayName === 'You' && styles.rankCardHighlight]}>
-              <Text style={styles.rankNumber}>#{item.rank}</Text>
-              <View style={styles.rankInfo}>
-                <Text style={styles.rankName}>
-                  {item.displayName === 'You'
-                    ? t('leaderboard_you')
-                    : item.displayName === 'Anonymous'
-                    ? t('leaderboard_anonymous_parent')
-                    : item.displayName}
-                </Text>
-                <Text style={styles.rankScore}>{item.score} {t('leaderboard_points')}</Text>
+        <>
+          <FlatList
+            data={localLeaderboard}
+            keyExtractor={(item) => String(item.rank)}
+            contentContainerStyle={styles.listContainer}
+            renderItem={({ item }) => (
+              <View style={[styles.rankCard, item.isMe && styles.rankCardHighlight]}>
+                <Text style={styles.rankNumber}>#{item.rank}</Text>
+                <View style={styles.rankInfo}>
+                  <Text style={styles.rankName}>{item.name}</Text>
+                  <Text style={styles.rankScore}>
+                    {item.score} {t('leaderboard_points')}
+                  </Text>
+                </View>
               </View>
-              <FontAwesome
-                name={item.trend === 'up' ? 'caret-up' : item.trend === 'down' ? 'caret-down' : 'minus'}
-                size={18}
-                color={item.trend === 'up' ? Colors.success : item.trend === 'down' ? Colors.error : Colors.textMuted}
-              />
-            </View>
-          )}
-        />
+            )}
+          />
+          <Text style={styles.localNote}>{t('leaderboard_local_note')}</Text>
+        </>
       ) : (
         <View style={styles.emptyState}>
-          <FontAwesome name="trophy" size={48} color={Colors.border} />
+          <Text style={styles.emptyIcon}>🏆</Text>
           <Text style={styles.emptyTitle}>{t('leaderboard_disabled')}</Text>
           <Text style={styles.emptyText}>{t('leaderboard_empty')}</Text>
         </View>
@@ -113,6 +137,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: Spacing.sm,
+    gap: Spacing.md,
+  },
+  settingTextGroup: {
+    flex: 1,
   },
   settingRowBorder: {
     borderTopWidth: 1,
@@ -131,7 +159,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   listContainer: {
-    paddingBottom: Spacing.xxl,
+    paddingBottom: Spacing.md,
   },
   rankCard: {
     flexDirection: 'row',
@@ -164,10 +192,20 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.textSecondary,
   },
+  localNote: {
+    color: '#888',
+    fontSize: 12,
+    marginTop: 12,
+    textAlign: 'center',
+  },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: Spacing.xxl * 2,
+  },
+  emptyIcon: {
+    color: Colors.border,
+    fontSize: 48,
   },
   emptyTitle: {
     ...Typography.h3,

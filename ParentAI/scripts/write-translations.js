@@ -72,6 +72,7 @@ const arFlat = {
   insights_interaction_trend: 'اتجاه التفاعل',
   insights_no_issues: 'لم يتم اكتشاف مشكلات بعد',
   insights_score_trend: 'اتجاه نقاط التربية',
+  insights_score_label: 'النقاط',
   profile_title: 'إعدادات الملف الشخصي',
   profile_edit: 'تعديل الملف الشخصي',
   profile_child_profile: 'ملف الطفل',
@@ -106,9 +107,10 @@ const arFlat = {
   auth_password_short: 'يجب أن تتكون كلمة المرور من ٦ أحرف على الأقل',
   auth_password_mismatch: 'كلمتا المرور غير متطابقتين',
   auth_notice: 'تنبيه',
-  auth_google_native_notice: 'يتطلب تسجيل الدخول عبر Google إعداداً أصلياً في الإنتاج.',
-  auth_apple_native_notice: 'يتطلب تسجيل الدخول عبر Apple إعداداً أصلياً في الإنتاج.',
   auth_or_continue: 'أو تابع باستخدام',
+  auth_google_failed: 'فشل تسجيل الدخول عبر Google',
+  auth_coming_soon: 'قريباً',
+  auth_apple_coming_soon: 'سيكون تسجيل الدخول عبر Apple متاحاً في التحديث القادم.',
   error_mic_blocked: 'الميكروفون محجوب. اسمح بالوصول من المتصفح.',
   error_no_speech: 'لم يتم اكتشاف كلام. تحدث بوضوح وحاول مجدداً.',
   error_analysis_failed: 'فشل التحليل. حاول مجدداً.',
@@ -134,6 +136,7 @@ const arFlat = {
   leaderboard_you: 'أنت',
   leaderboard_anonymous_parent: 'والد مجهول',
   leaderboard_points: 'نقطة',
+  leaderboard_local_note: 'تعتمد التصنيفات على سجل جلساتك المحلي. ستتوفر لوحة المتصدرين السحابية قريباً.',
 };
 
 const trFlat = {
@@ -200,6 +203,7 @@ const trFlat = {
   insights_interaction_trend: 'Etkileşim Trendi',
   insights_no_issues: 'Henüz sorun tespit edilmedi',
   insights_score_trend: 'Ebeveynlik Puanı Trendi',
+  insights_score_label: 'Puan',
   profile_title: 'Profil Ayarları',
   profile_edit: 'Profili Düzenle',
   profile_child_profile: 'Çocuk Profili',
@@ -234,9 +238,10 @@ const trFlat = {
   auth_password_short: 'Şifre en az 6 karakter olmalı',
   auth_password_mismatch: 'Şifreler eşleşmiyor',
   auth_notice: 'Bilgi',
-  auth_google_native_notice: 'Google girişi üretimde yerel yapılandırma gerektirir.',
-  auth_apple_native_notice: 'Apple girişi üretimde yerel yapılandırma gerektirir.',
   auth_or_continue: 'veya şununla devam edin',
+  auth_google_failed: 'Google Girişi Başarısız',
+  auth_coming_soon: 'Yakında',
+  auth_apple_coming_soon: 'Apple ile giriş sonraki güncellemede kullanılabilir olacak.',
   error_mic_blocked: 'Mikrofon engellendi. Tarayıcı ayarlarından izin verin.',
   error_no_speech: 'Konuşma algılanamadı. Net konuşun ve tekrar deneyin.',
   error_analysis_failed: 'Analiz başarısız. Lütfen tekrar deneyin.',
@@ -262,6 +267,7 @@ const trFlat = {
   leaderboard_you: 'Siz',
   leaderboard_anonymous_parent: 'Anonim Ebeveyn',
   leaderboard_points: 'puan',
+  leaderboard_local_note: 'Sıralamalar yerel oturum geçmişinize dayanır. Bulut liderlik tablosu yakında.',
 };
 
 function withNested(flat, lang) {

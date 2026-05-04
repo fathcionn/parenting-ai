@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Alert, Text, TouchableOpacity } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { signOut } from 'firebase/auth';
@@ -9,6 +8,7 @@ import { useAuthStore } from '../stores/auth-store';
 import { theme } from '../styles/theme';
 import { Container, Card } from '../components/Layout';
 import { Button } from '../components/Button';
+import { getStorageItem, setStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 
 export const ProfileScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -30,7 +30,7 @@ export const ProfileScreen: React.FC = () => {
         const mics = devices.filter((device) => device.kind === 'audioinput');
         setMicrophones(mics);
 
-        const saved = await AsyncStorage.getItem('parentai_mic_id');
+        const saved = await getStorageItem(STORAGE_KEYS.micId);
         if (saved) setSelectedMicId(saved);
       } catch (err) {
         console.error('Could not load microphones:', err);
@@ -65,7 +65,7 @@ export const ProfileScreen: React.FC = () => {
 
   async function selectMic(deviceId: string) {
     setSelectedMicId(deviceId);
-    await AsyncStorage.setItem('parentai_mic_id', deviceId);
+    await setStorageItem(STORAGE_KEYS.micId, deviceId);
   }
 
   return (

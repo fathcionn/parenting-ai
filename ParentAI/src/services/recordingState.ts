@@ -1,4 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// LEGACY FILE — Not used by current Gemini/MediaRecorder flow. Safe to delete.
+import { getStorageItem, setStorageItem, STORAGE_KEYS } from './storageKeys';
 
 export type RecordingMode = 'idle' | 'background' | 'coaching';
 
@@ -31,10 +32,10 @@ export function getBackgroundStartedAt() {
 }
 
 export async function getAutoMonitorPreference(): Promise<boolean> {
-  const val = await AsyncStorage.getItem('parentai_auto_monitor');
+  const val = await getStorageItem(STORAGE_KEYS.autoMonitor);
   return val === 'true';
 }
 
 export async function setAutoMonitorPreference(val: boolean) {
-  await AsyncStorage.setItem('parentai_auto_monitor', val ? 'true' : 'false');
+  await setStorageItem(STORAGE_KEYS.autoMonitor, val ? 'true' : 'false');
 }
