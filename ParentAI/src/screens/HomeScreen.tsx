@@ -279,7 +279,7 @@ export const HomeScreen: React.FC = () => {
           <View style={styles.loadingRow}>
             <ActivityIndicator color={isMonitoring ? '#000' : '#FFF'} />
             <Text style={[styles.mainButtonText, isMonitoring && styles.mainButtonTextActive]}>
-              {t('home_analyzing')}
+              Analyzing your session... This may take up to 30 seconds on first use.
             </Text>
           </View>
         ) : (

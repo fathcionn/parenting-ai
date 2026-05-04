@@ -235,7 +235,9 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       {isLoading && (
         <View style={styles.loadingBox}>
           <ActivityIndicator color={theme.colors.primary} size="large" />
-          <Text style={styles.loadingText}>{t('coaching_analyzing')}</Text>
+          <Text style={styles.loadingText}>
+            Analyzing your session... This may take up to 30 seconds on first use.
+          </Text>
         </View>
       )}
 

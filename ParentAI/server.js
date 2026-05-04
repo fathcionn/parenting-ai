@@ -9,6 +9,10 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
+app.get('/health', (_req, res) => {
+  res.json({ ok: true });
+});
+
 function buildStrictJsonPrompt(language, transcript) {
   const transcriptText = transcript || 'Listen to the attached audio and transcribe the parent speech.';
 
@@ -158,3 +162,18 @@ app.post('/api/analyze-audio', async (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Proxy running on port ${PORT}`));
+
+// Keep Railway awake by self-pinging every 14 minutes
+if (process.env.NODE_ENV === 'production') {
+  const RAILWAY_URL = process.env.RAILWAY_PUBLIC_DOMAIN
+    || 'parenting-ai-production.up.railway.app';
+
+  setInterval(async () => {
+    try {
+      await fetch(`https://${RAILWAY_URL}/health`);
+      console.log('Keep-alive ping sent');
+    } catch (e) {
+      console.log('Keep-alive ping failed:', e.message);
+    }
+  }, 14 * 60 * 1000); // every 14 minutes
+}
