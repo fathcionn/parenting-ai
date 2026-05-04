@@ -1,0 +1,14 @@
+node_modules
+.expo
+android
+ios
+assets
+src
+app
+scripts
+web
+components
+constants
+functions
+*.test.ts
+*.test.tsx
