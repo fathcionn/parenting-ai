@@ -78,10 +78,10 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
     const newErrors: Record<string, string> = {};
 
     if (!email) newErrors.email = t('auth_email_required');
-    else if (email !== 'admin' && !/\S+@\S+\.\S+/.test(email)) newErrors.email = t('auth_email_invalid');
+    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = t('auth_email_invalid');
 
     if (!password) newErrors.password = t('auth_password_required');
-    else if (password !== 'admin' && password.length < 6) {
+    else if (password.length < 6) {
       newErrors.password = t('auth_password_short');
     }
 
@@ -98,18 +98,6 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
 
     setLoading(true);
     try {
-      if (email === 'admin' && password === 'admin') {
-        setUser({
-          uid: 'admin_mock_id',
-          email: 'admin@talkwise.app',
-          displayName: 'Admin User',
-          parentingScore: 100,
-          isAnonymous: false,
-        } as any);
-        router.replace('/(drawer)');
-        return;
-      }
-
       if (mode === 'signup') {
         const result = await createUserWithEmailAndPassword(auth, email, password);
         setUser(result.user);
@@ -251,13 +239,6 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
                   resizeMode="contain"
                 />
                 <Text style={styles.socialButtonText}>{t('auth_google')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: '#000', borderColor: '#000' }]}
-                onPress={() => Alert.alert(t('auth_coming_soon'), t('auth_apple_coming_soon'))}
-              >
-                <Ionicons name="logo-apple" size={20} color="#FFF" />
-                <Text style={[styles.socialButtonText, { color: '#FFF' }]}>{t('auth_apple')}</Text>
               </TouchableOpacity>
             </View>
           </View>

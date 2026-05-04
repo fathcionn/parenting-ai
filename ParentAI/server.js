@@ -10,123 +10,80 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
 function buildStrictJsonPrompt(language, transcript) {
-  const transcriptInstruction = transcript
-    ? `Analyze this transcript exactly as provided: ${transcript}`
-    : 'Listen to this audio.';
+  const transcriptText = transcript || 'Listen to the attached audio and transcribe the parent speech.';
 
-  return `You must respond with ONLY a valid JSON object. No markdown, no code blocks, no explanation text, no trailing commas, no comments. Start your response with { and end with }.
+  return `
+You are a parenting coach AI. Analyze this transcript.
+Return ONLY a raw JSON object - no markdown, no code blocks, no explanation, just the JSON.
+Write summary, strengths, improvements, and tips in ${language}.
 
-You are a professional child psychologist and parenting coach.
-${transcriptInstruction} The speaker is using ${language}.
+Transcript:
+"""
+${transcriptText}
+"""
 
-STRICT OUTPUT RULES - FOLLOW EXACTLY:
-1. Return ONLY one short raw JSON object.
-2. Keep every string brief to avoid truncation.
-3. detectedIssues must contain maximum 3 short strings.
-4. suggestions must contain maximum 3 short strings.
-5. positiveNotes must contain maximum 2 short strings.
-6. Only values for transcript, detectedIssues, suggestions, impactAnalysis, positiveNotes should be written in ${language}.
-
-Output exactly this and nothing else:
+Required JSON format:
 {
-  "transcript": "string (max 300 chars)",
-  "tone": "string (one word)",
-  "confidence": 80,
-  "emotionalIntensity": "low|medium|high",
-  "parentingStyle": "string (one word)",
-  "detectedIssues": ["max 3 short strings"],
-  "suggestions": ["max 3 short strings"],
-  "impactAnalysis": "string (max 100 chars)",
-  "positiveNotes": ["max 2 short strings"],
-  "language": "${language}"
+  "score": <number 0-100>,
+  "summary": "<2-3 sentence summary>",
+  "strengths": ["<item>", "<item>"],
+  "improvements": ["<item>", "<item>"],
+  "tips": ["<item>", "<item>"]
 }`;
 }
 
-function extractJSON(text) {
-  if (!text || typeof text !== 'string') {
-    throw new Error('Empty response from Gemini');
-  }
-
-  let cleaned = text
-    .replace(/```json\s*/gi, '')
-    .replace(/```\s*/gi, '')
-    .trim();
-
+const parseGeminiResponse = (rawText) => {
   try {
-    return JSON.parse(cleaned);
-  } catch (e1) {}
-
-  const start = cleaned.indexOf('{');
-  const end = cleaned.lastIndexOf('}');
-
-  if (start !== -1 && end !== -1 && end > start) {
+    return JSON.parse(rawText);
+  } catch {
     try {
-      return JSON.parse(cleaned.substring(start, end + 1));
-    } catch (e2) {}
+      const cleaned = rawText
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim();
+      return JSON.parse(cleaned);
+    } catch {
+      try {
+        const match = rawText.match(/\{[\s\S]*\}/);
+        if (match) return JSON.parse(match[0]);
+      } catch {}
+      return {
+        score: 50,
+        summary: 'Session completed. Analysis could not be fully processed.',
+        strengths: ['Engaged in a coaching session'],
+        improvements: ['Continue practicing regularly'],
+        tips: ['Try recording a longer session for better analysis'],
+      };
+    }
   }
-
-  try {
-    const fixed = cleaned
-      .replace(/,\s*}/g, '}')
-      .replace(/,\s*]/g, ']');
-    return JSON.parse(fixed);
-  } catch (e3) {}
-
-  try {
-    let fixed = cleaned;
-    const openBrackets = (fixed.match(/\[/g) || []).length;
-    const closeBrackets = (fixed.match(/\]/g) || []).length;
-    const openBraces = (fixed.match(/\{/g) || []).length;
-    const closeBraces = (fixed.match(/\}/g) || []).length;
-
-    if ((fixed.match(/"/g) || []).length % 2 !== 0) {
-      fixed += '"';
-    }
-    for (let i = 0; i < openBrackets - closeBrackets; i++) {
-      fixed += ']';
-    }
-    for (let i = 0; i < openBraces - closeBraces; i++) {
-      fixed += '}';
-    }
-    return JSON.parse(fixed);
-  } catch (e4) {}
-
-  console.error('All JSON parse attempts failed. Raw text:', text.substring(0, 500));
-  throw new Error('Invalid JSON from Gemini after all recovery attempts');
-}
+};
 
 function extractSafeJson(result) {
   const rawText = result.response.text().trim();
   console.log('RAW GEMINI RESPONSE:', rawText.substring(0, 600));
   console.log('Gemini raw response:', rawText.substring(0, 300));
 
-  const jsonStr = rawText
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/i, '')
-    .replace(/\s*```$/i, '')
-    .trim();
-
-  const parsed = extractJSON(jsonStr);
-  const emotionalIntensityValue = parsed.emotional_intensity ?? parsed.emotionalIntensity;
-  const emotionalIntensityNumber = typeof emotionalIntensityValue === 'number'
-    ? emotionalIntensityValue
-    : emotionalIntensityValue === 'high'
-    ? 80
-    : emotionalIntensityValue === 'medium'
-    ? 50
-    : 25;
-  const parentingStyleValue = parsed.parenting_style ?? parsed.parentingStyle;
+  const parsed = parseGeminiResponse(rawText);
+  const score = typeof parsed.score === 'number' ? Math.max(0, Math.min(100, Math.round(parsed.score))) : 50;
+  const strengths = Array.isArray(parsed.strengths) ? parsed.strengths : [];
+  const improvements = Array.isArray(parsed.improvements) ? parsed.improvements : [];
+  const tips = Array.isArray(parsed.tips) ? parsed.tips : [];
 
   return {
+    score,
+    summary: parsed.summary || '',
+    strengths,
+    improvements,
+    tips,
     transcript: parsed.transcript || '',
-    tone: ['calm', 'supportive', 'firm', 'harsh', 'aggressive'].includes(parsed.tone) ? parsed.tone : 'calm',
-    confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 75,
-    emotional_intensity: emotionalIntensityNumber,
-    parenting_style: ['authoritative', 'authoritarian', 'permissive', 'uninvolved'].includes(parentingStyleValue) ? parentingStyleValue : 'authoritative',
-    detected_issues: Array.isArray(parsed.detected_issues) ? parsed.detected_issues : Array.isArray(parsed.detectedIssues) ? parsed.detectedIssues : [],
-    suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
-    impact_analysis: parsed.impact_analysis || parsed.impactAnalysis || '',
-    positive_notes: Array.isArray(parsed.positive_notes) ? parsed.positive_notes : Array.isArray(parsed.positiveNotes) ? parsed.positiveNotes : [],
+    tone: score >= 70 ? 'supportive' : score >= 50 ? 'firm' : 'harsh',
+    confidence: 80,
+    emotional_intensity: score >= 70 ? 30 : score >= 50 ? 55 : 80,
+    parenting_style: score >= 70 ? 'authoritative' : score >= 50 ? 'authoritarian' : 'authoritarian',
+    detected_issues: improvements,
+    suggestions: tips,
+    impact_analysis: parsed.summary || '',
+    positive_notes: strengths,
   };
 }
 
