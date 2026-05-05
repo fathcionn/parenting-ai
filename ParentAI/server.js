@@ -2,15 +2,46 @@ require('dotenv').config();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const express = require('express');
 const cors = require('cors');
+const multer = require('multer');
 
 const app = express();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
+});
+
+app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No audio file received' });
+    }
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const audioBase64 = req.file.buffer.toString('base64');
+    const mimeType = req.file.mimetype || 'audio/webm';
+
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          mimeType,
+          data: audioBase64,
+        },
+      },
+      'Transcribe this audio recording exactly as spoken. Return only the transcribed text, nothing else.',
+    ]);
+
+    const transcript = result.response.text().trim();
+    console.log('Transcribed:', transcript.slice(0, 100));
+    res.json({ transcript });
+  } catch (error) {
+    console.error('Transcription error:', error);
+    res.status(500).json({ error: 'Transcription failed', transcript: '' });
+  }
 });
 
 function buildStrictJsonPrompt(language, transcript) {

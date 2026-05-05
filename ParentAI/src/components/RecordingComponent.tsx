@@ -152,12 +152,6 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     try {
       const audioData = await stopRecording();
 
-      if (typeof audioData === 'string' && audioData.trim().length < 2) {
-        setError(t('error_no_speech'));
-        setIsLoading(false);
-        return;
-      }
-
       if (typeof audioData !== 'string' && audioData.size < 1000) {
         setError(t('error_no_speech'));
         setIsLoading(false);
@@ -168,6 +162,12 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       const result = await transcribeAndAnalyze(audioData, lang);
       const normalizedAnalysis = normalizeAnalysis(result);
       const transcriptText = String(result.transcript || '');
+
+      if (transcriptText.trim().length < 2) {
+        setError(t('error_no_speech'));
+        setIsLoading(false);
+        return;
+      }
 
       setTranscript(transcriptText);
       setAnalysis(result);

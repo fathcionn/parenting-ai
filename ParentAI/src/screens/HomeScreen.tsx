@@ -185,12 +185,6 @@ export const HomeScreen: React.FC = () => {
 
     try {
       const audioData = await stopRecording();
-      if (typeof audioData === 'string' && audioData.trim().length < 2) {
-        setErrorMessage(t('error_no_speech'));
-        setIsLoading(false);
-        return;
-      }
-
       if (typeof audioData !== 'string' && audioData.size < 1000) {
         setErrorMessage(t('error_no_speech'));
         setIsLoading(false);
@@ -201,6 +195,12 @@ export const HomeScreen: React.FC = () => {
       const result = await transcribeAndAnalyze(audioData, lang);
       const analysis = normalizeAnalysis(result);
       const transcript = String(result.transcript || '');
+
+      if (transcript.trim().length < 2) {
+        setErrorMessage(t('error_no_speech'));
+        setIsLoading(false);
+        return;
+      }
 
       await saveToHistory({
         id: `report_${Date.now()}`,
