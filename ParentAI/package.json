@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
-    "@google/generative-ai": "^0.24.1",
+    "@google/genai": "^1.52.0",
     "@react-native-async-storage/async-storage": "^3.0.2",
     "@react-navigation/drawer": "^7.9.9",
     "@react-navigation/native": "^7.1.8",

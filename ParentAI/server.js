@@ -1,11 +1,11 @@
 require('dotenv').config();
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require('@google/genai');
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 
 const app = express();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(cors());
@@ -24,24 +24,28 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
     console.log('Audio received:', req.file.size, 'bytes');
     console.log('Audio mimetype:', req.file.mimetype);
 
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash-latest',
+    const audioBase64 = req.file.buffer.toString('base64');
+
+    const response = await genAI.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: [
+        {
+          parts: [
+            {
+              inlineData: {
+                mimeType: 'audio/webm',
+                data: audioBase64,
+              },
+            },
+            {
+              text: 'Transcribe this audio. Return only the spoken words.',
+            },
+          ],
+        },
+      ],
     });
 
-    const audioBase64 = req.file.buffer.toString('base64');
-    const mimeType = 'audio/webm';
-
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          mimeType,
-          data: audioBase64,
-        },
-      },
-      { text: 'Please transcribe this audio. Return only the spoken words, nothing else. If you cannot hear speech, return "no speech detected".' },
-    ]);
-
-    const transcript = result.response.text().trim();
+    const transcript = response.text.trim();
     console.log('Transcript result:', transcript.slice(0, 200));
 
     if (!transcript || transcript === 'no speech detected') {
@@ -79,14 +83,19 @@ const fallbackAnalysis = {
   tips: ['Try shorter sessions for faster analysis'],
 };
 
-const callGeminiWithTimeout = async (model, prompt) => {
+const callGeminiWithTimeout = async (prompt) => {
   const timeoutPromise = new Promise((resolve) => {
     setTimeout(() => {
       resolve(JSON.stringify(fallbackAnalysis));
     }, 30000);
   });
 
-  const geminiPromise = model.generateContent(prompt).then((result) => result.response.text());
+  const geminiPromise = genAI.models
+    .generateContent({
+      model: 'gemini-2.0-flash',
+      contents: [{ parts: [{ text: prompt }] }],
+    })
+    .then((response) => response.text.trim());
   return Promise.race([geminiPromise, timeoutPromise]);
 };
 
@@ -142,14 +151,13 @@ function extractSafeJson(rawText, transcript = '') {
 app.post('/api/analyze', async (req, res) => {
   try {
     const { transcript, language } = req.body;
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
     const languageNames = { en: 'English', ar: 'Arabic', tr: 'Turkish' };
     const langName = languageNames[language] || 'English';
 
     const prompt = buildStrictJsonPrompt(langName, transcript);
 
-    const responseText = await callGeminiWithTimeout(model, prompt);
+    const responseText = await callGeminiWithTimeout(prompt);
     res.json(extractSafeJson(responseText, transcript));
   } catch (err) {
     console.error('Gemini error:', err);
@@ -163,14 +171,12 @@ app.post('/api/analyze-audio', async (req, res) => {
     const audioPayload = audioBase64 || audio;
     const promptLanguage = language || lang || 'English';
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
-
     const prompt = buildStrictJsonPrompt(promptLanguage);
 
-    const resultPromise = model.generateContent({
+    const resultPromise = genAI.models.generateContent({
+      model: 'gemini-2.0-flash',
       contents: [
         {
-          role: 'user',
           parts: [
             { text: prompt },
             {
@@ -182,7 +188,7 @@ app.post('/api/analyze-audio', async (req, res) => {
           ],
         },
       ],
-      generationConfig: {
+      config: {
         maxOutputTokens: 2048,
         temperature: 0.1,
         responseMimeType: 'application/json',
@@ -190,7 +196,7 @@ app.post('/api/analyze-audio', async (req, res) => {
     });
 
     const responseText = await Promise.race([
-      resultPromise.then((result) => result.response.text()),
+      resultPromise.then((response) => response.text.trim()),
       new Promise((resolve) => setTimeout(() => resolve(JSON.stringify(fallbackAnalysis)), 30000)),
     ]);
 
