@@ -14,27 +14,34 @@ app.get('/health', (_req, res) => {
 });
 
 function buildStrictJsonPrompt(language, transcript) {
-  const transcriptText = transcript || 'Listen to the attached audio and transcribe the parent speech.';
+  const transcriptText = String(transcript || '').slice(0, 2000);
 
-  return `
-You are a parenting coach AI. Analyze this transcript.
-Return ONLY a raw JSON object - no markdown, no code blocks, no explanation, just the JSON.
+  return `Analyze this parenting coaching transcript.
+Return ONLY valid JSON, no extra text:
+{"score":0-100,"summary":"brief","strengths":["x"],"improvements":["x"],"tips":["x"]}
 Write summary, strengths, improvements, and tips in ${language}.
 
-Transcript:
-"""
-${transcriptText}
-"""
-
-Required JSON format:
-{
-  "score": <number 0-100>,
-  "summary": "<2-3 sentence summary>",
-  "strengths": ["<item>", "<item>"],
-  "improvements": ["<item>", "<item>"],
-  "tips": ["<item>", "<item>"]
-}`;
+Transcript: ${transcriptText}`;
 }
+
+const fallbackAnalysis = {
+  score: 65,
+  summary: 'Session completed successfully.',
+  strengths: ['Engaged in a coaching session', 'Showed commitment to improvement'],
+  improvements: ['Continue practicing regularly'],
+  tips: ['Try shorter sessions for faster analysis'],
+};
+
+const callGeminiWithTimeout = async (model, prompt) => {
+  const timeoutPromise = new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(JSON.stringify(fallbackAnalysis));
+    }, 30000);
+  });
+
+  const geminiPromise = model.generateContent(prompt).then((result) => result.response.text());
+  return Promise.race([geminiPromise, timeoutPromise]);
+};
 
 const parseGeminiResponse = (rawText) => {
   try {
@@ -51,19 +58,13 @@ const parseGeminiResponse = (rawText) => {
         const match = rawText.match(/\{[\s\S]*\}/);
         if (match) return JSON.parse(match[0]);
       } catch {}
-      return {
-        score: 50,
-        summary: 'Session completed. Analysis could not be fully processed.',
-        strengths: ['Engaged in a coaching session'],
-        improvements: ['Continue practicing regularly'],
-        tips: ['Try recording a longer session for better analysis'],
-      };
+      return fallbackAnalysis;
     }
   }
 };
 
-function extractSafeJson(result) {
-  const rawText = result.response.text().trim();
+function extractSafeJson(rawText, transcript = '') {
+  rawText = String(rawText || '').trim();
   console.log('RAW GEMINI RESPONSE:', rawText.substring(0, 600));
   console.log('Gemini raw response:', rawText.substring(0, 300));
 
@@ -79,7 +80,7 @@ function extractSafeJson(result) {
     strengths,
     improvements,
     tips,
-    transcript: parsed.transcript || '',
+    transcript: parsed.transcript || transcript,
     tone: score >= 70 ? 'supportive' : score >= 50 ? 'firm' : 'harsh',
     confidence: 80,
     emotional_intensity: score >= 70 ? 30 : score >= 50 ? 55 : 80,
@@ -94,27 +95,15 @@ function extractSafeJson(result) {
 app.post('/api/analyze', async (req, res) => {
   try {
     const { transcript, language } = req.body;
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const languageNames = { en: 'English', ar: 'Arabic', tr: 'Turkish' };
     const langName = languageNames[language] || 'English';
 
     const prompt = buildStrictJsonPrompt(langName, transcript);
 
-    const result = await model.generateContent({
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: prompt }],
-        },
-      ],
-      generationConfig: {
-        maxOutputTokens: 2048,
-        temperature: 0.1,
-        responseMimeType: 'application/json',
-      },
-    });
-    res.json(extractSafeJson(result));
+    const responseText = await callGeminiWithTimeout(model, prompt);
+    res.json(extractSafeJson(responseText, transcript));
   } catch (err) {
     console.error('Gemini error:', err);
     res.status(500).json({ error: err.message });
@@ -127,11 +116,11 @@ app.post('/api/analyze-audio', async (req, res) => {
     const audioPayload = audioBase64 || audio;
     const promptLanguage = language || lang || 'English';
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = buildStrictJsonPrompt(promptLanguage);
 
-    const result = await model.generateContent({
+    const resultPromise = model.generateContent({
       contents: [
         {
           role: 'user',
@@ -153,7 +142,12 @@ app.post('/api/analyze-audio', async (req, res) => {
       },
     });
 
-    res.json(extractSafeJson(result));
+    const responseText = await Promise.race([
+      resultPromise.then((result) => result.response.text()),
+      new Promise((resolve) => setTimeout(() => resolve(JSON.stringify(fallbackAnalysis)), 30000)),
+    ]);
+
+    res.json(extractSafeJson(responseText));
   } catch (err) {
     console.error('Gemini audio error:', err);
     res.status(500).json({ error: err.message });

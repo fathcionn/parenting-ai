@@ -9,8 +9,47 @@ import {
 let mediaRecorder: MediaRecorder | null = null;
 let audioChunks: Blob[] = [];
 let micStream: MediaStream | null = null;
+let speechRecognition: any = null;
+let webTranscript = '';
 
-export async function startRecording(micDeviceId?: string): Promise<void> {
+function startWebSpeechRecognition(language = 'en') {
+  const SpeechRecognition =
+    (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    throw new Error('Speech recognition is not supported in this browser. Please use Chrome.');
+  }
+
+  const languageMap: Record<string, string> = {
+    en: 'en-US',
+    ar: 'ar-SA',
+    tr: 'tr-TR',
+  };
+
+  webTranscript = '';
+  speechRecognition = new SpeechRecognition();
+  speechRecognition.lang = languageMap[language] || 'en-US';
+  speechRecognition.continuous = true;
+  speechRecognition.interimResults = true;
+  speechRecognition.maxAlternatives = 1;
+  speechRecognition.onresult = (event: any) => {
+    let finalText = '';
+    for (let index = event.resultIndex; index < event.results.length; index += 1) {
+      if (event.results[index].isFinal) {
+        finalText += `${event.results[index][0].transcript} `;
+      }
+    }
+    if (finalText.trim()) {
+      webTranscript = `${webTranscript} ${finalText}`.trim();
+      console.log('Web Speech transcript:', webTranscript);
+    }
+  };
+  speechRecognition.onerror = (event: any) => {
+    console.warn('Speech recognition error:', event.error);
+  };
+  speechRecognition.start();
+}
+
+export async function startRecording(micDeviceId?: string, language = 'en'): Promise<void> {
   if (Platform.OS !== 'web') {
     return startNativeRecording();
   }
@@ -24,6 +63,9 @@ export async function startRecording(micDeviceId?: string): Promise<void> {
   micStream?.getTracks().forEach((track) => track.stop());
   micStream = null;
   audioChunks = [];
+  speechRecognition?.stop?.();
+  speechRecognition = null;
+  startWebSpeechRecognition(language);
 
   try {
     micStream = await navigator.mediaDevices.getUserMedia({
@@ -69,6 +111,9 @@ export function stopRecording(): Promise<Blob | string> {
   }
 
   return new Promise((resolve, reject) => {
+    speechRecognition?.stop?.();
+    speechRecognition = null;
+
     if (!mediaRecorder) return reject(new Error('No recorder'));
 
     mediaRecorder.onstop = () => {
@@ -79,7 +124,7 @@ export function stopRecording(): Promise<Blob | string> {
       micStream?.getTracks().forEach((track) => track.stop());
       micStream = null;
       mediaRecorder = null;
-      resolve(audioBlob);
+      resolve(webTranscript.trim());
     };
 
     mediaRecorder.stop();
@@ -94,6 +139,31 @@ export async function transcribeAndAnalyze(
   audioData: Blob | string,
   language: string
 ): Promise<any> {
+  const languageNames: Record<string, string> = {
+    en: 'English',
+    ar: 'Arabic',
+    tr: 'Turkish',
+  };
+  const langName = languageNames[language] || 'English';
+
+  if (Platform.OS === 'web' && typeof audioData === 'string') {
+    const response = await fetch(`${API_BASE_URL}/api/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        transcript: audioData,
+        language,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Analysis failed');
+    }
+
+    return response.json();
+  }
+
   let base64Audio: string;
   let mimeType: string;
 
@@ -110,13 +180,6 @@ export async function transcribeAndAnalyze(
     base64Audio = btoa(binary);
     mimeType = audioData.type || 'audio/webm';
   }
-
-  const languageNames: Record<string, string> = {
-    en: 'English',
-    ar: 'Arabic',
-    tr: 'Turkish',
-  };
-  const langName = languageNames[language] || 'English';
 
   const response = await fetch(`${API_BASE_URL}/api/analyze-audio`, {
     method: 'POST',

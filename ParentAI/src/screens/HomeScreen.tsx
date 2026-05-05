@@ -165,7 +165,8 @@ export const HomeScreen: React.FC = () => {
     setElapsedSeconds(0);
     try {
       const micId = await getStorageItem(STORAGE_KEYS.micId) || 'default';
-      await startRecording(micId);
+      const lang = await getStorageItem(STORAGE_KEYS.speechLanguage) || 'en';
+      await startRecording(micId, lang);
       const stream = getMicStream();
       startWaveform(stream);
       startedAtRef.current = Date.now();
@@ -184,6 +185,12 @@ export const HomeScreen: React.FC = () => {
 
     try {
       const audioData = await stopRecording();
+      if (typeof audioData === 'string' && audioData.trim().length < 2) {
+        setErrorMessage(t('error_no_speech'));
+        setIsLoading(false);
+        return;
+      }
+
       if (typeof audioData !== 'string' && audioData.size < 1000) {
         setErrorMessage(t('error_no_speech'));
         setIsLoading(false);
