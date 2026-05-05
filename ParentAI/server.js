@@ -25,7 +25,7 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
     console.log('Audio mimetype:', req.file.mimetype);
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-1.5-flash-latest',
     });
 
     const audioBase64 = req.file.buffer.toString('base64');
@@ -142,7 +142,7 @@ function extractSafeJson(rawText, transcript = '') {
 app.post('/api/analyze', async (req, res) => {
   try {
     const { transcript, language } = req.body;
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
     const languageNames = { en: 'English', ar: 'Arabic', tr: 'Turkish' };
     const langName = languageNames[language] || 'English';
@@ -163,7 +163,7 @@ app.post('/api/analyze-audio', async (req, res) => {
     const audioPayload = audioBase64 || audio;
     const promptLanguage = language || lang || 'English';
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
     const prompt = buildStrictJsonPrompt(promptLanguage);
 
