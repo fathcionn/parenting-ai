@@ -18,12 +18,18 @@ app.get('/health', (_req, res) => {
 app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'No audio file received' });
+      return res.status(400).json({ error: 'No audio file' });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    console.log('Audio received:', req.file.size, 'bytes');
+    console.log('Audio mimetype:', req.file.mimetype);
+
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+    });
+
     const audioBase64 = req.file.buffer.toString('base64');
-    const mimeType = req.file.mimetype || 'audio/webm';
+    const mimeType = 'audio/webm';
 
     const result = await model.generateContent([
       {
@@ -32,15 +38,25 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
           data: audioBase64,
         },
       },
-      'Transcribe this audio recording exactly as spoken. Return only the transcribed text, nothing else.',
+      { text: 'Please transcribe this audio. Return only the spoken words, nothing else. If you cannot hear speech, return "no speech detected".' },
     ]);
 
     const transcript = result.response.text().trim();
-    console.log('Transcribed:', transcript.slice(0, 100));
+    console.log('Transcript result:', transcript.slice(0, 200));
+
+    if (!transcript || transcript === 'no speech detected') {
+      return res.json({ transcript: '' });
+    }
+
     res.json({ transcript });
   } catch (error) {
-    console.error('Transcription error:', error);
-    res.status(500).json({ error: 'Transcription failed', transcript: '' });
+    console.error('Transcription error details:', error.message);
+    console.error('Full error:', JSON.stringify(error, null, 2));
+    res.status(500).json({
+      error: 'Transcription failed',
+      details: error.message,
+      transcript: '',
+    });
   }
 });
 
