@@ -30,6 +30,7 @@ interface AuthStore {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
+  clearUser: () => void;
   logout: () => void;
 }
 
@@ -46,5 +47,6 @@ export const useAuthStore = create<AuthStore>((set) => ({
     set((state) => ({
       profile: state.profile ? { ...state.profile, ...updates } : null,
     })),
+  clearUser: () => set({ user: null, profile: null }),
   logout: () => set({ user: null, profile: null }),
 }));

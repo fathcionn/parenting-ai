@@ -1,17 +1,21 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { I18nextProvider } from 'react-i18next';
 import { onAuthStateChanged } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import 'react-native-reanimated';
 import i18n from '../src/config/i18n';
-import { auth } from '../src/config/firebase-config';
+import { auth, db } from '../src/config/firebase-config';
 import { useAuthStore } from '../src/stores/auth-store';
 import { theme } from '../src/styles/theme';
+import { ThemeProvider } from '../src/context/ThemeContext';
 
 export {
   ErrorBoundary,
@@ -23,6 +27,32 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+async function registerForPushNotifications(userId: string) {
+  try {
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') return;
+
+    const token = await Notifications.getExpoPushTokenAsync();
+    await setDoc(
+      doc(db, 'users', userId),
+      { pushToken: token.data },
+      { merge: true }
+    );
+  } catch (error) {
+    console.warn('Push notification registration failed:', error);
+  }
+}
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
@@ -30,7 +60,10 @@ export default function RootLayout() {
   });
 
   const [isInitialized, setIsInitialized] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
   const { setUser } = useAuthStore();
+  const router = useRouter();
+  const segments = useSegments();
 
   useEffect(() => {
     if (error) throw error;
@@ -39,6 +72,9 @@ export default function RootLayout() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
+      if (user) {
+        registerForPushNotifications(user.uid);
+      }
       setIsInitialized(true);
     });
 
@@ -51,34 +87,47 @@ export default function RootLayout() {
     }
   }, [loaded, isInitialized]);
 
+  useEffect(() => {
+    if (!loaded || !isInitialized || onboardingChecked) return;
+    AsyncStorage.getItem('onboardingComplete').then((value) => {
+      setOnboardingChecked(true);
+      if (!value && String(segments[0]) !== 'onboarding') {
+        router.replace('/onboarding' as any);
+      }
+    });
+  }, [isInitialized, loaded, onboardingChecked, router, segments]);
+
   if (!loaded || !isInitialized) {
     return null;
   }
 
   return (
     <I18nextProvider i18n={i18n}>
-      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <StatusBar style="dark" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: theme.colors.background },
-            animation: 'fade',
-          }}
-        >
-          <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
-          <Stack.Screen name="history/[id]" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ presentation: 'fullScreenModal' }} />
-          <Stack.Screen name="signup" options={{ presentation: 'fullScreenModal' }} />
-          <Stack.Screen
-            name="modal"
-            options={{
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
+      <ThemeProvider>
+        <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <StatusBar style="dark" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: theme.colors.background },
+              animation: 'fade',
             }}
-          />
-        </Stack>
-      </View>
+          >
+            <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal' }} />
+            <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
+            <Stack.Screen name="history/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="login" options={{ presentation: 'fullScreenModal' }} />
+            <Stack.Screen name="signup" options={{ presentation: 'fullScreenModal' }} />
+            <Stack.Screen
+              name="modal"
+              options={{
+                presentation: 'modal',
+                animation: 'slide_from_bottom',
+              }}
+            />
+          </Stack>
+        </View>
+      </ThemeProvider>
     </I18nextProvider>
   );
 }

@@ -1,6 +1,7 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,27 +13,104 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { historyService } from '../../src/services/history-service';
-import type { CoachingReport } from '../../src/types/analysis';
+import { collection, deleteDoc, doc, getDocs, orderBy, query } from 'firebase/firestore';
+import { Swipeable } from 'react-native-gesture-handler';
+import { auth, db } from '../../src/config/firebase-config';
 import { BorderRadius, Colors, Spacing, Typography } from '../../src/constants/theme';
+import { SESSION_TAGS, getScoreColor, getSessionTag, reportScoreFromData, toReportDate } from '../../src/utils/reportUtils';
 
-const formatDate = (isoDate: string) =>
-  new Date(isoDate).toLocaleString(undefined, {
+type HistoryReport = {
+  id: string;
+  date: Date;
+  score: number;
+  summary: string;
+  tone: string;
+  childName?: string | null;
+  tag?: string | null;
+  transcript?: string;
+  safetyFlag?: {
+    severity: string;
+    detected: string[];
+    recommendation: string;
+  } | null;
+};
+
+const formatDate = (date: Date) =>
+  date.toLocaleString(undefined, {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
   });
 
+function SkeletonCards() {
+  const pulse = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.3, duration: 800, useNativeDriver: true }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [pulse]);
+
+  return (
+    <View>
+      {[0, 1, 2].map((item) => (
+        <Animated.View key={item} style={[styles.skeletonCard, { opacity: pulse }]}>
+          <View style={styles.skeletonLineWide} />
+          <View style={styles.skeletonLine} />
+        </Animated.View>
+      ))}
+    </View>
+  );
+}
+
 export default function HistoryScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [history, setHistory] = useState<CoachingReport[]>([]);
-  const [query, setQuery] = useState('');
+  const [history, setHistory] = useState<HistoryReport[]>([]);
+  const [queryText, setQueryText] = useState('');
+  const [selectedTag, setSelectedTag] = useState('all');
+  const [loading, setLoading] = useState(true);
 
   const loadHistory = useCallback(async () => {
-    const records = await historyService.getHistory();
-    setHistory(records);
+    const user = auth.currentUser;
+    if (!user) {
+      setHistory([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const snapshot = await getDocs(
+        query(collection(db, 'users', user.uid, 'reports'), orderBy('date', 'desc'))
+      );
+      const nextHistory = snapshot.docs.map((item) => {
+        const data = item.data();
+        return {
+          id: item.id,
+          date: toReportDate(data.date || data.createdAt),
+          score: reportScoreFromData(data),
+          summary: String(data.summary || data.analysis?.impact_analysis || ''),
+          tone: String(data.analysis?.tone || data.tone || 'calm'),
+          childName: data.childName || null,
+          tag: data.tag || 'general',
+          transcript: String(data.transcript || ''),
+          safetyFlag: data.safetyFlag || null,
+        };
+      });
+      setHistory(nextHistory);
+    } catch (error) {
+      console.error('Failed to load history:', error);
+      setHistory([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useFocusEffect(
@@ -42,32 +120,47 @@ export default function HistoryScreen() {
   );
 
   const filteredHistory = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return history;
-
+    const normalizedQuery = queryText.trim().toLowerCase();
     return history.filter((item) => {
-      const date = new Date(item.createdAt).toLocaleDateString().toLowerCase();
+      const tagMatches = selectedTag === 'all' || item.tag === selectedTag;
+      if (!tagMatches) return false;
+      if (!normalizedQuery) return true;
       return (
-        item.analysis.tone.toLowerCase().includes(normalizedQuery) ||
-        item.transcript.toLowerCase().includes(normalizedQuery) ||
-        date.includes(normalizedQuery)
+        item.tone.toLowerCase().includes(normalizedQuery) ||
+        item.transcript?.toLowerCase().includes(normalizedQuery) ||
+        item.childName?.toLowerCase().includes(normalizedQuery) ||
+        formatDate(item.date).toLowerCase().includes(normalizedQuery)
       );
     });
-  }, [history, query]);
+  }, [history, queryText, selectedTag]);
 
-  const deleteRecord = (record: CoachingReport) => {
-    Alert.alert(t('history_delete'), t('history_delete'), [
+  const deleteRecord = (record: HistoryReport) => {
+    const user = auth.currentUser;
+    if (!user) return;
+    Alert.alert('Delete Report', 'Are you sure you want to delete this report?', [
       { text: t('common_cancel'), style: 'cancel' },
       {
         text: t('common_delete'),
         style: 'destructive',
         onPress: async () => {
-          await historyService.deleteReport(record.id);
-          await loadHistory();
+          try {
+            await deleteDoc(doc(db, 'users', user.uid, 'reports', record.id));
+            await loadHistory();
+          } catch (error) {
+            console.error('Delete error:', error);
+            Alert.alert('Error', 'Failed to delete report.');
+          }
         },
       },
     ]);
   };
+
+  const renderRightActions = (record: HistoryReport) => (
+    <TouchableOpacity style={styles.swipeDelete} onPress={() => deleteRecord(record)}>
+      <FontAwesome name="trash-o" size={20} color="#FFF" />
+      <Text style={styles.swipeDeleteText}>Delete</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <ScrollView
@@ -80,45 +173,78 @@ export default function HistoryScreen() {
       <View style={styles.searchBar}>
         <FontAwesome name="search" size={14} color={Colors.textMuted} />
         <TextInput
-          value={query}
-          onChangeText={setQuery}
+          value={queryText}
+          onChangeText={setQueryText}
           placeholder={t('history_search')}
           placeholderTextColor={Colors.textMuted}
           style={styles.searchInput}
         />
       </View>
 
-      {filteredHistory.length === 0 ? (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagFilter}>
+        <TouchableOpacity
+          style={[styles.filterPill, selectedTag === 'all' && styles.filterPillActive]}
+          onPress={() => setSelectedTag('all')}
+        >
+          <Text style={selectedTag === 'all' ? styles.filterTextActive : styles.filterText}>All</Text>
+        </TouchableOpacity>
+        {SESSION_TAGS.map((tag) => (
+          <TouchableOpacity
+            key={tag.id}
+            style={[styles.filterPill, selectedTag === tag.id && styles.filterPillActive]}
+            onPress={() => setSelectedTag(tag.id)}
+          >
+            <Text style={selectedTag === tag.id ? styles.filterTextActive : styles.filterText}>
+              {tag.icon} {tag.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {loading ? (
+        <SkeletonCards />
+      ) : filteredHistory.length === 0 ? (
         <View style={styles.emptyState}>
           <FontAwesome name="microphone-slash" size={42} color={Colors.textMuted} />
           <Text style={styles.emptyTitle}>{t('history_empty')}</Text>
-          <Text style={styles.emptyText}>
-            {t('home_session_saved')}
-          </Text>
+          <Text style={styles.emptyText}>{t('home_session_saved')}</Text>
         </View>
       ) : (
         filteredHistory.map((record) => {
+          const tag = getSessionTag(record.tag);
+          const scoreColor = getScoreColor(record.score);
           return (
-            <View key={record.id}>
+            <Swipeable key={record.id} renderRightActions={() => renderRightActions(record)}>
               <TouchableOpacity
                 style={styles.card}
                 activeOpacity={0.75}
-                onPress={() => router.push(`/history/${record.id}`)}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(drawer)/report-detail' as any,
+                    params: { id: record.id },
+                  })
+                }
               >
                 <View style={styles.cardMain}>
-                  <Text style={styles.dateText}>{formatDate(record.createdAt)}</Text>
+                  <Text style={styles.dateText}>{formatDate(record.date)}</Text>
+                  {record.childName ? <Text style={styles.childText}>{record.childName}</Text> : null}
                   <View style={styles.badgeRow}>
                     <View style={styles.toneBadge}>
-                      <Text style={styles.toneBadgeText}>{record.analysis.tone}</Text>
+                      <Text style={styles.toneBadgeText}>{record.tone}</Text>
                     </View>
-                    <Text style={styles.duration}>
-                      {t('coaching_intensity')} {record.analysis.emotional_intensity}%
-                    </Text>
+                    {record.safetyFlag ? (
+                      <View style={styles.warningBadge}>
+                        <Text style={styles.warningBadgeText}>⚠️ {record.safetyFlag.severity}</Text>
+                      </View>
+                    ) : null}
+                    <View style={[styles.tagBadge, { backgroundColor: tag.color }]}>
+                      <Text style={styles.tagBadgeText}>{tag.icon} {tag.label}</Text>
+                    </View>
                   </View>
                 </View>
 
                 <View style={styles.scoreArea}>
-                  <Text style={styles.score}>{record.parentingScore}</Text>
+                  <Text style={[styles.score, { color: scoreColor }]}>{record.score}</Text>
                   <Text style={styles.scoreLabel}>{t('profile_parenting_score')}</Text>
                 </View>
 
@@ -133,7 +259,7 @@ export default function HistoryScreen() {
                   <FontAwesome name="trash-o" size={18} color={Colors.textSecondary} />
                 </TouchableOpacity>
               </TouchableOpacity>
-            </View>
+            </Swipeable>
           );
         })
       )}
@@ -164,7 +290,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: 'row',
     gap: Spacing.sm,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
     paddingHorizontal: Spacing.md,
   },
   searchInput: {
@@ -172,6 +298,32 @@ const styles = StyleSheet.create({
     color: Colors.text,
     flex: 1,
     paddingVertical: 12,
+  },
+  tagFilter: {
+    marginBottom: Spacing.lg,
+  },
+  filterPill: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#E5E5E5',
+    borderRadius: 999,
+    borderWidth: 1,
+    marginRight: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  filterPillActive: {
+    backgroundColor: '#000',
+    borderColor: '#000',
+  },
+  filterText: {
+    color: '#000',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  filterTextActive: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '800',
   },
   card: {
     alignItems: 'center',
@@ -193,9 +345,15 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontWeight: '700',
   },
+  childText: {
+    color: '#777',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   badgeRow: {
     alignItems: 'center',
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: Spacing.sm,
   },
   toneBadge: {
@@ -210,16 +368,33 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'capitalize',
   },
-  duration: {
-    ...Typography.caption,
-    color: Colors.textMuted,
+  tagBadge: {
+    borderRadius: BorderRadius.round,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  warningBadge: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: BorderRadius.round,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  warningBadgeText: {
+    color: '#B91C1C',
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'capitalize',
+  },
+  tagBadgeText: {
+    color: '#000',
+    fontSize: 11,
+    fontWeight: '800',
   },
   scoreArea: {
     alignItems: 'center',
     minWidth: 52,
   },
   score: {
-    color: Colors.text,
     fontSize: 26,
     fontWeight: '800',
   },
@@ -232,6 +407,40 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     width: 36,
+  },
+  swipeDelete: {
+    alignItems: 'center',
+    backgroundColor: '#EF4444',
+    borderRadius: BorderRadius.lg,
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+    paddingHorizontal: 18,
+  },
+  swipeDeleteText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  skeletonCard: {
+    backgroundColor: '#E5E5E5',
+    borderRadius: BorderRadius.lg,
+    height: 88,
+    marginBottom: Spacing.sm,
+    padding: 16,
+  },
+  skeletonLineWide: {
+    backgroundColor: '#D2D2D2',
+    borderRadius: 8,
+    height: 16,
+    marginBottom: 12,
+    width: '55%',
+  },
+  skeletonLine: {
+    backgroundColor: '#D2D2D2',
+    borderRadius: 8,
+    height: 12,
+    width: '35%',
   },
   emptyState: {
     alignItems: 'center',

@@ -28,6 +28,17 @@ export interface CoachingReport {
   analysis: ParentingAnalysis;
   parentingScore: number;
   childId?: string | null;
+  childName?: string | null;
+  tag?: string | null;
+  summary?: string;
+  strengths?: string[];
+  improvements?: string[];
+  tips?: string[];
+  safetyFlag?: {
+    severity: 'none' | 'mild' | 'moderate' | 'severe';
+    detected: string[];
+    recommendation: string;
+  } | null;
 }
 
 export function clampPercent(value: number): number {

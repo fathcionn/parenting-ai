@@ -18,7 +18,10 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "TalkWise needs microphone access to record and analyse your parenting sessions.",
-        "UIBackgroundModes": ["audio"]
+        "NSLocationWhenInUseUsageDescription": "TalkWise needs location access to share a child's location with the parent.",
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
@@ -31,7 +34,12 @@
       "permissions": [
         "RECORD_AUDIO",
         "WRITE_EXTERNAL_STORAGE",
-        "READ_EXTERNAL_STORAGE"
+        "READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -47,10 +55,19 @@
         {
           "microphonePermission": "TalkWise needs access to your microphone to record interactions."
         }
-      ]
+      ],
+      "expo-notifications",
+      "expo-location",
+      "expo-image-picker"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "63fb7dd4-bbf6-46cd-923d-6d24f4c8b904"
+      }
     }
   }
 }

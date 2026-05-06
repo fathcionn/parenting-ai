@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, I18nManager } from 'react-native';
 import { theme } from '../styles/theme';
+import { useAppTheme } from '../context/ThemeContext';
 
 interface CardProps {
   title?: string;
@@ -9,9 +10,11 @@ interface CardProps {
 }
 
 export const Card: React.FC<CardProps> = ({ title, children, style }) => {
+  const appTheme = useAppTheme();
+
   return (
-    <View style={[styles.card, style]}>
-      {title && <Text style={styles.title}>{title}</Text>}
+    <View style={[styles.card, { backgroundColor: appTheme.colors.card }, style]}>
+      {title && <Text style={[styles.title, { color: appTheme.colors.text }]}>{title}</Text>}
       {children}
     </View>
   );
@@ -30,18 +33,23 @@ export const Container: React.FC<ContainerProps> = ({
   style,
   isRTL = false,
 }) => {
+  const appTheme = useAppTheme();
+
   if (isRTL) {
     I18nManager.forceRTL(true);
   }
 
   const content = (
-    <View style={[styles.container, style]}>
+    <View style={[styles.container, { backgroundColor: appTheme.colors.background }, style]}>
       {children}
     </View>
   );
 
   return scroll ? (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: appTheme.colors.background }}
+      contentContainerStyle={[styles.scrollContent, { backgroundColor: appTheme.colors.background }]}
+    >
       {content}
     </ScrollView>
   ) : (

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Platform,
   ScrollView,
@@ -11,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import {
   getMicStream,
@@ -20,6 +22,7 @@ import {
 } from '../services/geminiAudio';
 import { getRecordingMeteringLevel } from '../services/nativeAudio';
 import { saveToHistory } from '../services/history-service';
+import { checkSessionSafety, notifySafetyFlag, saveSafetyFlag } from '../services/safety-service';
 import {
   getAutoMonitorPreference,
   setAutoMonitorPreference,
@@ -27,6 +30,44 @@ import {
 } from '../services/recordingState';
 import { getStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 import { calculateParentingScore, type ParentingAnalysis } from '../types/analysis';
+
+const DAILY_TIPS = [
+  "Use 'I feel...' statements instead of 'You always...'",
+  'Give your child 2 choices instead of commands',
+  'Praise effort, not just results',
+  "Get down to your child's eye level when talking",
+  "Ask 'What was the best part of your day?' at dinner",
+  'Pause for one breath before responding to conflict',
+  'Name the emotion before correcting the behavior',
+  'Use a calm voice even when setting a firm boundary',
+  'Offer help before assuming defiance',
+  'Catch one good behavior and name it out loud',
+  'Keep instructions short and specific',
+  'Replace threats with clear consequences',
+  'Use routines to reduce repeated arguments',
+  'Ask curious questions before giving advice',
+  'Validate feelings while keeping the limit',
+  'Give warnings before transitions',
+  'Use repair language after a hard moment',
+  'Avoid labels; describe the behavior instead',
+  'Let your child repeat the plan back to you',
+  'Celebrate small steps toward self-control',
+  'Make eye contact before giving an instruction',
+  'Use humor gently to lower tension',
+  'Give attention before your child has to demand it',
+  'Separate your child from the problem',
+  'Practice the phrase you want them to use',
+  'Ask what support would help next time',
+  'Choose connection before correction when possible',
+  'Keep consequences related and respectful',
+  'End tough talks with reassurance',
+  'Notice your own tone as early feedback',
+];
+
+function isConnectionError(error: any) {
+  const message = String(error?.message || '').toLowerCase();
+  return message.includes('fetch') || message.includes('network') || message.includes('server');
+}
 
 const formatTime = (seconds: number) => {
   const hrs = Math.floor(seconds / 3600);
@@ -52,12 +93,14 @@ function normalizeAnalysis(result: any): ParentingAnalysis {
 
 export const HomeScreen: React.FC = () => {
   const { t } = useTranslation();
+  const router = useRouter();
   const startedAtRef = useRef(0);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const hasAutoStarted = useRef(false);
   const animFrameRef = useRef<number>(0);
   const meteringIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const pendingAudioRef = useRef<Blob | string | null>(null);
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [autoMonitor, setAutoMonitor] = useState(false);
@@ -185,12 +228,42 @@ export const HomeScreen: React.FC = () => {
 
     try {
       const audioData = await stopRecording();
+      pendingAudioRef.current = audioData;
       if (typeof audioData !== 'string' && audioData.size < 1000) {
         setErrorMessage(t('error_no_speech'));
         setIsLoading(false);
         return;
       }
 
+      await analyzeMonitorAudio(audioData);
+    } catch (err: any) {
+      if (isConnectionError(err)) {
+        Alert.alert('Connection Issue', 'Could not reach the server. Please check your internet connection and try again.', [
+          { text: 'Retry', onPress: () => retryAnalysis() },
+          { text: 'Cancel', style: 'cancel' },
+        ]);
+      } else {
+        setErrorMessage(`${t('error_analysis_failed')} ${err.message}`);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function retryAnalysis() {
+    if (!pendingAudioRef.current) return;
+    setIsLoading(true);
+    setErrorMessage('');
+    try {
+      await analyzeMonitorAudio(pendingAudioRef.current);
+    } catch (err: any) {
+      setErrorMessage(`${t('error_analysis_failed')} ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function analyzeMonitorAudio(audioData: Blob | string) {
       const lang = await getStorageItem(STORAGE_KEYS.speechLanguage) || 'en';
       const result = await transcribeAndAnalyze(audioData, lang);
       const analysis = normalizeAnalysis(result);
@@ -202,8 +275,9 @@ export const HomeScreen: React.FC = () => {
         return;
       }
 
+      const reportId = `report_${Date.now()}`;
       await saveToHistory({
-        id: `report_${Date.now()}`,
+        id: reportId,
         createdAt: new Date().toISOString(),
         durationSeconds: Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)),
         audioUri: typeof audioData === 'string' ? audioData : null,
@@ -212,14 +286,29 @@ export const HomeScreen: React.FC = () => {
         analysis,
         parentingScore: calculateParentingScore(analysis),
         mode: 'background',
+        summary: String(result.summary || analysis.impact_analysis || ''),
+        strengths: Array.isArray(result.strengths) ? result.strengths : analysis.positive_notes,
+        improvements: Array.isArray(result.improvements) ? result.improvements : analysis.detected_issues,
+        tips: Array.isArray(result.tips) ? result.tips : analysis.suggestions,
+        tag: 'general',
       });
 
+      try {
+        const safety = await checkSessionSafety(transcript);
+        if (!safety.safe) {
+          await saveSafetyFlag(reportId, safety);
+          await notifySafetyFlag(reportId, safety, () =>
+            router.push({
+              pathname: '/(drawer)/report-detail' as any,
+              params: { id: reportId },
+            })
+          );
+        }
+      } catch (safetyError) {
+        console.warn('Safety check failed:', safetyError);
+      }
+
       setSuccessMessage(t('home_session_saved'));
-    } catch (err: any) {
-      setErrorMessage(`${t('error_analysis_failed')} ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
   }
 
   const handleToggleAutoMonitor = async (value: boolean) => {
@@ -316,6 +405,16 @@ export const HomeScreen: React.FC = () => {
         <Text style={styles.infoText}>
           {t('home_privacy_note')}
         </Text>
+      </View>
+
+      <View style={styles.tipCard}>
+        <Text style={styles.tipIcon}>💡</Text>
+        <View style={styles.tipTextWrap}>
+          <Text style={styles.tipTitle}>Tip of the Day</Text>
+          <Text style={styles.tipText}>
+            {DAILY_TIPS[new Date().getDate() % DAILY_TIPS.length]}
+          </Text>
+        </View>
       </View>
     </ScrollView>
   );
@@ -471,6 +570,34 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     lineHeight: 18,
+  },
+  tipCard: {
+    alignItems: 'flex-start',
+    backgroundColor: '#FEF9C3',
+    borderColor: '#FDE68A',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 16,
+  },
+  tipIcon: {
+    fontSize: 24,
+  },
+  tipTextWrap: {
+    flex: 1,
+  },
+  tipTitle: {
+    color: '#000',
+    fontSize: 15,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  tipText: {
+    color: '#3F3F00',
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 19,
   },
   errorCard: {
     backgroundColor: '#FEF2F2',

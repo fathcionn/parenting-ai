@@ -1,12 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Modal,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { auth, db } from '../config/firebase-config';
 import { theme } from '../styles/theme';
 import { Button } from './Button';
 import { Card } from './Layout';
@@ -19,6 +26,7 @@ import {
 } from '../services/geminiAudio';
 import { getRecordingMeteringLevel } from '../services/nativeAudio';
 import { saveToHistory } from '../services/history-service';
+import { checkSessionSafety, notifySafetyFlag, saveSafetyFlag } from '../services/safety-service';
 import { setMode } from '../services/recordingState';
 import { getStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 import {
@@ -27,6 +35,7 @@ import {
   type ParentingAnalysis,
 } from '../types/analysis';
 import { useCoachingStore } from '../stores/coaching-store';
+import { SESSION_TAGS } from '../utils/reportUtils';
 
 interface RecordingComponentProps {
   childId?: string | null;
@@ -34,6 +43,11 @@ interface RecordingComponentProps {
   onReport?: (report: CoachingReport) => void;
   speechLanguage?: string;
 }
+
+type ChildOption = {
+  id: string;
+  name: string;
+};
 
 function normalizeAnalysis(result: any): ParentingAnalysis {
   return {
@@ -43,9 +57,18 @@ function normalizeAnalysis(result: any): ParentingAnalysis {
     parenting_style: result.parenting_style || 'authoritative',
     detected_issues: Array.isArray(result.detected_issues) ? result.detected_issues : [],
     suggestions: Array.isArray(result.suggestions) ? result.suggestions : [],
-    impact_analysis: String(result.impact_analysis || ''),
-    positive_notes: Array.isArray(result.positive_notes) ? result.positive_notes : [],
+    impact_analysis: String(result.impact_analysis || result.summary || ''),
+    positive_notes: Array.isArray(result.positive_notes)
+      ? result.positive_notes
+      : Array.isArray(result.strengths)
+      ? result.strengths
+      : [],
   };
+}
+
+function isConnectionError(error: any) {
+  const message = String(error?.message || '').toLowerCase();
+  return message.includes('fetch') || message.includes('network') || message.includes('server');
 }
 
 export const RecordingComponent: React.FC<RecordingComponentProps> = ({
@@ -54,24 +77,87 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
   onReport,
 }) => {
   const { t } = useTranslation();
+  const router = useRouter();
   const cardTitle = title || t('coaching_session_title');
   const { currentAnalysis, setCurrentAnalysis, setIsAnalyzing } = useCoachingStore();
   const animFrameRef = useRef<number>(0);
   const meteringIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const sessionStartRef = useRef(0);
+  const pendingAudioRef = useRef<Blob | string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [waveformBars, setWaveformBars] = useState<number[]>(Array(40).fill(2));
   const [transcript, setTranscript] = useState('');
-  const [analysis, setAnalysis] = useState<any>(null);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [children, setChildren] = useState<ChildOption[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(childId || null);
+  const [selectedTag, setSelectedTag] = useState('general');
+  const [audioSourceMode, setAudioSourceMode] = useState<'device' | 'external'>('device');
+  const [availableMics, setAvailableMics] = useState<MediaDeviceInfo[]>([]);
+  const [selectedMicDeviceId, setSelectedMicDeviceId] = useState<string>('default');
+  const [showMicModal, setShowMicModal] = useState(false);
 
   useEffect(() => {
     return () => {
       stopWaveform();
     };
   }, []);
+
+  useEffect(() => {
+    async function loadChildren() {
+      const user = auth.currentUser;
+      if (!user) return;
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'users', user.uid, 'children'), orderBy('createdAt', 'desc'))
+        );
+        const nextChildren = snapshot.docs.map((item) => {
+          const data = item.data();
+          return { id: item.id, name: String(data.name || 'Child') };
+        });
+        setChildren(nextChildren);
+        if (!selectedChildId && nextChildren[0]) {
+          setSelectedChildId(nextChildren[0].id);
+        }
+      } catch (err) {
+        console.error('Failed to load children:', err);
+      }
+    }
+    loadChildren();
+  }, [selectedChildId]);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | undefined;
+    if (isRecording) {
+      interval = setInterval(() => {
+        setRecordingSeconds((Date.now() - sessionStartRef.current) / 1000);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isRecording]);
+
+  async function loadAvailableMics() {
+    if (Platform.OS !== 'web' || !navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setAvailableMics(devices.filter((device) => device.kind === 'audioinput'));
+    } catch (err) {
+      console.error('Failed to load audio devices:', err);
+      setError('Could not access microphones. Please check browser permissions.');
+    }
+  }
+
+  async function chooseExternalMic() {
+    setAudioSourceMode('external');
+    await loadAvailableMics();
+    setShowMicModal(true);
+  }
 
   function startWaveform(stream: MediaStream | null) {
     if (Platform.OS !== 'web') {
@@ -118,15 +204,18 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
 
   async function handleStart() {
     setError(null);
-    setAnalysis(null);
     setCurrentAnalysis(null);
     setTranscript('');
     setIsLoading(false);
     setIsAnalyzing(false);
+    setRecordingSeconds(0);
 
     try {
-      const micId = await getStorageItem(STORAGE_KEYS.micId) || 'default';
-      const lang = await getStorageItem(STORAGE_KEYS.speechLanguage) || 'en';
+      const micId =
+        audioSourceMode === 'external'
+          ? selectedMicDeviceId
+          : (await getStorageItem(STORAGE_KEYS.micId)) || 'default';
+      const lang = (await getStorageItem(STORAGE_KEYS.speechLanguage)) || 'en';
       await startRecording(micId, lang);
       const stream = getMicStream();
       startWaveform(stream);
@@ -142,6 +231,82 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     }
   }
 
+  async function analyzeAudioData(audioData: Blob | string) {
+    if (typeof audioData !== 'string' && audioData.size < 1000) {
+      setError(t('error_no_speech'));
+      return;
+    }
+
+    const lang = (await getStorageItem(STORAGE_KEYS.speechLanguage)) || 'en';
+    const result = await transcribeAndAnalyze(audioData, lang);
+    const normalizedAnalysis = normalizeAnalysis(result);
+    const transcriptText = String(result.transcript || '');
+
+    if (transcriptText.trim().length < 2) {
+      setError(t('error_no_speech'));
+      return;
+    }
+
+    const selectedChild = children.find((item) => item.id === selectedChildId) || null;
+    const score = calculateParentingScore(normalizedAnalysis);
+
+    const report: CoachingReport = {
+      id: `report_${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      durationSeconds: Math.max(1, Math.round((Date.now() - sessionStartRef.current) / 1000)),
+      audioUri: typeof audioData === 'string' ? audioData : null,
+      transcript: transcriptText,
+      language: lang,
+      mode: 'coaching',
+      analysis: normalizedAnalysis,
+      parentingScore: score,
+      childId: selectedChild?.id || null,
+      childName: selectedChild?.name || null,
+      tag: selectedTag,
+      summary: String(result.summary || normalizedAnalysis.impact_analysis || ''),
+      strengths: Array.isArray(result.strengths) ? result.strengths : normalizedAnalysis.positive_notes,
+      improvements: Array.isArray(result.improvements)
+        ? result.improvements
+        : normalizedAnalysis.detected_issues,
+      tips: Array.isArray(result.tips) ? result.tips : normalizedAnalysis.suggestions,
+    };
+
+    setTranscript(transcriptText);
+    setCurrentAnalysis(report);
+    onReport?.(report);
+    await saveToHistory(report);
+
+    try {
+      const safety = await checkSessionSafety(transcriptText);
+      if (!safety.safe) {
+        await saveSafetyFlag(report.id, safety);
+        await notifySafetyFlag(report.id, safety, () =>
+          router.push({
+            pathname: '/(drawer)/report-detail' as any,
+            params: { id: report.id },
+          })
+        );
+      }
+    } catch (safetyError) {
+      console.warn('Safety check failed:', safetyError);
+    }
+  }
+
+  async function retryAnalysis() {
+    if (!pendingAudioRef.current) return;
+    setIsLoading(true);
+    setIsAnalyzing(true);
+    setError(null);
+    try {
+      await analyzeAudioData(pendingAudioRef.current);
+    } catch (err: any) {
+      setError(`${t('error_analysis_failed')} ${err.message}`);
+    } finally {
+      setIsLoading(false);
+      setIsAnalyzing(false);
+    }
+  }
+
   async function handleStop() {
     setIsRecording(false);
     setMode('idle');
@@ -151,45 +316,17 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
 
     try {
       const audioData = await stopRecording();
-
-      if (typeof audioData !== 'string' && audioData.size < 1000) {
-        setError(t('error_no_speech'));
-        setIsLoading(false);
-        return;
-      }
-
-      const lang = await getStorageItem(STORAGE_KEYS.speechLanguage) || 'en';
-      const result = await transcribeAndAnalyze(audioData, lang);
-      const normalizedAnalysis = normalizeAnalysis(result);
-      const transcriptText = String(result.transcript || '');
-
-      if (transcriptText.trim().length < 2) {
-        setError(t('error_no_speech'));
-        setIsLoading(false);
-        return;
-      }
-
-      setTranscript(transcriptText);
-      setAnalysis(result);
-
-      const report: CoachingReport = {
-        id: `report_${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        durationSeconds: Math.max(1, Math.round((Date.now() - sessionStartRef.current) / 1000)),
-        audioUri: typeof audioData === 'string' ? audioData : null,
-        transcript: transcriptText,
-        language: lang,
-        mode: 'coaching',
-        analysis: normalizedAnalysis,
-        parentingScore: calculateParentingScore(normalizedAnalysis),
-        childId,
-      };
-
-      setCurrentAnalysis(report);
-      onReport?.(report);
-      await saveToHistory(report);
+      pendingAudioRef.current = audioData;
+      await analyzeAudioData(audioData);
     } catch (err: any) {
-      setError(`${t('error_analysis_failed')} ${err.message}`);
+      if (isConnectionError(err)) {
+        Alert.alert('Connection Issue', 'Could not reach the server. Please check your internet connection and try again.', [
+          { text: 'Retry', onPress: () => retryAnalysis() },
+          { text: 'Cancel', style: 'cancel' },
+        ]);
+      } else {
+        setError(`${t('error_analysis_failed')} ${err.message}`);
+      }
     } finally {
       setIsLoading(false);
       setIsAnalyzing(false);
@@ -198,11 +335,100 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
 
   return (
     <Card title={cardTitle}>
+      <Text style={styles.selectorTitle}>Audio Source</Text>
+      <View style={styles.audioSourceGrid}>
+        <TouchableOpacity
+          style={[styles.audioSourceCard, audioSourceMode === 'device' && styles.audioSourceCardActive]}
+          onPress={() => {
+            setAudioSourceMode('device');
+            setSelectedMicDeviceId('default');
+          }}
+          disabled={isRecording || isLoading}
+        >
+          <Text style={styles.audioSourceIcon}>📱</Text>
+          <Text style={audioSourceMode === 'device' ? styles.audioSourceTextActive : styles.audioSourceText}>
+            This device
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.audioSourceCard, audioSourceMode === 'external' && styles.audioSourceCardActive]}
+          onPress={chooseExternalMic}
+          disabled={isRecording || isLoading}
+        >
+          <Text style={styles.audioSourceIcon}>🎙️</Text>
+          <Text style={audioSourceMode === 'external' ? styles.audioSourceTextActive : styles.audioSourceText}>
+            External microphone
+          </Text>
+        </TouchableOpacity>
+        <View style={[styles.audioSourceCard, styles.audioSourceDisabled]}>
+          <Text style={styles.audioSourceIcon}>📡</Text>
+          <Text style={styles.audioSourceText}>Child's device</Text>
+          <Text style={styles.comingSoonText}>Coming soon</Text>
+        </View>
+      </View>
+
+      <Text style={styles.selectorTitle}>Which child is this session for?</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
+        {children.length === 0 ? (
+          <View style={[styles.selectorPill, styles.selectorPillActive]}>
+            <Text style={styles.selectorPillTextActive}>No child linked</Text>
+          </View>
+        ) : (
+          children.map((childOption) => {
+            const isSelected = selectedChildId === childOption.id;
+            return (
+              <TouchableOpacity
+                key={childOption.id}
+                style={[styles.selectorPill, isSelected && styles.selectorPillActive]}
+                onPress={() => setSelectedChildId(childOption.id)}
+                activeOpacity={0.8}
+              >
+                <Text style={isSelected ? styles.selectorPillTextActive : styles.selectorPillText}>
+                  {childOption.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })
+        )}
+      </ScrollView>
+
+      <Text style={styles.selectorTitle}>Session topic</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
+        {SESSION_TAGS.map((tag) => {
+          const isSelected = selectedTag === tag.id;
+          return (
+            <TouchableOpacity
+              key={tag.id}
+              style={[styles.tagPill, { backgroundColor: isSelected ? '#000' : tag.color }]}
+              onPress={() => setSelectedTag(tag.id)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.tagText, isSelected && styles.tagTextActive]}>
+                {tag.icon} {tag.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
       <View style={styles.waveform}>
         {waveformBars.map((bar, index) => (
           <View key={index} style={[styles.waveformBar, { height: bar }]} />
         ))}
       </View>
+
+      {isRecording ? (
+        <View style={styles.recordingStatus}>
+          <Text style={styles.recordingStatusText}>Recording... speak clearly</Text>
+          <Text style={styles.recordingTimer}>🎙️ Recording: {recordingSeconds.toFixed(1)} seconds</Text>
+        </View>
+      ) : null}
+
+      {isLoading ? (
+        <View style={styles.processingStatus}>
+          <Text style={styles.processingText}>Processing your session...</Text>
+        </View>
+      ) : null}
 
       {error ? (
         <View style={styles.errorBox}>
@@ -248,14 +474,136 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
         </View>
       )}
 
-      {!isLoading && currentAnalysis && (
-        <AnalysisDisplay analysis={currentAnalysis} />
-      )}
+      {!isLoading && currentAnalysis && <AnalysisDisplay analysis={currentAnalysis} />}
+
+      <Modal visible={showMicModal} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowMicModal(false)}
+        >
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Choose microphone</Text>
+            {availableMics.length === 0 ? (
+              <Text style={styles.modalEmpty}>No microphones found.</Text>
+            ) : (
+              availableMics.map((mic, index) => {
+                const isSelected = selectedMicDeviceId === mic.deviceId;
+                return (
+                  <TouchableOpacity
+                    key={mic.deviceId}
+                    style={[styles.micRow, isSelected && styles.micRowSelected]}
+                    onPress={() => {
+                      setSelectedMicDeviceId(mic.deviceId);
+                      setShowMicModal(false);
+                    }}
+                  >
+                    <Text style={isSelected ? styles.micRowTextSelected : styles.micRowText}>
+                      {mic.label || `Microphone ${index + 1}`}
+                    </Text>
+                    {isSelected ? <Text style={styles.micCheck}>✓</Text> : null}
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </Card>
   );
 };
 
 const styles = StyleSheet.create({
+  selectorTitle: {
+    color: '#000',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 8,
+    marginTop: 4,
+    textTransform: 'uppercase',
+  },
+  selectorScroll: {
+    marginBottom: theme.spacing.md,
+  },
+  audioSourceGrid: {
+    gap: 8,
+    marginBottom: theme.spacing.md,
+  },
+  audioSourceCard: {
+    alignItems: 'center',
+    backgroundColor: '#F7F7F7',
+    borderColor: '#E5E5E5',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    padding: 12,
+  },
+  audioSourceCardActive: {
+    backgroundColor: '#000',
+    borderColor: '#000',
+  },
+  audioSourceDisabled: {
+    opacity: 0.45,
+  },
+  audioSourceIcon: {
+    fontSize: 20,
+  },
+  audioSourceText: {
+    color: '#000',
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  audioSourceTextActive: {
+    color: '#FFF',
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  comingSoonText: {
+    color: '#777',
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  selectorPill: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#E5E5E5',
+    borderRadius: 999,
+    borderWidth: 1,
+    marginRight: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  selectorPillActive: {
+    backgroundColor: '#000',
+    borderColor: '#000',
+  },
+  selectorPillText: {
+    color: '#000',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  selectorPillTextActive: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  tagPill: {
+    borderRadius: 999,
+    marginRight: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  tagText: {
+    color: '#000',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  tagTextActive: {
+    color: '#FFF',
+  },
   waveform: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -268,6 +616,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     borderRadius: 2,
     width: 4,
+  },
+  recordingStatus: {
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
+    borderColor: '#E5E5E5',
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: theme.spacing.md,
+    padding: 12,
+  },
+  recordingStatusText: {
+    color: '#000',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  recordingTimer: {
+    color: '#777',
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  processingStatus: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    marginBottom: theme.spacing.md,
+    padding: 12,
+  },
+  processingText: {
+    color: '#000',
+    fontSize: 14,
+    fontWeight: '800',
+    textAlign: 'center',
   },
   controls: {
     marginTop: theme.spacing.md,
@@ -316,5 +696,57 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.bodySmall.fontSize,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  modalBackdrop: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    maxWidth: 360,
+    padding: 20,
+    width: '100%',
+  },
+  modalTitle: {
+    color: '#000',
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 14,
+  },
+  modalEmpty: {
+    color: '#777',
+    fontSize: 14,
+  },
+  micRow: {
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 10,
+    flexDirection: 'row',
+    marginBottom: 8,
+    padding: 12,
+  },
+  micRowSelected: {
+    backgroundColor: '#000',
+  },
+  micRowText: {
+    color: '#000',
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  micRowTextSelected: {
+    color: '#FFF',
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  micCheck: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '900',
   },
 });

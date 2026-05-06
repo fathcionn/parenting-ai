@@ -1,6 +1,6 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
+  Animated,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,9 +13,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { getAuth } from 'firebase/auth';
-import { collection, getDocs, orderBy, query, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDocs, orderBy, query, setDoc } from 'firebase/firestore';
 import { db } from '../../src/config/firebase-config';
 import { BorderRadius, Colors, Spacing, Typography } from '../../src/constants/theme';
+import { getScoreColor, reportScoreFromData, toReportDate } from '../../src/utils/reportUtils';
 
 type FirestoreReport = {
   id: string;
@@ -24,18 +25,21 @@ type FirestoreReport = {
   strengths: string[];
   improvements: string[];
   transcript?: string;
+  childId?: string | null;
+  childName?: string | null;
 };
 
-const clampScore = (value: unknown) => {
-  const numberValue = typeof value === 'number' && Number.isFinite(value) ? value : 0;
-  return Math.max(0, Math.min(100, Math.round(numberValue)));
+type ChildFilter = {
+  id: string;
+  name: string;
 };
 
-const toDate = (value: unknown) => {
-  if (value instanceof Timestamp) return value.toDate();
-  if (typeof value === 'string') return new Date(value);
-  if (value instanceof Date) return value;
-  return new Date();
+type BadgeState = {
+  id: string;
+  icon: string;
+  name: string;
+  earned: boolean;
+  earnedAt?: Date | null;
 };
 
 const topItem = (items: string[]) => {
@@ -49,9 +53,7 @@ const topItem = (items: string[]) => {
 };
 
 const calculateStreak = (reports: FirestoreReport[]) => {
-  const days = new Set(
-    reports.map((report) => report.date.toISOString().slice(0, 10))
-  );
+  const days = new Set(reports.map((report) => report.date.toISOString().slice(0, 10)));
   let streak = 0;
   const cursor = new Date();
   while (days.has(cursor.toISOString().slice(0, 10))) {
@@ -71,19 +73,12 @@ function ScoreRing({ score }: { score: number }) {
   return (
     <View style={styles.ringWrapper}>
       <Svg width={size} height={size}>
+        <Circle cx={size / 2} cy={size / 2} r={radius} stroke="#E7E7E7" strokeWidth={strokeWidth} fill="transparent" />
         <Circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#E7E7E7"
-          strokeWidth={strokeWidth}
-          fill="transparent"
-        />
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="#000"
+          stroke={getScoreColor(score)}
           strokeWidth={strokeWidth}
           fill="transparent"
           strokeDasharray={`${circumference} ${circumference}`}
@@ -94,7 +89,7 @@ function ScoreRing({ score }: { score: number }) {
         />
       </Svg>
       <View style={styles.ringCenter}>
-        <Text style={styles.ringScore}>{score}%</Text>
+        <Text style={[styles.ringScore, { color: getScoreColor(score) }]}>{score}%</Text>
         <Text style={styles.ringLabel}>Average</Text>
       </View>
     </View>
@@ -126,7 +121,7 @@ function ProgressLine({ reports }: { reports: FirestoreReport[] }) {
         <Polyline points={points.join(' ')} fill="none" stroke="#000" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
         {chartReports.map((report, index) => {
           const [x, y] = points[index].split(',').map(Number);
-          return <Circle key={report.id} cx={x} cy={y} r={5} fill="#000" />;
+          return <Circle key={report.id} cx={x} cy={y} r={5} fill={getScoreColor(report.score)} />;
         })}
       </Svg>
       <View style={styles.chartLabels}>
@@ -136,6 +131,28 @@ function ProgressLine({ reports }: { reports: FirestoreReport[] }) {
           </Text>
         ))}
       </View>
+    </View>
+  );
+}
+
+function SkeletonInsights() {
+  const pulse = useRef(new Animated.Value(0.3)).current;
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.3, duration: 800, useNativeDriver: true }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [pulse]);
+
+  return (
+    <View>
+      {[0, 1, 2, 3].map((item) => (
+        <Animated.View key={item} style={[styles.skeletonCard, { opacity: pulse }]} />
+      ))}
     </View>
   );
 }
@@ -169,7 +186,46 @@ export default function ReportsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const [reports, setReports] = useState<FirestoreReport[]>([]);
+  const [children, setChildren] = useState<ChildFilter[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState('all');
+  const [badges, setBadges] = useState<BadgeState[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const updateBadges = useCallback(async (userId: string, sourceReports: FirestoreReport[]) => {
+    const uniqueDays = new Set(sourceReports.map((report) => report.date.toISOString().slice(0, 10)));
+    const definitions: BadgeState[] = [
+      { id: 'first_steps', icon: '🎉', name: 'First Steps', earned: sourceReports.length >= 1 },
+      { id: 'on_a_roll', icon: '🔥', name: 'On a Roll', earned: sourceReports.length >= 3 },
+      { id: 'committed_parent', icon: '🏆', name: 'Committed Parent', earned: sourceReports.length >= 10 },
+      { id: 'high_scorer', icon: '⭐', name: 'High Scorer', earned: sourceReports.some((report) => report.score > 80) },
+      { id: 'consistent', icon: '📅', name: 'Consistent', earned: uniqueDays.size >= 3 },
+      { id: 'excellence', icon: '🌟', name: 'Excellence', earned: sourceReports.some((report) => report.score > 90) },
+    ];
+
+    const existingSnapshot = await getDocs(collection(db, 'users', userId, 'badges'));
+    const existing = new Map(
+      existingSnapshot.docs.map((item) => [item.id, item.data().earnedAt?.toDate?.() || new Date()])
+    );
+
+    await Promise.all(
+      definitions
+        .filter((badge) => badge.earned && !existing.has(badge.id))
+        .map((badge) =>
+          setDoc(doc(db, 'users', userId, 'badges', badge.id), {
+            name: badge.name,
+            icon: badge.icon,
+            earnedAt: new Date(),
+          })
+        )
+    );
+
+    setBadges(
+      definitions.map((badge) => ({
+        ...badge,
+        earnedAt: existing.get(badge.id) || (badge.earned ? new Date() : null),
+      }))
+    );
+  }, []);
 
   const loadReports = useCallback(async () => {
     setLoading(true);
@@ -181,15 +237,19 @@ export default function ReportsScreen() {
         return;
       }
 
-      const snapshot = await getDocs(
+      const reportSnapshot = await getDocs(
         query(collection(db, 'users', user.uid, 'reports'), orderBy('date', 'desc'))
       );
-      const nextReports = snapshot.docs.map((item) => {
+      const childSnapshot = await getDocs(
+        query(collection(db, 'users', user.uid, 'children'), orderBy('createdAt', 'desc'))
+      );
+
+      const nextReports = reportSnapshot.docs.map((item) => {
         const data = item.data();
         return {
           id: item.id,
-          score: clampScore(data.score ?? data.parentingScore),
-          date: toDate(data.date ?? data.createdAt),
+          score: reportScoreFromData(data),
+          date: toReportDate(data.date ?? data.createdAt),
           strengths: Array.isArray(data.strengths)
             ? data.strengths
             : Array.isArray(data.analysis?.positive_notes)
@@ -201,17 +261,26 @@ export default function ReportsScreen() {
             ? data.analysis.detected_issues
             : [],
           transcript: String(data.transcript || ''),
+          childId: data.childId || null,
+          childName: data.childName || null,
         };
       });
+      const nextChildren = childSnapshot.docs.map((item) => ({
+        id: item.id,
+        name: String(item.data().name || 'Child'),
+      }));
+
       console.log('Fetched reports:', nextReports.length);
       setReports(nextReports);
+      setChildren(nextChildren);
+      await updateBadges(user.uid, nextReports);
     } catch (error) {
       console.error('Failed to load insights:', error);
       setReports([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [updateBadges]);
 
   useFocusEffect(
     useCallback(() => {
@@ -219,42 +288,61 @@ export default function ReportsScreen() {
     }, [loadReports])
   );
 
+  const visibleReports = useMemo(() => {
+    if (selectedChildId === 'all') return reports;
+    return reports.filter((report) => report.childId === selectedChildId);
+  }, [reports, selectedChildId]);
+
   const summary = useMemo(() => {
-    const totalSessions = reports.length;
+    const totalSessions = visibleReports.length;
     const averageScore = totalSessions
-      ? Math.round(reports.reduce((sum, report) => sum + report.score, 0) / totalSessions)
+      ? Math.round(visibleReports.reduce((sum, report) => sum + report.score, 0) / totalSessions)
       : 0;
-    const strengths = reports.flatMap((report) => report.strengths);
-    const improvements = reports.flatMap((report) => report.improvements);
-    const chronologicalReports = reports.slice().reverse();
-    const lastSession = reports[0] || null;
+    const strengths = visibleReports.flatMap((report) => report.strengths);
+    const improvements = visibleReports.flatMap((report) => report.improvements);
+    const chronologicalReports = visibleReports.slice().reverse();
+    const lastSession = visibleReports[0] || null;
 
     return {
       totalSessions,
       averageScore,
       topStrength: topItem(strengths),
       topImprovement: topItem(improvements),
-      streak: calculateStreak(reports),
+      streak: calculateStreak(visibleReports),
       lastSession,
       chronologicalReports,
     };
-  }, [reports]);
+  }, [visibleReports]);
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <Text style={styles.pageTitle}>{t('insights_overview')}</Text>
       <Text style={styles.pageSubtitle}>Real progress from your saved coaching reports</Text>
 
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.childFilters}>
+        <TouchableOpacity
+          style={[styles.childFilter, selectedChildId === 'all' && styles.childFilterActive]}
+          onPress={() => setSelectedChildId('all')}
+        >
+          <Text style={selectedChildId === 'all' ? styles.childFilterTextActive : styles.childFilterText}>All children</Text>
+        </TouchableOpacity>
+        {children.map((child) => (
+          <TouchableOpacity
+            key={child.id}
+            style={[styles.childFilter, selectedChildId === child.id && styles.childFilterActive]}
+            onPress={() => setSelectedChildId(child.id)}
+          >
+            <Text style={selectedChildId === child.id ? styles.childFilterTextActive : styles.childFilterText}>{child.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
       {loading ? (
-        <View style={styles.loadingState}>
-          <ActivityIndicator color="#000" size="large" />
+        <>
           <Text style={styles.placeholderText}>Loading your insights...</Text>
-        </View>
-      ) : reports.length === 0 ? (
+          <SkeletonInsights />
+        </>
+      ) : visibleReports.length === 0 ? (
         <View style={styles.emptyState}>
           <FontAwesome name="bar-chart" size={46} color={Colors.textMuted} />
           <Text style={styles.emptyTitle}>{t('insights_title')}</Text>
@@ -263,12 +351,7 @@ export default function ReportsScreen() {
       ) : (
         <>
           <View style={styles.topGrid}>
-            <InsightCard
-              icon="check-circle"
-              title="Total Sessions"
-              value={String(summary.totalSessions)}
-              subtitle="Completed coaching sessions"
-            />
+            <InsightCard icon="check-circle" title="Total Sessions" value={String(summary.totalSessions)} subtitle="Completed coaching sessions" />
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.iconBubble}>
@@ -290,26 +373,9 @@ export default function ReportsScreen() {
             <ProgressLine reports={summary.chronologicalReports} />
           </View>
 
-          <InsightCard
-            icon="star"
-            title="Top Strength"
-            value={summary.topStrength}
-            subtitle="Most frequent positive behavior"
-          />
-
-          <InsightCard
-            icon="wrench"
-            title="Top Area To Improve"
-            value={summary.topImprovement}
-            subtitle="Most frequent flagged improvement"
-          />
-
-          <InsightCard
-            icon="fire"
-            title="Streak"
-            value={`${summary.streak} day${summary.streak === 1 ? '' : 's'}`}
-            subtitle="Days in a row with at least one session"
-          />
+          <InsightCard icon="star" title="Top Strength" value={summary.topStrength} subtitle="Most frequent positive behavior" />
+          <InsightCard icon="wrench" title="Top Area To Improve" value={summary.topImprovement} subtitle="Most frequent flagged improvement" />
+          <InsightCard icon="fire" title="Streak" value={`${summary.streak} day${summary.streak === 1 ? '' : 's'}`} subtitle="Days in a row with at least one session" />
 
           {summary.lastSession && (
             <View style={styles.card}>
@@ -319,7 +385,9 @@ export default function ReportsScreen() {
                 </View>
                 <Text style={styles.sectionTitle}>Last Session Summary</Text>
               </View>
-              <Text style={styles.cardValue}>{summary.lastSession.score}%</Text>
+              <Text style={[styles.cardValue, { color: getScoreColor(summary.lastSession.score) }]}>
+                {summary.lastSession.score}%
+              </Text>
               <Text style={styles.cardSubtitle}>
                 {summary.lastSession.date.toLocaleDateString(undefined, {
                   month: 'long',
@@ -330,12 +398,37 @@ export default function ReportsScreen() {
               <TouchableOpacity
                 style={styles.reportButton}
                 activeOpacity={0.8}
-                onPress={() => router.push(`/history/${summary.lastSession?.id}`)}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(drawer)/report-detail' as any,
+                    params: { id: summary.lastSession?.id },
+                  })
+                }
               >
                 <Text style={styles.reportButtonText}>View Full Report</Text>
               </TouchableOpacity>
             </View>
           )}
+
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={styles.iconBubble}>
+                <FontAwesome name="certificate" size={18} color="#000" />
+              </View>
+              <Text style={styles.sectionTitle}>Achievements</Text>
+            </View>
+            <View style={styles.badgeGrid}>
+              {badges.map((badge) => (
+                <View key={badge.id} style={[styles.badgeCard, !badge.earned && styles.badgeCardLocked]}>
+                  <Text style={styles.badgeIcon}>{badge.icon}</Text>
+                  <Text style={styles.badgeName}>{badge.name}</Text>
+                  <Text style={styles.badgeDate}>
+                    {badge.earned && badge.earnedAt ? `Earned on: ${badge.earnedAt.toLocaleDateString()}` : 'Not earned yet'}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
         </>
       )}
     </ScrollView>
@@ -343,28 +436,33 @@ export default function ReportsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: Colors.background,
-    flex: 1,
-  },
+  container: { backgroundColor: Colors.background, flex: 1 },
   content: {
     gap: 16,
     paddingBottom: Spacing.xxl,
     paddingHorizontal: Spacing.lg,
     paddingTop: 60,
   },
-  pageTitle: {
-    ...Typography.h1,
-    color: Colors.text,
-  },
+  pageTitle: { ...Typography.h1, color: Colors.text },
   pageSubtitle: {
     ...Typography.bodySmall,
     color: Colors.textMuted,
     marginTop: -8,
   },
-  topGrid: {
-    gap: 16,
+  childFilters: { marginBottom: 2 },
+  childFilter: {
+    backgroundColor: '#F5F5F5',
+    borderColor: '#E5E5E5',
+    borderRadius: 999,
+    borderWidth: 1,
+    marginRight: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
   },
+  childFilterActive: { backgroundColor: '#000', borderColor: '#000' },
+  childFilterText: { color: '#000', fontSize: 13, fontWeight: '700' },
+  childFilterTextActive: { color: '#FFF', fontSize: 13, fontWeight: '800' },
+  topGrid: { gap: 16 },
   card: {
     backgroundColor: Colors.backgroundCard,
     borderColor: Colors.border,
@@ -401,12 +499,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
-  cardValue: {
-    color: '#000',
-    fontSize: 30,
-    fontWeight: '900',
-    lineHeight: 38,
-  },
+  cardValue: { color: '#000', fontSize: 30, fontWeight: '900', lineHeight: 38 },
   cardSubtitle: {
     ...Typography.bodySmall,
     color: Colors.textMuted,
@@ -420,15 +513,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 150,
   },
-  ringCenter: {
-    alignItems: 'center',
-    position: 'absolute',
-  },
-  ringScore: {
-    color: '#000',
-    fontSize: 32,
-    fontWeight: '900',
-  },
+  ringCenter: { alignItems: 'center', position: 'absolute' },
+  ringScore: { fontSize: 32, fontWeight: '900' },
   ringLabel: {
     color: Colors.textMuted,
     fontSize: 12,
@@ -440,11 +526,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: -4,
   },
-  chartLabel: {
-    color: Colors.textMuted,
-    fontSize: 10,
-    fontWeight: '700',
-  },
+  chartLabel: { color: Colors.textMuted, fontSize: 10, fontWeight: '700' },
   reportButton: {
     alignItems: 'center',
     backgroundColor: '#000',
@@ -452,25 +534,25 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingVertical: 12,
   },
-  reportButtonText: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '800',
+  reportButtonText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
+  skeletonCard: {
+    backgroundColor: '#E5E5E5',
+    borderRadius: 16,
+    height: 130,
+    marginBottom: 16,
   },
-  loadingState: {
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: Spacing.xxl * 2,
-  },
+  badgeGrid: { gap: 10 },
+  badgeCard: { backgroundColor: '#F7F7F7', borderRadius: 12, padding: 14 },
+  badgeCardLocked: { opacity: 0.45 },
+  badgeIcon: { fontSize: 26 },
+  badgeName: { color: '#000', fontSize: 15, fontWeight: '900', marginTop: 6 },
+  badgeDate: { color: '#777', fontSize: 12, fontWeight: '600', marginTop: 3 },
   emptyState: {
     alignItems: 'center',
     gap: Spacing.md,
     paddingVertical: Spacing.xxl * 2,
   },
-  emptyTitle: {
-    ...Typography.h3,
-    color: Colors.text,
-  },
+  emptyTitle: { ...Typography.h3, color: Colors.text },
   placeholderText: {
     ...Typography.bodySmall,
     color: Colors.textMuted,

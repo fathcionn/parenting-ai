@@ -83,6 +83,13 @@ const fallbackAnalysis = {
   tips: ['Try shorter sessions for faster analysis'],
 };
 
+const fallbackSafety = {
+  safe: true,
+  severity: 'none',
+  detected: [],
+  recommendation: 'No concerning content was detected.',
+};
+
 const callGeminiWithTimeout = async (prompt) => {
   const timeoutPromise = new Promise((resolve) => {
     setTimeout(() => {
@@ -204,6 +211,47 @@ app.post('/api/analyze-audio', async (req, res) => {
   } catch (err) {
     console.error('Gemini audio error:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/check-safety', async (req, res) => {
+  try {
+    const { transcript } = req.body;
+    const safetyPrompt = `
+You are a child safety AI. Analyze this transcript for any signs of:
+- Verbal abuse or harsh language toward a child
+- Threats or intimidation
+- Emotional abuse or humiliation
+- Inappropriate content
+
+Transcript:
+"""
+${String(transcript || '').slice(0, 2000)}
+"""
+
+Return ONLY this JSON:
+{
+  "safe": true,
+  "severity": "none",
+  "detected": [],
+  "recommendation": "brief advice for parent"
+}
+
+If concerning content is found, set safe to false and severity to mild, moderate, or severe.`;
+
+    const responseText = await callGeminiWithTimeout(safetyPrompt);
+    const parsed = parseGeminiResponse(responseText);
+    const severityValues = ['none', 'mild', 'moderate', 'severe'];
+
+    res.json({
+      safe: typeof parsed.safe === 'boolean' ? parsed.safe : true,
+      severity: severityValues.includes(parsed.severity) ? parsed.severity : 'none',
+      detected: Array.isArray(parsed.detected) ? parsed.detected.map(String) : [],
+      recommendation: String(parsed.recommendation || fallbackSafety.recommendation),
+    });
+  } catch (err) {
+    console.error('Safety check error:', err);
+    res.json(fallbackSafety);
   }
 });
 
