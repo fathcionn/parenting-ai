@@ -6,7 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { I18nextProvider } from 'react-i18next';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -38,6 +38,11 @@ Notifications.setNotificationHandler({
 });
 
 async function registerForPushNotifications(userId: string) {
+  if (Platform.OS === 'web') {
+    console.log('Push notifications skipped on web');
+    return;
+  }
+
   try {
     const { status } = await Notifications.requestPermissionsAsync();
     if (status !== 'granted') return;

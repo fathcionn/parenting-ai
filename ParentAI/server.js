@@ -15,6 +15,24 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/api/test-gemini', async (_req, res) => {
+  try {
+    const response = await genAI.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: [{ parts: [{ text: 'Say hello in one word' }] }],
+    });
+    res.json({
+      success: true,
+      response: response.text,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
   try {
     if (!req.file) {
@@ -54,12 +72,12 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
 
     res.json({ transcript });
   } catch (error) {
-    console.error('Transcription error details:', error.message);
-    console.error('Full error:', JSON.stringify(error, null, 2));
+    console.error('TRANSCRIBE ERROR:', error.message);
+    console.error('TRANSCRIBE STACK:', error.stack);
     res.status(500).json({
       error: 'Transcription failed',
       details: error.message,
-      transcript: '',
+      stack: error.stack?.split('\n')[0],
     });
   }
 });

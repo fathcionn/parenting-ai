@@ -48,6 +48,9 @@
       "favicon": "./assets/logo.png",
       "template": "./web/index.html"
     },
+    "notification": {
+      "vapidPublicKey": "PLACEHOLDER_VAPID_KEY"
+    },
     "plugins": [
       "expo-router",
       [
