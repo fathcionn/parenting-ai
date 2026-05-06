@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { API_BASE_URL } from '../config/api';
 import {
@@ -25,11 +26,13 @@ export async function startRecording(micDeviceId?: string, language = 'en'): Pro
   micStream = null;
   audioChunks = [];
 
+  const savedMicId = micDeviceId || (await AsyncStorage.getItem('selectedMicId'));
+
   try {
     micStream = await navigator.mediaDevices.getUserMedia({
-      audio: micDeviceId && micDeviceId !== 'default'
+      audio: savedMicId && savedMicId !== 'default'
         ? {
-            deviceId: { exact: micDeviceId },
+            deviceId: { exact: savedMicId },
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,

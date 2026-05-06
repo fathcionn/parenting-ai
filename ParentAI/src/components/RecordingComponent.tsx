@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -94,10 +93,6 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
   const [children, setChildren] = useState<ChildOption[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(childId || null);
   const [selectedTag, setSelectedTag] = useState('general');
-  const [audioSourceMode, setAudioSourceMode] = useState<'device' | 'external'>('device');
-  const [availableMics, setAvailableMics] = useState<MediaDeviceInfo[]>([]);
-  const [selectedMicDeviceId, setSelectedMicDeviceId] = useState<string>('default');
-  const [showMicModal, setShowMicModal] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -139,25 +134,6 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       if (interval) clearInterval(interval);
     };
   }, [isRecording]);
-
-  async function loadAvailableMics() {
-    if (Platform.OS !== 'web' || !navigator.mediaDevices?.enumerateDevices) return;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((track) => track.stop());
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      setAvailableMics(devices.filter((device) => device.kind === 'audioinput'));
-    } catch (err) {
-      console.error('Failed to load audio devices:', err);
-      setError('Could not access microphones. Please check browser permissions.');
-    }
-  }
-
-  async function chooseExternalMic() {
-    setAudioSourceMode('external');
-    await loadAvailableMics();
-    setShowMicModal(true);
-  }
 
   function startWaveform(stream: MediaStream | null) {
     if (Platform.OS !== 'web') {
@@ -211,12 +187,8 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     setRecordingSeconds(0);
 
     try {
-      const micId =
-        audioSourceMode === 'external'
-          ? selectedMicDeviceId
-          : (await getStorageItem(STORAGE_KEYS.micId)) || 'default';
       const lang = (await getStorageItem(STORAGE_KEYS.speechLanguage)) || 'en';
-      await startRecording(micId, lang);
+      await startRecording(undefined, lang);
       const stream = getMicStream();
       startWaveform(stream);
       sessionStartRef.current = Date.now();
@@ -249,9 +221,16 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
 
     const selectedChild = children.find((item) => item.id === selectedChildId) || null;
     const score = calculateParentingScore(normalizedAnalysis);
+    const reportId = `report_${Date.now()}`;
+    const summary = String(result.summary || normalizedAnalysis.impact_analysis || '');
+    const strengths = Array.isArray(result.strengths) ? result.strengths : normalizedAnalysis.positive_notes;
+    const improvements = Array.isArray(result.improvements)
+      ? result.improvements
+      : normalizedAnalysis.detected_issues;
+    const tips = Array.isArray(result.tips) ? result.tips : normalizedAnalysis.suggestions;
 
     const report: CoachingReport = {
-      id: `report_${Date.now()}`,
+      id: reportId,
       createdAt: new Date().toISOString(),
       durationSeconds: Math.max(1, Math.round((Date.now() - sessionStartRef.current) / 1000)),
       audioUri: typeof audioData === 'string' ? audioData : null,
@@ -263,12 +242,10 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       childId: selectedChild?.id || null,
       childName: selectedChild?.name || null,
       tag: selectedTag,
-      summary: String(result.summary || normalizedAnalysis.impact_analysis || ''),
-      strengths: Array.isArray(result.strengths) ? result.strengths : normalizedAnalysis.positive_notes,
-      improvements: Array.isArray(result.improvements)
-        ? result.improvements
-        : normalizedAnalysis.detected_issues,
-      tips: Array.isArray(result.tips) ? result.tips : normalizedAnalysis.suggestions,
+      summary,
+      strengths,
+      improvements,
+      tips,
     };
 
     setTranscript(transcriptText);
@@ -276,8 +253,10 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     onReport?.(report);
     await saveToHistory(report);
 
+    let safetyFlag: any = { safe: true, severity: 'none', detected: [], recommendation: '' };
     try {
       const safety = await checkSessionSafety(transcriptText);
+      safetyFlag = safety;
       if (!safety.safe) {
         await saveSafetyFlag(report.id, safety);
         await notifySafetyFlag(report.id, safety, () =>
@@ -290,6 +269,21 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     } catch (safetyError) {
       console.warn('Safety check failed:', safetyError);
     }
+
+    router.push({
+      pathname: '/(drawer)/session-results' as any,
+      params: {
+        score: String(score),
+        summary,
+        strengths: JSON.stringify(strengths),
+        improvements: JSON.stringify(improvements),
+        tips: JSON.stringify(tips),
+        safetyFlag: JSON.stringify(safetyFlag),
+        reportId,
+        childName: selectedChild?.name || '',
+        sessionTag: selectedTag || '',
+      },
+    });
   }
 
   async function retryAnalysis() {
@@ -335,38 +329,6 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
 
   return (
     <Card title={cardTitle}>
-      <Text style={styles.selectorTitle}>Audio Source</Text>
-      <View style={styles.audioSourceGrid}>
-        <TouchableOpacity
-          style={[styles.audioSourceCard, audioSourceMode === 'device' && styles.audioSourceCardActive]}
-          onPress={() => {
-            setAudioSourceMode('device');
-            setSelectedMicDeviceId('default');
-          }}
-          disabled={isRecording || isLoading}
-        >
-          <Text style={styles.audioSourceIcon}>📱</Text>
-          <Text style={audioSourceMode === 'device' ? styles.audioSourceTextActive : styles.audioSourceText}>
-            This device
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.audioSourceCard, audioSourceMode === 'external' && styles.audioSourceCardActive]}
-          onPress={chooseExternalMic}
-          disabled={isRecording || isLoading}
-        >
-          <Text style={styles.audioSourceIcon}>🎙️</Text>
-          <Text style={audioSourceMode === 'external' ? styles.audioSourceTextActive : styles.audioSourceText}>
-            External microphone
-          </Text>
-        </TouchableOpacity>
-        <View style={[styles.audioSourceCard, styles.audioSourceDisabled]}>
-          <Text style={styles.audioSourceIcon}>📡</Text>
-          <Text style={styles.audioSourceText}>Child's device</Text>
-          <Text style={styles.comingSoonText}>Coming soon</Text>
-        </View>
-      </View>
-
       <Text style={styles.selectorTitle}>Which child is this session for?</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
         {children.length === 0 ? (
@@ -476,39 +438,6 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
 
       {!isLoading && currentAnalysis && <AnalysisDisplay analysis={currentAnalysis} />}
 
-      <Modal visible={showMicModal} transparent animationType="fade">
-        <TouchableOpacity
-          style={styles.modalBackdrop}
-          activeOpacity={1}
-          onPress={() => setShowMicModal(false)}
-        >
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Choose microphone</Text>
-            {availableMics.length === 0 ? (
-              <Text style={styles.modalEmpty}>No microphones found.</Text>
-            ) : (
-              availableMics.map((mic, index) => {
-                const isSelected = selectedMicDeviceId === mic.deviceId;
-                return (
-                  <TouchableOpacity
-                    key={mic.deviceId}
-                    style={[styles.micRow, isSelected && styles.micRowSelected]}
-                    onPress={() => {
-                      setSelectedMicDeviceId(mic.deviceId);
-                      setShowMicModal(false);
-                    }}
-                  >
-                    <Text style={isSelected ? styles.micRowTextSelected : styles.micRowText}>
-                      {mic.label || `Microphone ${index + 1}`}
-                    </Text>
-                    {isSelected ? <Text style={styles.micCheck}>✓</Text> : null}
-                  </TouchableOpacity>
-                );
-              })
-            )}
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </Card>
   );
 };
@@ -524,48 +453,6 @@ const styles = StyleSheet.create({
   },
   selectorScroll: {
     marginBottom: theme.spacing.md,
-  },
-  audioSourceGrid: {
-    gap: 8,
-    marginBottom: theme.spacing.md,
-  },
-  audioSourceCard: {
-    alignItems: 'center',
-    backgroundColor: '#F7F7F7',
-    borderColor: '#E5E5E5',
-    borderRadius: 12,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 10,
-    padding: 12,
-  },
-  audioSourceCardActive: {
-    backgroundColor: '#000',
-    borderColor: '#000',
-  },
-  audioSourceDisabled: {
-    opacity: 0.45,
-  },
-  audioSourceIcon: {
-    fontSize: 20,
-  },
-  audioSourceText: {
-    color: '#000',
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  audioSourceTextActive: {
-    color: '#FFF',
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  comingSoonText: {
-    color: '#777',
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
   },
   selectorPill: {
     backgroundColor: '#F5F5F5',
@@ -696,57 +583,5 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.bodySmall.fontSize,
     fontWeight: '600',
     textAlign: 'center',
-  },
-  modalBackdrop: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    maxWidth: 360,
-    padding: 20,
-    width: '100%',
-  },
-  modalTitle: {
-    color: '#000',
-    fontSize: 18,
-    fontWeight: '900',
-    marginBottom: 14,
-  },
-  modalEmpty: {
-    color: '#777',
-    fontSize: 14,
-  },
-  micRow: {
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 10,
-    flexDirection: 'row',
-    marginBottom: 8,
-    padding: 12,
-  },
-  micRowSelected: {
-    backgroundColor: '#000',
-  },
-  micRowText: {
-    color: '#000',
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  micRowTextSelected: {
-    color: '#FFF',
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  micCheck: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '900',
   },
 });

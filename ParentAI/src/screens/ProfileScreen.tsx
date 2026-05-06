@@ -1,9 +1,21 @@
-﻿import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Alert, Text, TouchableOpacity, Modal, TextInput, Switch } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  Alert,
+  Image,
+  Modal,
+  Platform,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import { signOut } from 'firebase/auth';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { signOut, updateProfile as updateFirebaseProfile } from 'firebase/auth';
+import { addDoc, collection, getDocs, orderBy, query, serverTimestamp } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
 import { auth, db, storage } from '../config/firebase-config';
@@ -13,6 +25,24 @@ import { Container, Card } from '../components/Layout';
 import { Button } from '../components/Button';
 import { getStorageItem, setStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 import { useAppTheme } from '../context/ThemeContext';
+import { reportScoreFromData, toReportDate } from '../utils/reportUtils';
+
+type ProfileStats = {
+  totalSessions: number;
+  averageScore: number;
+  streak: number;
+};
+
+const calculateDayStreak = (dates: Date[]) => {
+  const days = new Set(dates.map((date) => date.toISOString().slice(0, 10)));
+  let streak = 0;
+  const cursor = new Date();
+  while (days.has(cursor.toISOString().slice(0, 10))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+};
 
 export const ProfileScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -22,6 +52,13 @@ export const ProfileScreen: React.FC = () => {
   const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
   const [selectedMicId, setSelectedMicId] = useState<string>('default');
   const [showChildModal, setShowChildModal] = useState(false);
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [profileStats, setProfileStats] = useState<ProfileStats>({
+    totalSessions: 0,
+    averageScore: 0,
+    streak: 0,
+  });
   const [childName, setChildName] = useState('');
   const [childAge, setChildAge] = useState('');
   const [childPhotoUri, setChildPhotoUri] = useState('');
@@ -31,12 +68,24 @@ export const ProfileScreen: React.FC = () => {
   const [schoolName, setSchoolName] = useState('');
   const [safeZoneRadius, setSafeZoneRadius] = useState('500');
 
+  const displayName =
+    profile?.displayName || user?.displayName || user?.email?.split('@')[0] || 'TalkWise User';
+  const email = user?.email || profile?.email || '';
+  const avatarUrl = profile?.photoURL || user?.photoURL || '';
+  const avatarInitial = displayName.trim()[0]?.toUpperCase() || 'T';
+
+  useEffect(() => {
+    setNameInput(displayName);
+  }, [displayName]);
+
   useEffect(() => {
     async function loadMics() {
       try {
-        if (!navigator.mediaDevices?.getUserMedia || !navigator.mediaDevices?.enumerateDevices) {
-          return;
-        }
+        const saved = await AsyncStorage.getItem('selectedMicId');
+        if (saved) setSelectedMicId(saved);
+
+        if (Platform.OS !== 'web') return;
+        if (!navigator.mediaDevices?.getUserMedia || !navigator.mediaDevices?.enumerateDevices) return;
 
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         stream.getTracks().forEach((track) => track.stop());
@@ -44,14 +93,53 @@ export const ProfileScreen: React.FC = () => {
         const mics = devices.filter((device) => device.kind === 'audioinput');
         setMicrophones(mics);
 
-        const saved = await getStorageItem(STORAGE_KEYS.micId);
-        if (saved) setSelectedMicId(saved);
+        const legacySaved = await getStorageItem(STORAGE_KEYS.micId);
+        if (!saved && legacySaved) {
+          setSelectedMicId(legacySaved);
+          await AsyncStorage.setItem('selectedMicId', legacySaved);
+        }
       } catch (err) {
         console.error('Could not load microphones:', err);
       }
     }
 
     loadMics();
+  }, []);
+
+  useEffect(() => {
+    async function loadStats() {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        setProfileStats({ totalSessions: 0, averageScore: 0, streak: 0 });
+        return;
+      }
+
+      try {
+        const snapshot = await getDocs(
+          query(collection(db, 'users', currentUser.uid, 'reports'), orderBy('date', 'desc'))
+        );
+        const reports = snapshot.docs.map((item) => {
+          const data = item.data();
+          return {
+            score: reportScoreFromData(data),
+            date: toReportDate(data.date || data.createdAt),
+          };
+        });
+        const totalSessions = reports.length;
+        const averageScore = totalSessions
+          ? Math.round(reports.reduce((sum, item) => sum + item.score, 0) / totalSessions)
+          : 0;
+        setProfileStats({
+          totalSessions,
+          averageScore,
+          streak: calculateDayStreak(reports.map((item) => item.date)),
+        });
+      } catch (error) {
+        console.error('Failed to load profile stats:', error);
+      }
+    }
+
+    loadStats();
   }, []);
 
   const handleLogout = async () => {
@@ -62,6 +150,28 @@ export const ProfileScreen: React.FC = () => {
     } catch (error) {
       console.error('Logout error:', error);
       Alert.alert('Error', 'Failed to logout. Please try again.');
+    }
+  };
+
+  const handleSaveName = async () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed) {
+      Alert.alert('Error', 'Please enter a display name.');
+      return;
+    }
+    if (!auth.currentUser) {
+      Alert.alert('Error', 'You need to be signed in to edit your name.');
+      return;
+    }
+
+    try {
+      await updateFirebaseProfile(auth.currentUser, { displayName: trimmed });
+      updateProfile({ displayName: trimmed });
+      setShowNameModal(false);
+      Alert.alert('Success', 'Name updated successfully.');
+    } catch (error) {
+      console.error('Edit name error:', error);
+      Alert.alert('Error', 'Failed to update your name. Please try again.');
     }
   };
 
@@ -141,27 +251,41 @@ export const ProfileScreen: React.FC = () => {
 
   async function selectMic(deviceId: string) {
     setSelectedMicId(deviceId);
+    await AsyncStorage.setItem('selectedMicId', deviceId);
     await setStorageItem(STORAGE_KEYS.micId, deviceId);
   }
 
   return (
     <Container scroll>
-      <Card title={t('profile_edit')}>
-        <View style={styles.profileInfo}>
+      <View style={[styles.avatarSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+        ) : (
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {profile?.displayName?.[0]?.toUpperCase() || 'U'}
-            </Text>
+            <Text style={styles.avatarText}>{avatarInitial}</Text>
           </View>
-          <View style={styles.info}>
-            <Text style={styles.name}>{profile?.displayName || t('common_user')}</Text>
-            <Text style={styles.email}>{user?.email}</Text>
-            <Text style={styles.joinDate}>
-              {t('common_member_since')} {profile?.createdAt ? new Date(profile.createdAt).getFullYear() : t('common_recently')}
-            </Text>
-          </View>
+        )}
+        <Text style={[styles.profileName, { color: colors.text }]}>{displayName}</Text>
+        <Text style={[styles.profileEmail, { color: colors.muted }]}>{email}</Text>
+        <TouchableOpacity style={styles.editNameButton} onPress={() => setShowNameModal(true)}>
+          <Text style={styles.editNameText}>✏️ Edit Name</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.statsRow}>
+        <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.statValue, { color: colors.text }]}>{profileStats.totalSessions}</Text>
+          <Text style={[styles.statLabel, { color: colors.muted }]}>Total Sessions</Text>
         </View>
-      </Card>
+        <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.statValue, { color: colors.text }]}>{profileStats.averageScore}%</Text>
+          <Text style={[styles.statLabel, { color: colors.muted }]}>Average Score</Text>
+        </View>
+        <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.statValue, { color: colors.text }]}>{profileStats.streak}</Text>
+          <Text style={[styles.statLabel, { color: colors.muted }]}>Day Streak</Text>
+        </View>
+      </View>
 
       <Card title={t('profile_child_profile')}>
         {profile?.children && profile.children.length > 0 ? (
@@ -172,7 +296,13 @@ export const ProfileScreen: React.FC = () => {
             </View>
           ))
         ) : (
-          <Text style={styles.emptyText}>{t('profile_no_children')}</Text>
+          <View style={styles.childEmptyState}>
+            <Text style={styles.childEmptyIcon}>👶</Text>
+            <Text style={styles.childEmptyTitle}>No children added yet</Text>
+            <Text style={styles.childEmptyText}>
+              Add your child's profile to get personalized coaching insights
+            </Text>
+          </View>
         )}
         <Button
           title={t('profile_add_child')}
@@ -185,7 +315,7 @@ export const ProfileScreen: React.FC = () => {
       <Card title={t('profile_parenting_score')}>
         <View style={styles.scoreContainer}>
           <View style={styles.scoreCircle}>
-            <Text style={styles.scoreText}>{profile?.parentingScore || 0}</Text>
+            <Text style={styles.scoreText}>{profileStats.averageScore || profile?.parentingScore || 0}</Text>
           </View>
           <Text style={styles.scoreDescription}>{t('profile_score_subtitle')}</Text>
         </View>
@@ -217,9 +347,20 @@ export const ProfileScreen: React.FC = () => {
         />
       </Card>
 
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>🎙️ {t('profile_microphone')}</Text>
-        <Text style={styles.sectionSubtitle}>{t('profile_mic_subtitle')}</Text>
+      <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Audio Settings</Text>
+        <Text style={[styles.sectionSubtitle, { color: colors.muted }]}>🎙️ Audio Input Device</Text>
+
+        <TouchableOpacity
+          style={[styles.micRow, selectedMicId === 'default' && styles.selectedStyle]}
+          onPress={() => selectMic('default')}
+          activeOpacity={0.75}
+        >
+          <Text style={[styles.micLabel, selectedMicId === 'default' && styles.micLabelSelected]}>
+            This device
+          </Text>
+          {selectedMicId === 'default' && <Text style={styles.checkmark}>✓</Text>}
+        </TouchableOpacity>
 
         {microphones.length === 0 ? (
           <Text style={styles.emptyText}>{t('profile_no_mics')}</Text>
@@ -243,7 +384,42 @@ export const ProfileScreen: React.FC = () => {
         )}
       </View>
 
+      <View style={[styles.aboutCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.aboutTitle, { color: colors.text }]}>TalkWise</Text>
+        <Text style={[styles.aboutMeta, { color: colors.muted }]}>Version 1.0.0</Text>
+        <Text style={[styles.aboutTagline, { color: colors.text }]}>AI-powered parenting coach</Text>
+        <Text style={[styles.disclaimer, { color: colors.muted }]}>
+          ⚠️ AI safety detection is a helpful guide and should not replace professional judgment.
+        </Text>
+      </View>
+
       <Button title={t('profile_sign_out')} onPress={handleLogout} variant="outline" fullWidth />
+
+      <Modal visible={showNameModal} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Edit Name</Text>
+            <TextInput
+              value={nameInput}
+              onChangeText={setNameInput}
+              placeholder="Display name"
+              placeholderTextColor="#888"
+              style={styles.modalInput}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalSecondaryButton}
+                onPress={() => setShowNameModal(false)}
+              >
+                <Text style={styles.modalSecondaryText}>{t('common_cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalPrimaryButton} onPress={handleSaveName}>
+                <Text style={styles.modalPrimaryText}>{t('common_save')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={showChildModal} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
@@ -326,90 +502,142 @@ export const ProfileScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  profileInfo: {
-    flexDirection: 'row',
+  avatarSection: {
     alignItems: 'center',
+    borderRadius: 18,
+    borderWidth: 1,
     marginVertical: theme.spacing.md,
+    padding: 22,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.colors.primary,
-    justifyContent: 'center',
     alignItems: 'center',
-    marginRight: theme.spacing.lg,
+    backgroundColor: '#000',
+    borderRadius: 45,
+    height: 90,
+    justifyContent: 'center',
+    width: 90,
+  },
+  avatarImage: {
+    borderRadius: 45,
+    height: 90,
+    width: 90,
   },
   avatarText: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: theme.colors.background,
+    color: '#FFF',
+    fontSize: 36,
+    fontWeight: '900',
   },
-  info: {
+  profileName: {
+    fontSize: 24,
+    fontWeight: '900',
+    marginTop: 14,
+  },
+  profileEmail: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  editNameButton: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 999,
+    marginTop: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+  },
+  editNameText: {
+    color: '#000',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 8,
+  },
+  statCard: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
     flex: 1,
+    padding: 12,
   },
-  name: {
-    fontSize: theme.typography.h3.fontSize,
-    fontWeight: '700',
-    color: theme.colors.text,
+  statValue: {
+    fontSize: 22,
+    fontWeight: '900',
   },
-  email: {
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.sm,
-  },
-  joinDate: {
-    fontSize: theme.typography.bodySmall.fontSize,
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.sm,
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 4,
+    textAlign: 'center',
   },
   childItem: {
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
+    borderBottomWidth: 1,
+    paddingVertical: theme.spacing.md,
   },
   childName: {
+    color: theme.colors.text,
     fontSize: theme.typography.body.fontSize,
     fontWeight: '600',
-    color: theme.colors.text,
   },
   childAge: {
-    fontSize: theme.typography.bodySmall.fontSize,
     color: theme.colors.textSecondary,
+    fontSize: theme.typography.bodySmall.fontSize,
     marginTop: theme.spacing.sm,
   },
-  emptyText: {
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.textSecondary,
+  childEmptyState: {
+    alignItems: 'center',
+    marginBottom: 14,
+    paddingVertical: 8,
+  },
+  childEmptyIcon: {
+    fontSize: 42,
+    marginBottom: 8,
+  },
+  childEmptyTitle: {
+    color: '#000',
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  childEmptyText: {
+    color: '#777',
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 19,
+    marginTop: 6,
     textAlign: 'center',
+  },
+  emptyText: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.typography.body.fontSize,
     marginVertical: theme.spacing.md,
+    textAlign: 'center',
   },
   scoreContainer: {
     alignItems: 'center',
     marginVertical: theme.spacing.md,
   },
   scoreCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: theme.colors.primaryLight,
-    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: theme.colors.primaryLight,
+    borderRadius: 60,
+    height: 120,
+    justifyContent: 'center',
     marginBottom: theme.spacing.md,
+    width: 120,
   },
   scoreText: {
+    color: theme.colors.primary,
     fontSize: 48,
     fontWeight: '700',
-    color: theme.colors.primary,
   },
   scoreDescription: {
-    fontSize: theme.typography.bodySmall.fontSize,
     color: theme.colors.textSecondary,
+    fontSize: theme.typography.bodySmall.fontSize,
     textAlign: 'center',
   },
   sectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E5E5',
     borderRadius: 12,
     borderWidth: 1,
     marginBottom: 16,
@@ -457,6 +685,32 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
   },
+  aboutCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 16,
+    padding: 18,
+  },
+  aboutTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  aboutMeta: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  aboutTagline: {
+    fontSize: 15,
+    fontWeight: '800',
+    marginTop: 12,
+  },
+  disclaimer: {
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 18,
+    marginTop: 12,
+  },
   modalBackdrop: {
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.45)',
@@ -467,9 +721,9 @@ const styles = StyleSheet.create({
   modalCard: {
     backgroundColor: '#FFF',
     borderRadius: 16,
+    maxWidth: 360,
     padding: 20,
     width: '100%',
-    maxWidth: 360,
   },
   modalTitle: {
     color: '#000',
@@ -532,4 +786,3 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 });
-

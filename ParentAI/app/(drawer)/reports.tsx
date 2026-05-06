@@ -40,6 +40,55 @@ type BadgeState = {
   name: string;
   earned: boolean;
   earnedAt?: Date | null;
+  requirement: string;
+};
+
+const badgeDefinitions = (reports: FirestoreReport[]): BadgeState[] => {
+  const uniqueDays = new Set(reports.map((report) => report.date.toISOString().slice(0, 10)));
+  return [
+    {
+      id: 'first_steps',
+      icon: '🎉',
+      name: 'First Steps',
+      earned: reports.length >= 1,
+      requirement: 'Complete 1 session to unlock',
+    },
+    {
+      id: 'on_a_roll',
+      icon: '🔥',
+      name: 'On a Roll',
+      earned: reports.length >= 3,
+      requirement: 'Complete 3 sessions to unlock',
+    },
+    {
+      id: 'committed_parent',
+      icon: '🏆',
+      name: 'Committed Parent',
+      earned: reports.length >= 10,
+      requirement: 'Complete 10 sessions to unlock',
+    },
+    {
+      id: 'high_scorer',
+      icon: '⭐',
+      name: 'High Scorer',
+      earned: reports.some((report) => report.score > 80),
+      requirement: 'Score above 80 to unlock',
+    },
+    {
+      id: 'consistent',
+      icon: '📅',
+      name: 'Consistent',
+      earned: uniqueDays.size >= 3,
+      requirement: 'Complete sessions on 3 different days',
+    },
+    {
+      id: 'excellence',
+      icon: '🌟',
+      name: 'Excellence',
+      earned: reports.some((report) => report.score > 90),
+      requirement: 'Score above 90 to unlock',
+    },
+  ];
 };
 
 const topItem = (items: string[]) => {
@@ -73,7 +122,14 @@ function ScoreRing({ score }: { score: number }) {
   return (
     <View style={styles.ringWrapper}>
       <Svg width={size} height={size}>
-        <Circle cx={size / 2} cy={size / 2} r={radius} stroke="#E7E7E7" strokeWidth={strokeWidth} fill="transparent" />
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="#E7E7E7"
+          strokeWidth={strokeWidth}
+          fill="transparent"
+        />
         <Circle
           cx={size / 2}
           cy={size / 2}
@@ -117,8 +173,20 @@ function ProgressLine({ reports }: { reports: FirestoreReport[] }) {
   return (
     <View>
       <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
-        <Polyline points={`${padding},${padding} ${padding},${height - padding} ${width - padding},${height - padding}`} fill="none" stroke="#E5E5E5" strokeWidth={2} />
-        <Polyline points={points.join(' ')} fill="none" stroke="#000" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+        <Polyline
+          points={`${padding},${padding} ${padding},${height - padding} ${width - padding},${height - padding}`}
+          fill="none"
+          stroke="#E5E5E5"
+          strokeWidth={2}
+        />
+        <Polyline
+          points={points.join(' ')}
+          fill="none"
+          stroke="#000"
+          strokeWidth={3}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
         {chartReports.map((report, index) => {
           const [x, y] = points[index].split(',').map(Number);
           return <Circle key={report.id} cx={x} cy={y} r={5} fill={getScoreColor(report.score)} />;
@@ -182,26 +250,43 @@ function InsightCard({
   );
 }
 
+function AchievementsSection({ badges }: { badges: BadgeState[] }) {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <View style={styles.iconBubble}>
+          <FontAwesome name="certificate" size={18} color="#000" />
+        </View>
+        <Text style={styles.sectionTitle}>Achievements</Text>
+      </View>
+      <View style={styles.badgeGrid}>
+        {badges.map((badge) => (
+          <View key={badge.id} style={[styles.badgeCard, !badge.earned && styles.badgeCardLocked]}>
+            <Text style={styles.badgeIcon}>{badge.earned ? badge.icon : '🔒'}</Text>
+            <Text style={styles.badgeName}>{badge.name}</Text>
+            <Text style={styles.badgeDate}>
+              {badge.earned && badge.earnedAt
+                ? `Earned on: ${badge.earnedAt.toLocaleDateString()}`
+                : badge.requirement}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export default function ReportsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const [reports, setReports] = useState<FirestoreReport[]>([]);
   const [children, setChildren] = useState<ChildFilter[]>([]);
   const [selectedChildId, setSelectedChildId] = useState('all');
-  const [badges, setBadges] = useState<BadgeState[]>([]);
+  const [badges, setBadges] = useState<BadgeState[]>(badgeDefinitions([]));
   const [loading, setLoading] = useState(true);
 
   const updateBadges = useCallback(async (userId: string, sourceReports: FirestoreReport[]) => {
-    const uniqueDays = new Set(sourceReports.map((report) => report.date.toISOString().slice(0, 10)));
-    const definitions: BadgeState[] = [
-      { id: 'first_steps', icon: '🎉', name: 'First Steps', earned: sourceReports.length >= 1 },
-      { id: 'on_a_roll', icon: '🔥', name: 'On a Roll', earned: sourceReports.length >= 3 },
-      { id: 'committed_parent', icon: '🏆', name: 'Committed Parent', earned: sourceReports.length >= 10 },
-      { id: 'high_scorer', icon: '⭐', name: 'High Scorer', earned: sourceReports.some((report) => report.score > 80) },
-      { id: 'consistent', icon: '📅', name: 'Consistent', earned: uniqueDays.size >= 3 },
-      { id: 'excellence', icon: '🌟', name: 'Excellence', earned: sourceReports.some((report) => report.score > 90) },
-    ];
-
+    const definitions = badgeDefinitions(sourceReports);
     const existingSnapshot = await getDocs(collection(db, 'users', userId, 'badges'));
     const existing = new Map(
       existingSnapshot.docs.map((item) => [item.id, item.data().earnedAt?.toDate?.() || new Date()])
@@ -234,6 +319,7 @@ export default function ReportsScreen() {
       if (!user) {
         console.log('Fetched reports:', 0);
         setReports([]);
+        setBadges(badgeDefinitions([]));
         return;
       }
 
@@ -277,6 +363,7 @@ export default function ReportsScreen() {
     } catch (error) {
       console.error('Failed to load insights:', error);
       setReports([]);
+      setBadges(badgeDefinitions([]));
     } finally {
       setLoading(false);
     }
@@ -324,7 +411,9 @@ export default function ReportsScreen() {
           style={[styles.childFilter, selectedChildId === 'all' && styles.childFilterActive]}
           onPress={() => setSelectedChildId('all')}
         >
-          <Text style={selectedChildId === 'all' ? styles.childFilterTextActive : styles.childFilterText}>All children</Text>
+          <Text style={selectedChildId === 'all' ? styles.childFilterTextActive : styles.childFilterText}>
+            All children
+          </Text>
         </TouchableOpacity>
         {children.map((child) => (
           <TouchableOpacity
@@ -332,7 +421,9 @@ export default function ReportsScreen() {
             style={[styles.childFilter, selectedChildId === child.id && styles.childFilterActive]}
             onPress={() => setSelectedChildId(child.id)}
           >
-            <Text style={selectedChildId === child.id ? styles.childFilterTextActive : styles.childFilterText}>{child.name}</Text>
+            <Text style={selectedChildId === child.id ? styles.childFilterTextActive : styles.childFilterText}>
+              {child.name}
+            </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -343,15 +434,28 @@ export default function ReportsScreen() {
           <SkeletonInsights />
         </>
       ) : visibleReports.length === 0 ? (
-        <View style={styles.emptyState}>
-          <FontAwesome name="bar-chart" size={46} color={Colors.textMuted} />
-          <Text style={styles.emptyTitle}>{t('insights_title')}</Text>
-          <Text style={styles.placeholderText}>Complete a session to unlock insights.</Text>
-        </View>
+        <>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>📊</Text>
+            <Text style={styles.emptyTitle}>No insights yet</Text>
+            <Text style={styles.placeholderText}>
+              Complete at least one coaching session to unlock your personalized insights
+            </Text>
+            <TouchableOpacity style={styles.emptyButton} onPress={() => router.push('/(drawer)/record' as any)}>
+              <Text style={styles.emptyButtonText}>Start a Session</Text>
+            </TouchableOpacity>
+          </View>
+          <AchievementsSection badges={badges} />
+        </>
       ) : (
         <>
           <View style={styles.topGrid}>
-            <InsightCard icon="check-circle" title="Total Sessions" value={String(summary.totalSessions)} subtitle="Completed coaching sessions" />
+            <InsightCard
+              icon="check-circle"
+              title="Total Sessions"
+              value={String(summary.totalSessions)}
+              subtitle="Completed coaching sessions"
+            />
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.iconBubble}>
@@ -375,7 +479,12 @@ export default function ReportsScreen() {
 
           <InsightCard icon="star" title="Top Strength" value={summary.topStrength} subtitle="Most frequent positive behavior" />
           <InsightCard icon="wrench" title="Top Area To Improve" value={summary.topImprovement} subtitle="Most frequent flagged improvement" />
-          <InsightCard icon="fire" title="Streak" value={`${summary.streak} day${summary.streak === 1 ? '' : 's'}`} subtitle="Days in a row with at least one session" />
+          <InsightCard
+            icon="fire"
+            title="Streak"
+            value={`${summary.streak} day${summary.streak === 1 ? '' : 's'}`}
+            subtitle="Days in a row with at least one session"
+          />
 
           {summary.lastSession && (
             <View style={styles.card}>
@@ -410,25 +519,7 @@ export default function ReportsScreen() {
             </View>
           )}
 
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.iconBubble}>
-                <FontAwesome name="certificate" size={18} color="#000" />
-              </View>
-              <Text style={styles.sectionTitle}>Achievements</Text>
-            </View>
-            <View style={styles.badgeGrid}>
-              {badges.map((badge) => (
-                <View key={badge.id} style={[styles.badgeCard, !badge.earned && styles.badgeCardLocked]}>
-                  <Text style={styles.badgeIcon}>{badge.icon}</Text>
-                  <Text style={styles.badgeName}>{badge.name}</Text>
-                  <Text style={styles.badgeDate}>
-                    {badge.earned && badge.earnedAt ? `Earned on: ${badge.earnedAt.toLocaleDateString()}` : 'Not earned yet'}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
+          <AchievementsSection badges={badges} />
         </>
       )}
     </ScrollView>
@@ -552,7 +643,20 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     paddingVertical: Spacing.xxl * 2,
   },
+  emptyIcon: { fontSize: 48 },
   emptyTitle: { ...Typography.h3, color: Colors.text },
+  emptyButton: {
+    backgroundColor: '#000',
+    borderRadius: 14,
+    marginTop: 4,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  emptyButtonText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '900',
+  },
   placeholderText: {
     ...Typography.bodySmall,
     color: Colors.textMuted,

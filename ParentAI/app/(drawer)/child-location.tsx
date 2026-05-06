@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Location from 'expo-location';
+import { useRouter } from 'expo-router';
 import { collection, doc, getDocs, orderBy, query, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase-config';
 import { BorderRadius, Colors, Spacing, Typography } from '../../src/constants/theme';
@@ -30,6 +31,7 @@ function minutesAgo(value: any) {
 }
 
 export default function ChildLocationScreen() {
+  const router = useRouter();
   const [children, setChildren] = useState<ChildRecord[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
@@ -114,6 +116,29 @@ export default function ChildLocationScreen() {
         longitudeDelta: 0.2,
       };
 
+  if (children.length === 0) {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.headerRow}>
+          <Text style={styles.title}>Child Location</Text>
+          <View style={styles.betaBadge}>
+            <Text style={styles.betaText}>Beta</Text>
+          </View>
+        </View>
+        <Text style={styles.subtitle}>Manual location sharing for future child device support.</Text>
+
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>👶</Text>
+          <Text style={styles.emptyTitle}>No children added yet</Text>
+          <Text style={styles.emptyText}>Add a child profile to track location</Text>
+          <TouchableOpacity style={styles.emptyButton} onPress={() => router.push('/(drawer)/profile' as any)}>
+            <Text style={styles.emptyButtonText}>Add Child</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.headerRow}>
@@ -125,24 +150,18 @@ export default function ChildLocationScreen() {
       <Text style={styles.subtitle}>Manual location sharing for future child device support.</Text>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.childTabs}>
-        {children.length === 0 ? (
-          <View style={[styles.childPill, styles.childPillActive]}>
-            <Text style={styles.childPillTextActive}>No children yet</Text>
-          </View>
-        ) : (
-          children.map((child) => {
-            const selected = selectedChildId === child.id;
-            return (
-              <TouchableOpacity
-                key={child.id}
-                style={[styles.childPill, selected && styles.childPillActive]}
-                onPress={() => setSelectedChildId(child.id)}
-              >
-                <Text style={selected ? styles.childPillTextActive : styles.childPillText}>{child.name}</Text>
-              </TouchableOpacity>
-            );
-          })
-        )}
+        {children.map((child) => {
+          const selected = selectedChildId === child.id;
+          return (
+            <TouchableOpacity
+              key={child.id}
+              style={[styles.childPill, selected && styles.childPillActive]}
+              onPress={() => setSelectedChildId(child.id)}
+            >
+              <Text style={selected ? styles.childPillTextActive : styles.childPillText}>{child.name}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       <View style={styles.mapCard}>
@@ -220,4 +239,24 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   emergencyButtonText: { color: '#EF4444', fontSize: 16, fontWeight: '900' },
+  emptyState: {
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderColor: '#E5E5E5',
+    borderRadius: 18,
+    borderWidth: 1,
+    marginTop: 36,
+    padding: 28,
+  },
+  emptyIcon: { fontSize: 50, marginBottom: 12 },
+  emptyTitle: { color: '#000', fontSize: 22, fontWeight: '900', textAlign: 'center' },
+  emptyText: { color: '#777', fontSize: 14, fontWeight: '700', marginTop: 8, textAlign: 'center' },
+  emptyButton: {
+    backgroundColor: '#000',
+    borderRadius: 14,
+    marginTop: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  emptyButtonText: { color: '#FFF', fontSize: 14, fontWeight: '900' },
 });

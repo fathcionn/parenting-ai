@@ -205,9 +205,12 @@ export default function HistoryScreen() {
         <SkeletonCards />
       ) : filteredHistory.length === 0 ? (
         <View style={styles.emptyState}>
-          <FontAwesome name="microphone-slash" size={42} color={Colors.textMuted} />
-          <Text style={styles.emptyTitle}>{t('history_empty')}</Text>
-          <Text style={styles.emptyText}>{t('home_session_saved')}</Text>
+          <Text style={styles.emptyIcon}>🎙️</Text>
+          <Text style={styles.emptyTitle}>No sessions yet</Text>
+          <Text style={styles.emptyText}>Start your first coaching session to see your history here</Text>
+          <TouchableOpacity style={styles.emptyButton} onPress={() => router.push('/(drawer)/record' as any)}>
+            <Text style={styles.emptyButtonText}>Start First Session</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         filteredHistory.map((record) => {
@@ -238,7 +241,9 @@ export default function HistoryScreen() {
                       </View>
                     ) : null}
                     <View style={[styles.tagBadge, { backgroundColor: tag.color }]}>
-                      <Text style={styles.tagBadgeText}>{tag.icon} {tag.label}</Text>
+                      <Text style={styles.tagBadgeText}>
+                        {tag.icon} {tag.label}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -447,6 +452,9 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     paddingVertical: Spacing.xxl * 2,
   },
+  emptyIcon: {
+    fontSize: 48,
+  },
   emptyTitle: {
     ...Typography.h3,
     color: Colors.text,
@@ -456,5 +464,16 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     lineHeight: 20,
     textAlign: 'center',
+  },
+  emptyButton: {
+    backgroundColor: '#000',
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  emptyButtonText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '900',
   },
 });

@@ -129,6 +129,13 @@ export default function DrawerLayout() {
             title: t('history_view_report'),
           }}
         />
+        <Drawer.Screen
+          name="session-results"
+          options={{
+            drawerItemStyle: { display: 'none' },
+            title: 'Session Complete',
+          }}
+        />
       </Drawer>
     </GestureHandlerRootView>
   );
