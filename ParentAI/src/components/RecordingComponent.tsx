@@ -286,21 +286,26 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     setIsLoading(false);
     setIsAnalyzing(false);
 
-    router.push({
-      pathname: '/(drawer)/session-results' as any,
-      params: {
-        score: String(score),
-        summary,
-        strengths: JSON.stringify(strengths),
-        improvements: JSON.stringify(improvements),
-        tips: JSON.stringify(tips),
-        safetyFlag: JSON.stringify(safetyFlag),
-        reportId,
-        childName: selectedChild?.name || '',
-        sessionTag: selectedTag || '',
-        durationSeconds: String(report.durationSeconds || 0),
-      },
-    });
+    try {
+      router.push({
+        pathname: '/(drawer)/session-results' as any,
+        params: {
+          score: String(score),
+          summary,
+          strengths: JSON.stringify(strengths),
+          improvements: JSON.stringify(improvements),
+          tips: JSON.stringify(tips),
+          safetyFlag: JSON.stringify(safetyFlag),
+          reportId,
+          childName: selectedChild?.name || '',
+          sessionTag: selectedTag || '',
+          durationSeconds: String(report.durationSeconds || 0),
+        },
+      });
+    } catch (navError) {
+      console.error('Navigation failed:', navError);
+      Alert.alert('Navigation Error', 'Could not navigate to results. Please try again.');
+    }
     } catch (error) {
       console.error('Transcription error details:', error);
       Alert.alert(
@@ -308,6 +313,9 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
         'Could not analyze your session. Please check your internet connection and try again.',
         [{ text: 'OK' }]
       );
+      // Clear loading on error
+      setIsLoading(false);
+      setIsAnalyzing(false);
       return;
     }
   }

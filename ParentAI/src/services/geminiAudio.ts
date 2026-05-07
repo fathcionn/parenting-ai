@@ -2,9 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { API_BASE_URL } from '../config/api';
 import {
-    audioFileToBase64,
-    startNativeRecording,
-    stopNativeRecording,
+  audioFileToBase64,
+  startNativeRecording,
+  stopNativeRecording,
 } from './nativeAudio';
 
 let mediaRecorder: MediaRecorder | null = null;
