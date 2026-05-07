@@ -1,11 +1,11 @@
 require('dotenv').config();
-const { GoogleGenAI } = require('@google/genai');
+const OpenAI = require('openai');
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 
 const app = express();
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(cors());
@@ -15,15 +15,15 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/api/test-gemini', async (_req, res) => {
+app.get('/api/test-openai', async (_req, res) => {
   try {
-    const response = await genAI.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: [{ parts: [{ text: 'Say hello in one word' }] }],
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: 'Say hello in one word' }],
     });
     res.json({
       success: true,
-      response: response.text,
+      response: response.choices[0].message.content,
     });
   } catch (error) {
     res.status(500).json({
@@ -42,31 +42,20 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
     console.log('Audio received:', req.file.size, 'bytes');
     console.log('Audio mimetype:', req.file.mimetype);
 
-    const audioBase64 = req.file.buffer.toString('base64');
+    // Create a readable stream from the buffer
+    const audioBuffer = req.file.buffer;
+    const audioFile = new File([audioBuffer], 'recording.webm', { type: req.file.mimetype });
 
-    const response = await genAI.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: [
-        {
-          parts: [
-            {
-              inlineData: {
-                mimeType: 'audio/webm',
-                data: audioBase64,
-              },
-            },
-            {
-              text: 'Transcribe this audio. Return only the spoken words.',
-            },
-          ],
-        },
-      ],
+    // Use OpenAI Whisper for transcription
+    const transcription = await openai.audio.transcriptions.create({
+      file: audioFile,
+      model: 'whisper-1',
     });
 
-    const transcript = response.text.trim();
+    const transcript = transcription.text.trim();
     console.log('Transcript result:', transcript.slice(0, 200));
 
-    if (!transcript || transcript === 'no speech detected') {
+    if (!transcript) {
       return res.json({ transcript: '' });
     }
 
@@ -108,23 +97,52 @@ const fallbackSafety = {
   recommendation: 'No concerning content was detected.',
 };
 
-const callGeminiWithTimeout = async (prompt) => {
+const callOpenAIWithTimeout = async (input, language = 'English', isSafetyCheck = false) => {
   const timeoutPromise = new Promise((resolve) => {
     setTimeout(() => {
-      resolve(JSON.stringify(fallbackAnalysis));
+      resolve(isSafetyCheck ? fallbackSafety : fallbackAnalysis);
     }, 30000);
   });
 
-  const geminiPromise = genAI.models
-    .generateContent({
-      model: 'gemini-2.0-flash',
-      contents: [{ parts: [{ text: prompt }] }],
-    })
-    .then((response) => response.text.trim());
-  return Promise.race([geminiPromise, timeoutPromise]);
+  const messages = isSafetyCheck ? [
+    {
+      role: 'system',
+      content: 'You are a child safety AI. Analyze the transcript for concerning content and return JSON.'
+    },
+    {
+      role: 'user',
+      content: input
+    }
+  ] : [
+    {
+      role: 'system',
+      content: `You are an expert parenting coach.
+      Analyze this parent-child conversation transcript
+      and return a JSON response with:
+      {
+        "score": number (0-100),
+        "summary": string,
+        "strengths": string[],
+        "improvements": string[],
+        "tips": string[]
+      }`
+    },
+    {
+      role: 'user',
+      content: input
+    }
+  ];
+
+  const openaiPromise = openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages,
+    response_format: { type: 'json_object' }
+  }).then((response) => response.choices[0].message.content);
+
+  return Promise.race([openaiPromise, timeoutPromise]);
 };
 
-const parseGeminiResponse = (rawText) => {
+const parseOpenAIResponse = (rawText) => {
   try {
     return JSON.parse(rawText);
   } catch {
@@ -146,10 +164,10 @@ const parseGeminiResponse = (rawText) => {
 
 function extractSafeJson(rawText, transcript = '') {
   rawText = String(rawText || '').trim();
-  console.log('RAW GEMINI RESPONSE:', rawText.substring(0, 600));
-  console.log('Gemini raw response:', rawText.substring(0, 300));
+  console.log('RAW OPENAI RESPONSE:', rawText.substring(0, 600));
+  console.log('OpenAI raw response:', rawText.substring(0, 300));
 
-  const parsed = parseGeminiResponse(rawText);
+  const parsed = parseOpenAIResponse(rawText);
   const score = typeof parsed.score === 'number' ? Math.max(0, Math.min(100, Math.round(parsed.score))) : 50;
   const strengths = Array.isArray(parsed.strengths) ? parsed.strengths : [];
   const improvements = Array.isArray(parsed.improvements) ? parsed.improvements : [];
@@ -180,12 +198,10 @@ app.post('/api/analyze', async (req, res) => {
     const languageNames = { en: 'English', ar: 'Arabic', tr: 'Turkish' };
     const langName = languageNames[language] || 'English';
 
-    const prompt = buildStrictJsonPrompt(langName, transcript);
-
-    const responseText = await callGeminiWithTimeout(prompt);
+    const responseText = await callOpenAIWithTimeout(transcript, langName, false);
     res.json(extractSafeJson(responseText, transcript));
   } catch (err) {
-    console.error('Gemini error:', err);
+    console.error('OpenAI error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -196,38 +212,27 @@ app.post('/api/analyze-audio', async (req, res) => {
     const audioPayload = audioBase64 || audio;
     const promptLanguage = language || lang || 'English';
 
-    const prompt = buildStrictJsonPrompt(promptLanguage);
+    // Convert base64 to buffer for OpenAI
+    const audioBuffer = Buffer.from(audioPayload, 'base64');
+    const audioFile = new File([audioBuffer], 'recording.webm', { type: mimeType || 'audio/webm' });
 
-    const resultPromise = genAI.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: [
-        {
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                mimeType: mimeType || 'audio/webm',
-                data: audioPayload,
-              },
-            },
-          ],
-        },
-      ],
-      config: {
-        maxOutputTokens: 2048,
-        temperature: 0.1,
-        responseMimeType: 'application/json',
-      },
+    // First transcribe with Whisper
+    const transcription = await openai.audio.transcriptions.create({
+      file: audioFile,
+      model: 'whisper-1',
     });
 
-    const responseText = await Promise.race([
-      resultPromise.then((response) => response.text.trim()),
-      new Promise((resolve) => setTimeout(() => resolve(JSON.stringify(fallbackAnalysis)), 30000)),
-    ]);
+    const transcript = transcription.text.trim();
 
-    res.json(extractSafeJson(responseText));
+    if (!transcript) {
+      return res.json(extractSafeJson(JSON.stringify(fallbackAnalysis)));
+    }
+
+    // Then analyze with GPT-4o-mini
+    const responseText = await callOpenAIWithTimeout(transcript, promptLanguage);
+    res.json(extractSafeJson(responseText, transcript));
   } catch (err) {
-    console.error('Gemini audio error:', err);
+    console.error('OpenAI audio error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -257,8 +262,8 @@ Return ONLY this JSON:
 
 If concerning content is found, set safe to false and severity to mild, moderate, or severe.`;
 
-    const responseText = await callGeminiWithTimeout(safetyPrompt);
-    const parsed = parseGeminiResponse(responseText);
+    const responseText = await callOpenAIWithTimeout(safetyPrompt, 'English', true);
+    const parsed = parseOpenAIResponse(responseText);
     const severityValues = ['none', 'mild', 'moderate', 'severe'];
 
     res.json({
