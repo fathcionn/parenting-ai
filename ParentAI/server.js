@@ -1,14 +1,17 @@
 require('dotenv').config();
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
+const os = require('os');
 const Groq = require('groq-sdk');
+const { toFile } = require('groq-sdk');
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 
 const app = express();
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(cors());
@@ -38,8 +41,6 @@ app.get('/api/test-groq', async (_req, res) => {
 });
 
 app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
-  let tempFilePath = null;
-
   try {
     const audioFile = req.file;
 
@@ -53,25 +54,17 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
       originalname: audioFile.originalname,
     });
 
-    const ext =
-      audioFile.originalname?.split('.').pop() ||
-      (audioFile.mimetype.includes('mp4') ? 'mp4' :
-       audioFile.mimetype.includes('webm') ? 'webm' :
-       audioFile.mimetype.includes('wav') ? 'wav' :
-       audioFile.mimetype.includes('ogg') ? 'ogg' : 'mp4');
+    const filename = audioFile.originalname || 'recording.mp4';
 
-    tempFilePath = path.join(
-      os.tmpdir(),
-      `upload-${Date.now()}.${ext}`
-    );
-
-    fs.writeFileSync(tempFilePath, audioFile.buffer);
+    const groqFile = await toFile(audioFile.buffer, filename, {
+      type: audioFile.mimetype || 'audio/mp4',
+    });
 
     const transcription = await groq.audio.transcriptions.create({
-      file: fs.createReadStream(tempFilePath),
+      file: groqFile,
       model: 'whisper-large-v3-turbo',
       language: 'en',
-      response_format: 'verbose_json',
+      response_format: 'json',
       temperature: 0,
     });
 
@@ -116,11 +109,12 @@ Return ONLY valid JSON with exactly these keys:
     });
 
     const raw = analysisResponse.choices[0]?.message?.content || '{}';
-    let analysis = {};
+    console.log('Analysis raw:', raw);
 
+    let analysis = {};
     try {
       analysis = JSON.parse(raw);
-    } catch (e) {
+    } catch (err) {
       console.error('Analysis JSON parse failed:', raw);
     }
 
@@ -139,10 +133,6 @@ Return ONLY valid JSON with exactly these keys:
       error: 'Transcription failed',
       details: error.message,
     });
-  } finally {
-    if (tempFilePath && fs.existsSync(tempFilePath)) {
-      fs.unlinkSync(tempFilePath);
-    }
   }
 });
 

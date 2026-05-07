@@ -1019,3 +1019,14 @@ Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░
 Firebase Messaging is not supported in this browser.
 Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
 Web Bundled 1157ms node_modules\expo-router\entry.js (1 module)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 62ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 1086ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 52ms node_modules\expo-router\node\render.js (1 module)
+Web Bundled 57ms node_modules\expo-router\entry.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 1612ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
