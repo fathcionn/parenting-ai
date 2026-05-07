@@ -213,7 +213,16 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     const lang = (await getStorageItem(STORAGE_KEYS.speechLanguage)) || 'en';
 
     try {
+      console.log('STEP 3: transcription result:', 'starting');
       const result = await transcribeAndAnalyze(audioData, lang);
+      console.log('STEP 4: analysis started');
+      console.log('STEP 5: analysis response raw:', result);
+      console.log('STEP 6: navigating to results');
+
+      if (!result) {
+        throw new Error('No result returned from analysis');
+      }
+
       const normalizedAnalysis = normalizeAnalysis(result);
       const transcriptText = String(result.transcript || '');
 
@@ -273,6 +282,10 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       console.warn('Safety check failed:', safetyError);
     }
 
+    // Clear loading before navigation
+    setIsLoading(false);
+    setIsAnalyzing(false);
+
     router.push({
       pathname: '/(drawer)/session-results' as any,
       params: {
@@ -315,6 +328,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
   }
 
   async function handleStop() {
+    console.log('STEP 1: recording stopped');
     setIsRecording(false);
     setMode('idle');
     stopWaveform();
@@ -323,9 +337,11 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
 
     try {
       const audioData = await stopRecording();
+      console.log('STEP 2: transcription started');
       pendingAudioRef.current = audioData;
       await analyzeAudioData(audioData);
     } catch (err: any) {
+      console.error('Analysis flow failed:', err);
       if (isConnectionError(err)) {
         Alert.alert('Connection Issue', 'Could not reach the server. Please check your internet connection and try again.', [
           { text: 'Retry', onPress: () => retryAnalysis() },
@@ -335,6 +351,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
         setError(`${t('error_analysis_failed')} ${err.message}`);
       }
     } finally {
+      console.log('STEP 7: loading false');
       setIsLoading(false);
       setIsAnalyzing(false);
     }

@@ -112,18 +112,19 @@ export async function transcribeAndAnalyze(
   };
   const langName = languageNames[language] || 'English';
 
-  let transcript = typeof audioData === 'string' ? audioData : '';
-
   if (Platform.OS === 'web' && audioData instanceof Blob) {
-    transcript = await transcribeAudio(audioData);
+    // For web, call /api/transcribe which now returns full analysis
+    const result = await transcribeAudio(audioData);
+    return result;
   }
 
   if (Platform.OS === 'web') {
+    // This shouldn't happen now, but keep for compatibility
     const response = await fetch(`${API_BASE_URL}/api/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        transcript,
+        transcript: audioData,
         language,
       }),
     });
@@ -136,6 +137,7 @@ export async function transcribeAndAnalyze(
     return response.json();
   }
 
+  // Mobile: use /api/analyze-audio
   let base64Audio: string;
   let mimeType: string;
 
@@ -173,7 +175,7 @@ export async function transcribeAndAnalyze(
   return response.json();
 }
 
-export const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
+export const transcribeAudio = async (audioBlob: Blob): Promise<any> => {
   const mimeType = audioBlob.type || 'audio/webm';
   const extension = mimeType.includes('wav') ? 'wav'
     : mimeType.includes('mp4') ? 'mp4'
@@ -199,5 +201,5 @@ export const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
   }
 
   const data = await response.json();
-  return data.transcript || '';
+  return data; // Now returns full analysis object
 };
