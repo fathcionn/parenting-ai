@@ -1,4 +1,7 @@
 require('dotenv').config();
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const Groq = require('groq-sdk');
 const express = require('express');
 const cors = require('cors');
@@ -35,6 +38,8 @@ app.get('/api/test-groq', async (_req, res) => {
 });
 
 app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
+  let tempFilePath = null;
+
   try {
     const audioFile = req.file;
 
@@ -48,16 +53,25 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
       originalname: audioFile.originalname,
     });
 
-    const fileForGroq = {
-      value: audioFile.buffer,
-      filename: audioFile.originalname || 'recording.webm',
-    };
+    const ext =
+      audioFile.originalname?.split('.').pop() ||
+      (audioFile.mimetype.includes('mp4') ? 'mp4' :
+       audioFile.mimetype.includes('webm') ? 'webm' :
+       audioFile.mimetype.includes('wav') ? 'wav' :
+       audioFile.mimetype.includes('ogg') ? 'ogg' : 'mp4');
+
+    tempFilePath = path.join(
+      os.tmpdir(),
+      `upload-${Date.now()}.${ext}`
+    );
+
+    fs.writeFileSync(tempFilePath, audioFile.buffer);
 
     const transcription = await groq.audio.transcriptions.create({
-      file: fileForGroq,
+      file: fs.createReadStream(tempFilePath),
       model: 'whisper-large-v3-turbo',
       language: 'en',
-      response_format: 'json',
+      response_format: 'verbose_json',
       temperature: 0,
     });
 
@@ -82,7 +96,6 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
         {
           role: 'system',
           content: `You are an expert parenting coach.
-Analyze the parent-child conversation transcript.
 Return ONLY valid JSON with exactly these keys:
 {
   "score": number,
@@ -91,8 +104,7 @@ Return ONLY valid JSON with exactly these keys:
   "improvements": string[],
   "tips": string[],
   "safetyFlag": boolean
-}
-Be supportive, practical, and concise.`,
+}`,
         },
         {
           role: 'user',
@@ -104,14 +116,12 @@ Be supportive, practical, and concise.`,
     });
 
     const raw = analysisResponse.choices[0]?.message?.content || '{}';
-    console.log('Analysis raw:', raw);
-
     let analysis = {};
+
     try {
       analysis = JSON.parse(raw);
     } catch (e) {
-      console.error('JSON parse failed, raw analysis:', raw);
-      analysis = {};
+      console.error('Analysis JSON parse failed:', raw);
     }
 
     return res.status(200).json({
@@ -129,6 +139,10 @@ Be supportive, practical, and concise.`,
       error: 'Transcription failed',
       details: error.message,
     });
+  } finally {
+    if (tempFilePath && fs.existsSync(tempFilePath)) {
+      fs.unlinkSync(tempFilePath);
+    }
   }
 });
 
