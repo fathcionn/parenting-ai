@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Navigation Drawer - TalkWise</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&amp;family=Inter:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary-fixed-dim": "#ffb783",
+                      "primary-fixed-dim": "#c0c1ff",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-container-high": "#e9e6f3",
+                      "on-background": "#1b1b23",
+                      "primary-fixed": "#e1e0ff",
+                      "secondary-container": "#8455ef",
+                      "background": "#fcf8ff",
+                      "tertiary-container": "#b55d00",
+                      "outline-variant": "#c7c4d7",
+                      "inverse-surface": "#303038",
+                      "error": "#ba1a1a",
+                      "secondary-fixed-dim": "#d0bcff",
+                      "on-tertiary-fixed-variant": "#703700",
+                      "inverse-primary": "#c0c1ff",
+                      "on-primary-fixed-variant": "#2f2ebe",
+                      "surface-container-low": "#f5f2fe",
+                      "outline": "#767586",
+                      "on-secondary": "#ffffff",
+                      "on-tertiary-fixed": "#301400",
+                      "on-primary-fixed": "#07006c",
+                      "surface-container": "#efecf8",
+                      "on-tertiary-container": "#fffbff",
+                      "on-secondary-container": "#fffbff",
+                      "secondary": "#6b38d4",
+                      "on-primary-container": "#fffbff",
+                      "surface": "#fcf8ff",
+                      "on-secondary-fixed-variant": "#5516be",
+                      "on-surface-variant": "#464554",
+                      "primary-container": "#6063ee",
+                      "surface-container-highest": "#e4e1ed",
+                      "error-container": "#ffdad6",
+                      "on-secondary-fixed": "#23005c",
+                      "surface-bright": "#fcf8ff",
+                      "surface-variant": "#e4e1ed",
+                      "on-error": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "primary": "#4648d4",
+                      "surface-tint": "#494bd6",
+                      "surface-dim": "#dbd8e4",
+                      "inverse-on-surface": "#f2effb",
+                      "secondary-fixed": "#e9ddff",
+                      "on-surface": "#1b1b23",
+                      "tertiary": "#904900",
+                      "on-tertiary": "#ffffff",
+                      "on-error-container": "#93000a",
+                      "tertiary-fixed": "#ffdcc5"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "base": "4px",
+                      "margin": "24px",
+                      "md": "16px",
+                      "gutter": "16px",
+                      "sm": "12px",
+                      "lg": "24px",
+                      "xl": "32px",
+                      "xs": "8px"
+              },
+              "fontFamily": {
+                      "subheading": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ],
+                      "h2": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "button": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "caption": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "h1": [
+                              "Plus Jakarta Sans"
+                      ]
+              },
+              "fontSize": {
+                      "subheading": [
+                              "20px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "h2": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "button": [
+                              "16px",
+                              {
+                                      "lineHeight": "1",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "caption": [
+                              "12px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "h1": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+            },
+          }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-lg h-screen overflow-hidden flex">
+<!-- Overlay Background -->
+<div aria-hidden="true" class="fixed inset-0 bg-on-background/30 z-40"></div>
+<!-- Navigation Drawer -->
+<nav class="fixed inset-y-0 left-0 z-50 overflow-y-auto bg-surface dark:bg-inverse-surface shadow-md h-full w-80 rounded-r-xl flex flex-col">
+<!-- Header -->
+<div class="p-lg flex items-center gap-md border-b border-surface-variant">
+<img alt="Parent User Profile" class="w-16 h-16 rounded-full object-cover shadow-sm" data-alt="A close-up portrait of a thoughtful, modern parent in soft, warm lighting. The individual has a gentle, approachable expression, conveying empathy and reliability. The background is a slightly out-of-focus, clean domestic setting with subtle indoor plants. The overall aesthetic is warm, professional, and reassuring, perfectly aligning with a modern family-oriented application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdaFgOHtr_AzgG5NVek5-URfyNz-PAhWnuzXYme-PjKNOiJ_9JlMyPsMIHBnn-Ig7eLJPW11dBrT_ohk3EPWUKZ_P690UYcE5V3SxaHL1Z3EmDutlXWp29byJm9N_uKU28JyFc-LjjfRMLzjo5T21LjAGIcga2YsGqhorR4XuCCnUZGGq54jj26K0ITMm4Qx9pskGHk0wdi3CFpnZAx3yyyuiDKtUd-1K23JQSUICTivJtVS6QxdnrYLlYW-OsPGZQJl9Hxr4Znp0"/>
+<div>
+<h2 class="font-subheading text-subheading text-primary dark:text-inverse-primary">Parent Account</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">TalkWise Premium</p>
+<span class="inline-block mt-xs bg-secondary-container/20 text-secondary-container text-caption font-caption px-sm py-1 rounded-full">Active Member</span>
+</div>
+</div>
+<!-- Menu Items -->
+<div class="flex-1 py-md px-sm flex flex-col gap-sm overflow-y-auto">
+<a class="flex items-center gap-md text-on-surface-variant dark:text-surface-variant px-lg py-sm hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-full Active: scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-lg text-body-lg">Dashboard</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant dark:text-surface-variant px-lg py-sm hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-full Active: scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-body-lg text-body-lg">Sessions</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant dark:text-surface-variant px-lg py-sm hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-full Active: scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="insights">insights</span>
+<span class="font-body-lg text-body-lg">Insights</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant dark:text-surface-variant px-lg py-sm hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-full Active: scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="emoji_events">emoji_events</span>
+<span class="font-body-lg text-body-lg">Achievements</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant dark:text-surface-variant px-lg py-sm hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-full Active: scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="child_care">child_care</span>
+<span class="font-body-lg text-body-lg">Children</span>
+</a>
+<a class="flex items-center gap-md bg-secondary-container text-on-secondary-container rounded-full px-lg py-sm hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors Active: scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined filled" data-icon="settings" data-weight="fill">settings</span>
+<span class="font-body-lg text-body-lg">Settings</span>
+</a>
+</div>
+<!-- Footer -->
+<div class="p-lg border-t border-surface-variant">
+<a class="flex items-center gap-md text-error px-lg py-sm hover:bg-error-container/50 rounded-full transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-body-lg text-body-lg font-semibold">Logout</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas (Behind Overlay) -->
+<main class="flex-1 p-xl relative z-0">
+<h1 class="font-h1 text-h1 text-primary mb-lg">Settings Dashboard</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">
+            Configure your TalkWise experience, manage child profiles, and update your premium subscription details. 
+        </p>
+</main>
+</body></html>

@@ -1,40 +1,41 @@
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
 import { useRouter } from 'expo-router';
-import { useTranslation } from 'react-i18next';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+    ActivityIndicator,
+    Alert,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { auth, db } from '../config/firebase-config';
+import {
+    getMicStream,
+    startRecording,
+    stopRecording,
+    transcribeAndAnalyze,
+} from '../services/geminiAudio';
+import { saveToHistory } from '../services/history-service';
+import { getRecordingMeteringLevel } from '../services/nativeAudio';
+import { setMode } from '../services/recordingState';
+import { checkSessionSafety, notifySafetyFlag, saveSafetyFlag } from '../services/safety-service';
+import { getStorageItem, STORAGE_KEYS } from '../services/storageKeys';
+import { useCoachingStore } from '../stores/coaching-store';
 import { theme } from '../styles/theme';
+import { COLORS } from '../theme/colors';
+import {
+    calculateParentingScore,
+    type CoachingReport,
+    type ParentingAnalysis,
+} from '../types/analysis';
+import { SESSION_TAGS } from '../utils/reportUtils';
+import { AnalysisDisplay } from './AnalysisDisplay';
 import { Button } from './Button';
 import { Card } from './Layout';
-import { AnalysisDisplay } from './AnalysisDisplay';
-import {
-  getMicStream,
-  startRecording,
-  stopRecording,
-  transcribeAndAnalyze,
-} from '../services/geminiAudio';
-import { getRecordingMeteringLevel } from '../services/nativeAudio';
-import { saveToHistory } from '../services/history-service';
-import { checkSessionSafety, notifySafetyFlag, saveSafetyFlag } from '../services/safety-service';
-import { setMode } from '../services/recordingState';
-import { getStorageItem, STORAGE_KEYS } from '../services/storageKeys';
-import {
-  calculateParentingScore,
-  type CoachingReport,
-  type ParentingAnalysis,
-} from '../types/analysis';
-import { useCoachingStore } from '../stores/coaching-store';
-import { SESSION_TAGS } from '../utils/reportUtils';
 
 interface RecordingComponentProps {
   childId?: string | null;
@@ -210,43 +211,45 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     }
 
     const lang = (await getStorageItem(STORAGE_KEYS.speechLanguage)) || 'en';
-    const result = await transcribeAndAnalyze(audioData, lang);
-    const normalizedAnalysis = normalizeAnalysis(result);
-    const transcriptText = String(result.transcript || '');
 
-    if (transcriptText.trim().length < 2) {
-      setError(t('error_no_speech'));
-      return;
-    }
+    try {
+      const result = await transcribeAndAnalyze(audioData, lang);
+      const normalizedAnalysis = normalizeAnalysis(result);
+      const transcriptText = String(result.transcript || '');
 
-    const selectedChild = children.find((item) => item.id === selectedChildId) || null;
-    const score = calculateParentingScore(normalizedAnalysis);
-    const reportId = `report_${Date.now()}`;
-    const summary = String(result.summary || normalizedAnalysis.impact_analysis || '');
-    const strengths = Array.isArray(result.strengths) ? result.strengths : normalizedAnalysis.positive_notes;
-    const improvements = Array.isArray(result.improvements)
-      ? result.improvements
-      : normalizedAnalysis.detected_issues;
-    const tips = Array.isArray(result.tips) ? result.tips : normalizedAnalysis.suggestions;
+      if (transcriptText.trim().length < 2) {
+        setError(t('error_no_speech'));
+        return;
+      }
 
-    const report: CoachingReport = {
-      id: reportId,
-      createdAt: new Date().toISOString(),
-      durationSeconds: Math.max(1, Math.round((Date.now() - sessionStartRef.current) / 1000)),
-      audioUri: typeof audioData === 'string' ? audioData : null,
-      transcript: transcriptText,
-      language: lang,
-      mode: 'coaching',
-      analysis: normalizedAnalysis,
-      parentingScore: score,
-      childId: selectedChild?.id || null,
-      childName: selectedChild?.name || null,
-      tag: selectedTag,
-      summary,
-      strengths,
-      improvements,
-      tips,
-    };
+      const selectedChild = children.find((item) => item.id === selectedChildId) || null;
+      const score = calculateParentingScore(normalizedAnalysis);
+      const reportId = `report_${Date.now()}`;
+      const summary = String(result.summary || normalizedAnalysis.impact_analysis || '');
+      const strengths = Array.isArray(result.strengths) ? result.strengths : normalizedAnalysis.positive_notes;
+      const improvements = Array.isArray(result.improvements)
+        ? result.improvements
+        : normalizedAnalysis.detected_issues;
+      const tips = Array.isArray(result.tips) ? result.tips : normalizedAnalysis.suggestions;
+
+      const report: CoachingReport = {
+        id: reportId,
+        createdAt: new Date().toISOString(),
+        durationSeconds: Math.max(1, Math.round((Date.now() - sessionStartRef.current) / 1000)),
+        audioUri: typeof audioData === 'string' ? audioData : null,
+        transcript: transcriptText,
+        language: lang,
+        mode: 'coaching',
+        analysis: normalizedAnalysis,
+        parentingScore: score,
+        childId: selectedChild?.id || null,
+        childName: selectedChild?.name || null,
+        tag: selectedTag,
+        summary,
+        strengths,
+        improvements,
+        tips,
+      };
 
     setTranscript(transcriptText);
     setCurrentAnalysis(report);
@@ -282,8 +285,18 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
         reportId,
         childName: selectedChild?.name || '',
         sessionTag: selectedTag || '',
+        durationSeconds: String(report.durationSeconds || 0),
       },
     });
+    } catch (error) {
+      console.error('Transcription error details:', error);
+      Alert.alert(
+        'Transcription Failed',
+        'Could not analyze your session. Please check your internet connection and try again.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
   }
 
   async function retryAnalysis() {
@@ -361,7 +374,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
           return (
             <TouchableOpacity
               key={tag.id}
-              style={[styles.tagPill, { backgroundColor: isSelected ? '#000' : tag.color }]}
+              style={[styles.tagPill, { backgroundColor: isSelected ? COLORS.primary : tag.color }]}
               onPress={() => setSelectedTag(tag.id)}
               activeOpacity={0.8}
             >
@@ -382,7 +395,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       {isRecording ? (
         <View style={styles.recordingStatus}>
           <Text style={styles.recordingStatusText}>Recording... speak clearly</Text>
-          <Text style={styles.recordingTimer}>🎙️ Recording: {recordingSeconds.toFixed(1)} seconds</Text>
+          <Text style={styles.recordingTimer}>ðŸŽ™ï¸ Recording: {recordingSeconds.toFixed(1)} seconds</Text>
         </View>
       ) : null}
 
@@ -444,7 +457,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
 
 const styles = StyleSheet.create({
   selectorTitle: {
-    color: '#000',
+    color: COLORS.primary,
     fontSize: 13,
     fontWeight: '800',
     marginBottom: 8,
@@ -455,8 +468,8 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   selectorPill: {
-    backgroundColor: '#F5F5F5',
-    borderColor: '#E5E5E5',
+    backgroundColor: COLORS.surfaceContainer,
+    borderColor: COLORS.border,
     borderRadius: 999,
     borderWidth: 1,
     marginRight: 8,
@@ -464,16 +477,16 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   selectorPillActive: {
-    backgroundColor: '#000',
-    borderColor: '#000',
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   selectorPillText: {
-    color: '#000',
+    color: COLORS.primary,
     fontSize: 13,
     fontWeight: '700',
   },
   selectorPillTextActive: {
-    color: '#FFF',
+    color: COLORS.onPrimary,
     fontSize: 13,
     fontWeight: '800',
   },
@@ -484,12 +497,12 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   tagText: {
-    color: '#000',
+    color: COLORS.primary,
     fontSize: 13,
     fontWeight: '700',
   },
   tagTextActive: {
-    color: '#FFF',
+    color: COLORS.onPrimary,
   },
   waveform: {
     alignItems: 'center',
@@ -500,38 +513,38 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   waveformBar: {
-    backgroundColor: '#000',
+    backgroundColor: COLORS.primary,
     borderRadius: 2,
     width: 4,
   },
   recordingStatus: {
     alignItems: 'center',
-    backgroundColor: '#FAFAFA',
-    borderColor: '#E5E5E5',
+    backgroundColor: COLORS.background,
+    borderColor: COLORS.border,
     borderRadius: 12,
     borderWidth: 1,
     marginBottom: theme.spacing.md,
     padding: 12,
   },
   recordingStatusText: {
-    color: '#000',
+    color: COLORS.primary,
     fontSize: 15,
     fontWeight: '800',
   },
   recordingTimer: {
-    color: '#777',
+    color: COLORS.textSecondary,
     fontSize: 13,
     fontWeight: '700',
     marginTop: 4,
   },
   processingStatus: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: COLORS.surfaceContainer,
     borderRadius: 12,
     marginBottom: theme.spacing.md,
     padding: 12,
   },
   processingText: {
-    color: '#000',
+    color: COLORS.primary,
     fontSize: 14,
     fontWeight: '800',
     textAlign: 'center',
@@ -540,36 +553,36 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
   },
   errorBox: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FCA5A5',
+    backgroundColor: COLORS.errorBg,
+    borderColor: COLORS.error,
     borderRadius: theme.borderRadius.md,
     borderWidth: 1,
     marginBottom: theme.spacing.md,
     padding: theme.spacing.md,
   },
   errorText: {
-    color: '#991B1B',
+    color: COLORS.error,
     fontSize: theme.typography.bodySmall.fontSize,
     fontWeight: '600',
     lineHeight: 20,
   },
   transcriptCard: {
-    backgroundColor: '#FAFAFA',
-    borderColor: '#E0E0E0',
+    backgroundColor: COLORS.background,
+    borderColor: COLORS.border,
     borderRadius: 12,
     borderWidth: 1,
     marginBottom: theme.spacing.md,
     padding: 16,
   },
   transcriptLabel: {
-    color: '#777',
+    color: COLORS.textSecondary,
     fontSize: 12,
     fontWeight: '800',
     marginBottom: 6,
     textTransform: 'uppercase',
   },
   transcriptText: {
-    color: '#000',
+    color: COLORS.primary,
     fontSize: 15,
     lineHeight: 22,
   },

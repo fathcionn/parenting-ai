@@ -1,0 +1,930 @@
+env: load .env
+env: export GEMINI_API_KEY EXPO_PUBLIC_FIREBASE_API_KEY EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN EXPO_PUBLIC_FIREBASE_PROJECT_ID EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID EXPO_PUBLIC_FIREBASE_APP_ID EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID EXPO_PUBLIC_API_BASE_URL
+Starting project at C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8083
+Logs for your project will appear below.
+Web node_modules\expo-router\entry.js ▓▓░░░░░░░░░░░░░░ 16.0% ( 4/10)
+λ node_modules\expo-router\node\render.js ▓░░░░░░░░░░░░░░░  7.1% ( 19/136)
+Web node_modules\expo-router\entry.js ▓▓▓▓░░░░░░░░░░░░ 25.0% ( 94/263)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓░░░░░░░░░ 45.7% (411/653)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓░░░░░░░░░░ 39.6% (409/692)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 63.4% ( 839/1054)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓░░░░░░░░ 51.2% (714/998)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 73.1% (1198/1401)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 80.3% (1147/1281)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 85.4% (1543/1670)
+| Dynamic import at line 15: require(moduleName). This module may not work as intended when deployed to a runtime.
+λ Bundled 19764ms node_modules\expo-router\node\render.js (1882 modules)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1626/1626)
+Web Bundled 23458ms node_modules\expo-router\entry.js (1626 modules)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 70.0% ( 965/1153)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 98.6% (1609/1620)
+Web Bundled 7062ms node_modules\expo-router\entry.js (1627 modules)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 71ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 816ms node_modules\expo-router\entry.js (1 module)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 153ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 1365ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 81ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 455ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 3202ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 64ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 195ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 1168ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 66ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 269ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 1147ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 55ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 41ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 1037ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 59ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 384ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 1263ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 55ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 295ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 1201ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 62ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 216ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 286ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web Bundled 56ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 147ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 1099ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 56ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 365ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 1233ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 71ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 363ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 451ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web Bundled 81ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Unable to resolve "../../src/config/firebase-config" from "app\achievements.tsx"
+[0m [90m 3 |[39m [36mimport[39m { useFocusEffect } [36mfrom[39m [32m'@react-navigation/native'[39m[33m;[39m
+ [90m 4 |[39m [36mimport[39m { collection[33m,[39m getDocs[33m,[39m orderBy[33m,[39m query } [36mfrom[39m [32m'firebase/firestore'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 5 |[39m [36mimport[39m { auth[33m,[39m db } [36mfrom[39m [32m'../../src/config/firebase-config'[39m[33m;[39m
+ [90m   |[39m                           [31m[1m^[22m[39m
+ [90m 6 |[39m [36mimport[39m { reportScoreFromData[33m,[39m toReportDate } [36mfrom[39m [32m'../../src/utils/reportUtils'[39m[33m;[39m
+ [90m 7 |[39m [36mimport[39m { [33mCOLORS[39m } [36mfrom[39m [32m'../../src/theme/colors'[39m[33m;[39m
+ [90m 8 |[39m[0m
+
+Import stack:
+
+ app\achievements.tsx
+ | import "../../src/config/firebase-config"
+
+ app (require.context)
+
+Unable to resolve "../../src/config/firebase-config" from "app\achievements.tsx"
+[0m [90m 3 |[39m [36mimport[39m { useFocusEffect } [36mfrom[39m [32m'@react-navigation/native'[39m[33m;[39m
+ [90m 4 |[39m [36mimport[39m { collection[33m,[39m getDocs[33m,[39m orderBy[33m,[39m query } [36mfrom[39m [32m'firebase/firestore'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 5 |[39m [36mimport[39m { auth[33m,[39m db } [36mfrom[39m [32m'../../src/config/firebase-config'[39m[33m;[39m
+ [90m   |[39m                           [31m[1m^[22m[39m
+ [90m 6 |[39m [36mimport[39m { reportScoreFromData[33m,[39m toReportDate } [36mfrom[39m [32m'../../src/utils/reportUtils'[39m[33m;[39m
+ [90m 7 |[39m [36mimport[39m { [33mCOLORS[39m } [36mfrom[39m [32m'../../src/theme/colors'[39m[33m;[39m
+ [90m 8 |[39m[0m
+
+Import stack:
+
+ app\achievements.tsx
+ | import "../../src/config/firebase-config"
+
+ app (require.context)
+
+Unable to resolve "../../src/config/firebase-config" from "app\achievements.tsx"
+[0m [90m 3 |[39m [36mimport[39m { useFocusEffect } [36mfrom[39m [32m'@react-navigation/native'[39m[33m;[39m
+ [90m 4 |[39m [36mimport[39m { collection[33m,[39m getDocs[33m,[39m orderBy[33m,[39m query } [36mfrom[39m [32m'firebase/firestore'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 5 |[39m [36mimport[39m { auth[33m,[39m db } [36mfrom[39m [32m'../../src/config/firebase-config'[39m[33m;[39m
+ [90m   |[39m                           [31m[1m^[22m[39m
+ [90m 6 |[39m [36mimport[39m { reportScoreFromData[33m,[39m toReportDate } [36mfrom[39m [32m'../../src/utils/reportUtils'[39m[33m;[39m
+ [90m 7 |[39m [36mimport[39m { [33mCOLORS[39m } [36mfrom[39m [32m'../../src/theme/colors'[39m[33m;[39m
+ [90m 8 |[39m[0m
+
+Import stack:
+
+ app\achievements.tsx
+ | import "../../src/config/firebase-config"
+
+ app (require.context)
+
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundling failed 719ms node_modules\expo-router\entry.js (1 module)
+
+Metro error: app\(drawer)\reports.tsx: ENOENT: no such file or directory, open 'C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\app\(drawer)\reports.tsx'
+
+Call Stack
+  Object.openSync (node:fs)
+  Object.readFileSync (node:fs)
+  process.emit (node:events)
+  emit (node:internal\child_process)
+λ node_modules\expo-router\node\render.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundling failed 963ms node_modules\expo-router\node\render.js (1 module)
+Web Bundled 336ms node_modules\expo-router\_error.js (250 modules)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundling failed 70ms node_modules\expo-router\entry.js (1 module)
+λ Bundling failed 81ms node_modules\expo-router\node\render.js (1 module)
+
+Metro error: app\(drawer)\reports.tsx: ENOENT: no such file or directory, open 'C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\app\(drawer)\reports.tsx'
+
+Call Stack
+  Object.openSync (node:fs)
+  Object.readFileSync (node:fs)
+  process.emit (node:events)
+  emit (node:internal\child_process)
+Web Bundled 13ms node_modules\expo-router\_error.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundling failed 65ms node_modules\expo-router\entry.js (1 module)
+λ Bundling failed 76ms node_modules\expo-router\node\render.js (1 module)
+
+Metro error: app\(drawer)\reports.tsx: ENOENT: no such file or directory, open 'C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\app\(drawer)\reports.tsx'
+
+Call Stack
+  Object.openSync (node:fs)
+  Object.readFileSync (node:fs)
+  process.emit (node:events)
+  emit (node:internal\child_process)
+Web Bundled 20ms node_modules\expo-router\_error.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundling failed 513ms node_modules\expo-router\entry.js (1 module)
+
+Metro error: app\(drawer)\reports.tsx: ENOENT: no such file or directory, open 'C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\app\(drawer)\reports.tsx'
+
+Call Stack
+  Object.openSync (node:fs)
+  Object.readFileSync (node:fs)
+  process.emit (node:events)
+  emit (node:internal\child_process)
+λ node_modules\expo-router\node\render.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 14ms node_modules\expo-router\_error.js (1 module)
+λ Bundling failed 646ms node_modules\expo-router\node\render.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundling failed 40ms node_modules\expo-router\node\render.js (1 module)
+Web Bundling failed 46ms node_modules\expo-router\entry.js (1 module)
+
+Metro error: app\(drawer)\reports.tsx: ENOENT: no such file or directory, open 'C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\app\(drawer)\reports.tsx'
+
+Call Stack
+  Object.openSync (node:fs)
+  Object.readFileSync (node:fs)
+  process.emit (node:events)
+  emit (node:internal\child_process)
+Web Bundled 14ms node_modules\expo-router\_error.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundling failed 173ms node_modules\expo-router\node\render.js (1 module)
+
+Metro error: app\(drawer)\reports.tsx: ENOENT: no such file or directory, open 'C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\app\(drawer)\reports.tsx'
+
+Call Stack
+  Object.openSync (node:fs)
+  Object.readFileSync (node:fs)
+  process.emit (node:events)
+  emit (node:internal\child_process)
+Web Bundled 13ms node_modules\expo-router\_error.js (1 module)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundling failed 278ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundling failed 247ms node_modules\expo-router\node\render.js (1 module)
+
+Metro error: app\(drawer)\reports.tsx: ENOENT: no such file or directory, open 'C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\app\(drawer)\reports.tsx'
+
+Call Stack
+  Object.openSync (node:fs)
+  Object.readFileSync (node:fs)
+  process.emit (node:events)
+  emit (node:internal\child_process)
+Web Bundled 12ms node_modules\expo-router\_error.js (1 module)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundling failed 371ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundling failed 38ms node_modules\expo-router\node\render.js (1 module)
+Web Bundling failed 43ms node_modules\expo-router\entry.js (1 module)
+
+Metro error: app\(drawer)\reports.tsx: ENOENT: no such file or directory, open 'C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\app\(drawer)\reports.tsx'
+
+Call Stack
+  Object.openSync (node:fs)
+  Object.readFileSync (node:fs)
+  process.emit (node:events)
+  emit (node:internal\child_process)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundling failed 834ms node_modules\expo-router\entry.js (1 module)
+
+Metro error: app\(drawer)\record.tsx: ENOENT: no such file or directory, open 'C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\app\(drawer)\record.tsx'
+
+Call Stack
+  Object.openSync (node:fs)
+  Object.readFileSync (node:fs)
+  process.emit (node:events)
+  emit (node:internal\child_process)
+λ Bundling failed 854ms node_modules\expo-router\node\render.js (1 module)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundling failed 61ms node_modules\expo-router\node\render.js (1 module)
+Web Bundling failed 69ms node_modules\expo-router\entry.js (1 module)
+
+Metro error: app\(drawer)\record.tsx: ENOENT: no such file or directory, open 'C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\app\(drawer)\record.tsx'
+
+Call Stack
+  Object.openSync (node:fs)
+  Object.readFileSync (node:fs)
+  process.emit (node:events)
+  emit (node:internal\child_process)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 220ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 3186ms node_modules\expo-router\entry.js (1 module)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 46ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 603ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 51ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 685ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 61ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 679ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 40ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 626ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 57ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 597ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 41ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 554ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 58ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 754ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 63ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 742ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 60ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 720ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 61ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 740ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 66ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 738ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 62ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 737ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 39ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 654ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 53ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 560ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 40ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 545ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 82ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 858ms node_modules\expo-router\entry.js (1 module)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 46ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 568ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 49ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 654ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 133ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 708ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 74ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 736ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 67ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 752ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 58ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 678ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 42ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 679ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 41ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 576ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 63ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 559ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 42ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 663ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 68ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 648ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 62ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 743ms node_modules\expo-router\entry.js (1 module)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 66ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 608ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 662ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 324ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 386ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web Bundled 70ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 50ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 603ms node_modules\expo-router\entry.js (1 module)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 39ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 664ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 41ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 534ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 42ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 595ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 59ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 666ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 42ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 680ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 41ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 530ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 60ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 606ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 58ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 637ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 59ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 670ms node_modules\expo-router\entry.js (1 module)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 67ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 582ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 69ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+ ERROR  Importing native-only module "react-native/Libraries/Utilities/codegenNativeCommands" on web from: node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+
+Import stack:
+
+ node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+ | import "react-native/Libraries/Utilities/codegenNativeCommands"
+           ^ Importing react-native internals is not supported on web.
+
+ node_modules\react-native-maps\lib\MapMarker.js
+ | import "./MapMarkerNativeComponent"
+
+ node_modules\react-native-maps\lib\index.js
+ | import "./MapMarker"
+
+ app\(drawer)\child-location.tsx
+ | import "react-native-maps"
+
+ app (require.context)
+
+ ERROR  Importing native-only module "react-native/Libraries/Utilities/codegenNativeCommands" on web from: node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+
+Import stack:
+
+ node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+ | import "react-native/Libraries/Utilities/codegenNativeCommands"
+           ^ Importing react-native internals is not supported on web.
+
+ node_modules\react-native-maps\lib\MapMarker.js
+ | import "./MapMarkerNativeComponent"
+
+ node_modules\react-native-maps\lib\index.js
+ | import "./MapMarker"
+
+ app\(drawer)\child-location.tsx
+ | import "react-native-maps"
+
+ app (require.context)
+
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundling failed 288ms node_modules\expo-router\entry.js (1 module)
+
+Metro error: Importing native-only module "react-native/Libraries/Utilities/codegenNativeCommands" on web from: node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+
+Import stack:
+
+ node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+ | import "react-native/Libraries/Utilities/codegenNativeCommands"
+           ^ Importing react-native internals is not supported on web.
+
+ node_modules\react-native-maps\lib\MapMarker.js
+ | import "./MapMarkerNativeComponent"
+
+ node_modules\react-native-maps\lib\index.js
+ | import "./MapMarker"
+
+ app\(drawer)\child-location.tsx
+ | import "react-native-maps"
+
+ app (require.context)
+
+
+
+λ Bundling failed 331ms node_modules\expo-router\node\render.js (1 module)
+ ERROR  Importing native-only module "react-native/Libraries/Utilities/codegenNativeCommands" on web from: node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+
+Import stack:
+
+ node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+ | import "react-native/Libraries/Utilities/codegenNativeCommands"
+           ^ Importing react-native internals is not supported on web.
+
+ node_modules\react-native-maps\lib\MapMarker.js
+ | import "./MapMarkerNativeComponent"
+
+ node_modules\react-native-maps\lib\index.js
+ | import "./MapMarker"
+
+ app\(drawer)\child-location.tsx
+ | import "react-native-maps"
+
+ app (require.context)
+
+ ERROR  Importing native-only module "react-native/Libraries/Utilities/codegenNativeCommands" on web from: node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+
+Import stack:
+
+ node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+ | import "react-native/Libraries/Utilities/codegenNativeCommands"
+           ^ Importing react-native internals is not supported on web.
+
+ node_modules\react-native-maps\lib\MapMarker.js
+ | import "./MapMarkerNativeComponent"
+
+ node_modules\react-native-maps\lib\index.js
+ | import "./MapMarker"
+
+ app\(drawer)\child-location.tsx
+ | import "react-native-maps"
+
+ app (require.context)
+
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundling failed 80ms node_modules\expo-router\node\render.js (1 module)
+
+Metro error: Importing native-only module "react-native/Libraries/Utilities/codegenNativeCommands" on web from: node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+
+Import stack:
+
+ node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+ | import "react-native/Libraries/Utilities/codegenNativeCommands"
+           ^ Importing react-native internals is not supported on web.
+
+ node_modules\react-native-maps\lib\MapMarker.js
+ | import "./MapMarkerNativeComponent"
+
+ node_modules\react-native-maps\lib\index.js
+ | import "./MapMarker"
+
+ app\(drawer)\child-location.tsx
+ | import "react-native-maps"
+
+ app (require.context)
+
+
+
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundling failed 135ms node_modules\expo-router\entry.js (1 module)
+ ERROR  Importing native-only module "react-native/Libraries/Utilities/codegenNativeCommands" on web from: node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+
+Import stack:
+
+ node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+ | import "react-native/Libraries/Utilities/codegenNativeCommands"
+           ^ Importing react-native internals is not supported on web.
+
+ node_modules\react-native-maps\lib\MapMarker.js
+ | import "./MapMarkerNativeComponent"
+
+ node_modules\react-native-maps\lib\index.js
+ | import "./MapMarker"
+
+ app\(drawer)\child-location.tsx
+ | import "react-native-maps"
+
+ app (require.context)
+
+ ERROR  Importing native-only module "react-native/Libraries/Utilities/codegenNativeCommands" on web from: node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+
+Import stack:
+
+ node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+ | import "react-native/Libraries/Utilities/codegenNativeCommands"
+           ^ Importing react-native internals is not supported on web.
+
+ node_modules\react-native-maps\lib\MapMarker.js
+ | import "./MapMarkerNativeComponent"
+
+ node_modules\react-native-maps\lib\index.js
+ | import "./MapMarker"
+
+ app\(drawer)\child-location.tsx
+ | import "react-native-maps"
+
+ app (require.context)
+
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundling failed 327ms node_modules\expo-router\entry.js (1 module)
+
+Metro error: Importing native-only module "react-native/Libraries/Utilities/codegenNativeCommands" on web from: node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+
+Import stack:
+
+ node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+ | import "react-native/Libraries/Utilities/codegenNativeCommands"
+           ^ Importing react-native internals is not supported on web.
+
+ node_modules\react-native-maps\lib\MapMarker.js
+ | import "./MapMarkerNativeComponent"
+
+ node_modules\react-native-maps\lib\index.js
+ | import "./MapMarker"
+
+ app\(drawer)\child-location.tsx
+ | import "react-native-maps"
+
+ app (require.context)
+
+
+
+λ node_modules\expo-router\node\render.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundling failed 384ms node_modules\expo-router\node\render.js (1 module)
+Web Bundled 15ms node_modules\expo-router\_error.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundling failed 40ms node_modules\expo-router\node\render.js (1 module)
+Web Bundling failed 59ms node_modules\expo-router\entry.js (1 module)
+
+Metro error: Importing native-only module "react-native/Libraries/Utilities/codegenNativeCommands" on web from: node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+
+Import stack:
+
+ node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+ | import "react-native/Libraries/Utilities/codegenNativeCommands"
+           ^ Importing react-native internals is not supported on web.
+
+ node_modules\react-native-maps\lib\MapMarker.js
+ | import "./MapMarkerNativeComponent"
+
+ node_modules\react-native-maps\lib\index.js
+ | import "./MapMarker"
+
+ app\(drawer)\child-location.tsx
+ | import "react-native-maps"
+
+ app (require.context)
+
+
+
+Web Bundled 22ms node_modules\expo-router\_error.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundling failed 29ms node_modules\expo-router\entry.js (1 module)
+λ Bundling failed 29ms node_modules\expo-router\node\render.js (1 module)
+
+Metro error: Importing native-only module "react-native/Libraries/Utilities/codegenNativeCommands" on web from: node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+
+Import stack:
+
+ node_modules\react-native-maps\lib\MapMarkerNativeComponent.js
+ | import "react-native/Libraries/Utilities/codegenNativeCommands"
+           ^ Importing react-native internals is not supported on web.
+
+ node_modules\react-native-maps\lib\MapMarker.js
+ | import "./MapMarkerNativeComponent"
+
+ node_modules\react-native-maps\lib\index.js
+ | import "./MapMarker"
+
+ app\(drawer)\child-location.tsx
+ | import "react-native-maps"
+
+ app (require.context)
+
+
+
+Web Bundled 12ms node_modules\expo-router\_error.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 127ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 1023ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 253ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+ ERROR  SyntaxError: C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\src\screens\ProfileScreen.tsx: Expected corresponding JSX closing tag for <>. (679:4)
+
+  677 |         </View>
+  678 |       </Modal>
+> 679 |     </Container>
+      |     ^
+  680 |   );
+  681 | };
+  682 |
+    at constructor (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:365:19)
+    at TypeScriptParserMixin.raise (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:6616:19)
+    at TypeScriptParserMixin.jsxParseElementAt (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:4732:14)
+    at TypeScriptParserMixin.jsxParseElement (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:4761:17)
+    at TypeScriptParserMixin.parseExprAtom (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:4771:19)
+    at TypeScriptParserMixin.parseExprSubscripts (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:11098:23)
+    at TypeScriptParserMixin.parseUpdate (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:11083:21)
+    at TypeScriptParserMixin.parseMaybeUnary (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:11063:23)
+    at TypeScriptParserMixin.parseMaybeUnary (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:9854:18)
+    at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10916:61)
+    at TypeScriptParserMixin.parseExprOps (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10921:23)
+    at TypeScriptParserMixin.parseMaybeConditional (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10898:23)
+    at TypeScriptParserMixin.parseMaybeAssign (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10848:21)
+    at C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:9792:39
+    at TypeScriptParserMixin.tryParse (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:6924:20)
+    at TypeScriptParserMixin.parseMaybeAssign (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:9792:18)
+    at C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10817:39
+    at TypeScriptParserMixin.allowInAnd (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12443:12)
+    at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10817:17)
+    at TypeScriptParserMixin.parseMaybeAssignAllowInOrVoidPattern (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12510:17)
+    at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:11692:28)
+    at TypeScriptParserMixin.parseExprAtom (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:11348:23)
+    at TypeScriptParserMixin.parseExprAtom (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:4776:20)
+    at TypeScriptParserMixin.parseExprSubscripts (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:11098:23)
+    at TypeScriptParserMixin.parseUpdate (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:11083:21)
+    at TypeScriptParserMixin.parseMaybeUnary (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:11063:23)
+    at TypeScriptParserMixin.parseMaybeUnary (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:9854:18)
+    at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10916:61)
+    at TypeScriptParserMixin.parseExprOpBaseRightExpr (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:11003:34)
+    at TypeScriptParserMixin.parseExprOpRightExpr (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10998:21)
+    at TypeScriptParserMixin.parseExprOp (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10964:27)
+    at TypeScriptParserMixin.parseExprOp (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:9323:18)
+    at TypeScriptParserMixin.parseExprOps (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10925:17)
+    at TypeScriptParserMixin.parseMaybeConditional (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10898:23)
+    at TypeScriptParserMixin.parseMaybeAssign (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10848:21)
+    at TypeScriptParserMixin.parseMaybeAssign (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:9803:20)
+    at TypeScriptParserMixin.parseExpressionBase (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10801:23)
+    at C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10797:39
+    at TypeScriptParserMixin.allowInAnd (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12443:12)
+    at TypeScriptParserMixin.parseExpression (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10797:17)
+    at TypeScriptParserMixin.jsxParseExpressionContainer (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:4644:31)
+    at TypeScriptParserMixin.jsxParseElementAt (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:4723:36)
+    at TypeScriptParserMixin.jsxParseElement (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:4761:17)
+    at TypeScriptParserMixin.parseExprAtom (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:4771:19)
+    at TypeScriptParserMixin.parseExprSubscripts (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:11098:23)
+    at TypeScriptParserMixin.parseUpdate (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:11083:21)
+    at TypeScriptParserMixin.parseMaybeUnary (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:11063:23)
+    at TypeScriptParserMixin.parseMaybeUnary (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:9854:18)
+    at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10916:61)
+    at TypeScriptParserMixin.parseExprOps (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10921:23)
+Unable to resolve "@react-native-picker/picker" from "src\screens\ProfileScreen.tsx"
+
+undefined
+Unable to resolve "@react-native-picker/picker" from "src\screens\ProfileScreen.tsx"
+
+undefined
+Unable to resolve "@react-native-picker/picker" from "src\screens\ProfileScreen.tsx"
+
+undefined
+Unable to resolve "@react-native-picker/picker" from "src\screens\ProfileScreen.tsx"
+
+undefined
+Unable to resolve "@react-native-picker/picker" from "src\screens\ProfileScreen.tsx"
+
+undefined
+Unable to resolve "@react-native-picker/picker" from "src\screens\ProfileScreen.tsx"
+
+undefined
+Unable to resolve "@react-native-picker/picker" from "src\screens\ProfileScreen.tsx"
+
+undefined
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundling failed 2938ms node_modules\expo-router\entry.js (1 module)
+
+Metro error: While trying to resolve module `@react-native-picker/picker` from file `C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\src\screens\ProfileScreen.tsx`, the package `C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@react-native-picker\picker\package.json` was successfully found. However, this package itself specifies a `main` module field that could not be resolved (`C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@react-native-picker\picker\dist\module\index.js`. Indeed, none of these files exist:
+
+  * C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@react-native-picker\picker\dist\module\index.js(.web.ts|.ts|.web.tsx|.tsx|.web.mjs|.mjs|.web.js|.js|.web.jsx|.jsx|.web.json|.json|.web.cjs|.cjs|.web.scss|.scss|.web.sass|.sass|.web.css|.css)
+  * C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@react-native-picker\picker\dist\module\index.js\index(.web.ts|.ts|.web.tsx|.tsx|.web.mjs|.mjs|.web.js|.js|.web.jsx|.jsx|.web.json|.json|.web.cjs|.cjs|.web.scss|.scss|.web.sass|.sass|.web.css|.css)
+
+Call Stack
+  <unknown> (src\screens\ProfileScreen.tsx)
+λ node_modules\expo-router\node\render.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 4622ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Unable to resolve "@react-native-picker/picker" from "src\screens\ProfileScreen.tsx"
+
+undefined
+Unable to resolve "@react-native-picker/picker" from "src\screens\ProfileScreen.tsx"
+
+undefined
+Unable to resolve "@react-native-picker/picker" from "src\screens\ProfileScreen.tsx"
+
+undefined
+Unable to resolve "@react-native-picker/picker" from "src\screens\ProfileScreen.tsx"
+
+undefined
+Unable to resolve "@react-native-picker/picker" from "src\screens\ProfileScreen.tsx"
+
+undefined
+Unable to resolve "@react-native-picker/picker" from "src\screens\ProfileScreen.tsx"
+
+undefined
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 1106ms node_modules\expo-router\node\render.js (1 module)
+Web Bundling failed 1655ms node_modules\expo-router\entry.js (1 module)
+Firebase Messaging is not supported in this browser.
+
+Metro error: While trying to resolve module `@react-native-picker/picker` from file `C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\src\screens\ProfileScreen.tsx`, the package `C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@react-native-picker\picker\package.json` was successfully found. However, this package itself specifies a `main` module field that could not be resolved (`C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@react-native-picker\picker\dist\module\index.js`. Indeed, none of these files exist:
+
+  * C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@react-native-picker\picker\dist\module\index.js(.web.ts|.ts|.web.tsx|.tsx|.web.mjs|.mjs|.web.js|.js|.web.jsx|.jsx|.web.json|.json|.web.cjs|.cjs|.web.scss|.scss|.web.sass|.sass|.web.css|.css)
+  * C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@react-native-picker\picker\dist\module\index.js\index(.web.ts|.ts|.web.tsx|.tsx|.web.mjs|.mjs|.web.js|.js|.web.jsx|.jsx|.web.json|.json|.web.cjs|.cjs|.web.scss|.scss|.web.sass|.sass|.web.css|.css)
+
+Call Stack
+  <unknown> (src\screens\ProfileScreen.tsx)
+Web Bundled 108ms node_modules\expo-router\_error.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 2871ms node_modules\expo-router\node\render.js (1 module)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 4532ms node_modules\expo-router\entry.js (1 module)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 7421ms node_modules\expo-router\entry.js (1 module)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 50ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 649ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 72ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 44ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 640ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 63ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 40ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 2925ms node_modules\expo-router\entry.js (1 module)
+ ERROR  SyntaxError: C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\src\components\RecordingComponent.tsx: Missing catch or finally clause. (215:4)
+
+  213 |     const lang = (await getStorageItem(STORAGE_KEYS.speechLanguage)) || 'en';
+  214 |
+> 215 |     try {
+      |     ^
+  216 |       const result = await transcribeAndAnalyze(audioData, lang);
+  217 |       const normalizedAnalysis = normalizeAnalysis(result);
+  218 |       const transcriptText = String(result.transcript || '');
+    at constructor (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:365:19)
+    at TypeScriptParserMixin.raise (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:6616:19)
+    at TypeScriptParserMixin.parseTryStatement (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:13241:12)
+    at TypeScriptParserMixin.parseStatementContent (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12821:21)
+    at TypeScriptParserMixin.parseStatementContent (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:9525:18)
+    at TypeScriptParserMixin.parseStatementLike (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12784:17)
+    at TypeScriptParserMixin.parseStatementListItem (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12764:17)
+    at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:13333:61)
+    at TypeScriptParserMixin.parseBlockBody (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:13326:10)
+    at TypeScriptParserMixin.parseBlock (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:13314:10)
+    at TypeScriptParserMixin.parseFunctionBody (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12117:24)
+    at TypeScriptParserMixin.parseFunctionBodyAndFinish (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12103:10)
+    at TypeScriptParserMixin.parseFunctionBodyAndFinish (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:9189:18)
+    at C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:13462:12
+    at TypeScriptParserMixin.withSmartMixTopicForbiddingContext (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12420:14)
+    at TypeScriptParserMixin.parseFunction (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:13461:10)
+    at TypeScriptParserMixin.parseFunctionStatement (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:13142:17)
+    at TypeScriptParserMixin.parseStatementContent (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12907:25)
+    at TypeScriptParserMixin.parseStatementContent (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:9525:18)
+    at TypeScriptParserMixin.parseStatementLike (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12784:17)
+    at TypeScriptParserMixin.parseStatementListItem (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12764:17)
+    at TypeScriptParserMixin.parseBlockOrModuleBlockBody (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:13333:61)
+    at TypeScriptParserMixin.parseBlockBody (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:13326:10)
+    at TypeScriptParserMixin.parseBlock (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:13314:10)
+    at TypeScriptParserMixin.parseFunctionBody (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12117:24)
+    at TypeScriptParserMixin.parseArrowExpression (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12092:10)
+    at TypeScriptParserMixin.parseParenAndDistinguishExpression (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:11704:12)
+    at TypeScriptParserMixin.parseExprAtom (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:11348:23)
+    at TypeScriptParserMixin.parseExprAtom (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:4776:20)
+    at TypeScriptParserMixin.parseExprSubscripts (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:11098:23)
+    at TypeScriptParserMixin.parseUpdate (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:11083:21)
+    at TypeScriptParserMixin.parseMaybeUnary (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:11063:23)
+    at TypeScriptParserMixin.parseMaybeUnary (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:9854:18)
+    at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10916:61)
+    at TypeScriptParserMixin.parseExprOps (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10921:23)
+    at TypeScriptParserMixin.parseMaybeConditional (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10898:23)
+    at TypeScriptParserMixin.parseMaybeAssign (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10848:21)
+    at TypeScriptParserMixin.parseMaybeAssign (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:9803:20)
+    at C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10817:39
+    at TypeScriptParserMixin.allowInAnd (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12438:16)
+    at TypeScriptParserMixin.parseMaybeAssignAllowIn (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:10817:17)
+    at TypeScriptParserMixin.parseVar (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:13401:91)
+    at TypeScriptParserMixin.parseVarStatement (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:13247:10)
+    at TypeScriptParserMixin.parseVarStatement (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:9425:31)
+    at TypeScriptParserMixin.parseStatementContent (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12868:23)
+    at TypeScriptParserMixin.parseStatementContent (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:9525:18)
+    at TypeScriptParserMixin.parseStatementLike (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12784:17)
+    at TypeScriptParserMixin.parseStatementListItem (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:12764:17)
+    at TypeScriptParserMixin.parseExportDeclaration (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:13951:17)
+    at TypeScriptParserMixin.parseExportDeclaration (C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI\node_modules\@babel\parser\lib\index.js:9646:85)

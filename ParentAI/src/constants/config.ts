@@ -1,4 +1,5 @@
 // App Configuration
+import { COLORS } from '../theme/colors';
 
 export const APP_CONFIG = {
   name: 'TalkWise',
@@ -18,11 +19,11 @@ export const APP_CONFIG = {
   // Analysis settings
   analysis: {
     toneCategories: [
-      { key: 'calm', label: 'Calm', color: '#4CAF50', emoji: '😌' },
-      { key: 'supportive', label: 'Supportive', color: '#2196F3', emoji: '🤗' },
-      { key: 'neutral', label: 'Neutral', color: '#9E9E9E', emoji: '😐' },
-      { key: 'frustrated', label: 'Frustrated', color: '#FF9800', emoji: '😤' },
-      { key: 'angry', label: 'Angry', color: '#F44336', emoji: '😠' },
+      { key: 'calm', label: 'Calm', color: COLORS.success, emoji: '😌' },
+      { key: 'supportive', label: 'Supportive', color: COLORS.primary, emoji: '🤗' },
+      { key: 'neutral', label: 'Neutral', color: COLORS.textFaint, emoji: '😐' },
+      { key: 'frustrated', label: 'Frustrated', color: COLORS.warning, emoji: '😤' },
+      { key: 'angry', label: 'Angry', color: COLORS.error, emoji: '😠' },
     ] as const,
     interactionTypes: ['discipline', 'support', 'conflict', 'teaching', 'play'] as const,
   },

@@ -1,17 +1,19 @@
+import { COLORS } from '../theme/colors';
+
 export const getScoreColor = (score: number) => {
-  if (score >= 80) return '#22c55e';
-  if (score >= 50) return '#f59e0b';
-  return '#ef4444';
+  if (score >= 80) return COLORS.success;
+  if (score >= 50) return COLORS.warning;
+  return COLORS.error;
 };
 
 export const SESSION_TAGS = [
-  { id: 'bedtime', label: 'Bedtime routine', icon: '😴', color: '#DBEAFE' },
-  { id: 'homework', label: 'Homework help', icon: '📚', color: '#DCFCE7' },
-  { id: 'tantrum', label: 'Tantrum management', icon: '😤', color: '#FEE2E2' },
-  { id: 'screen_time', label: 'Screen time limits', icon: '📱', color: '#EDE9FE' },
-  { id: 'mealtime', label: 'Mealtime behavior', icon: '🍽️', color: '#FEF3C7' },
-  { id: 'siblings', label: 'Sibling conflicts', icon: '🤝', color: '#E0F2FE' },
-  { id: 'general', label: 'General coaching', icon: '✨', color: '#F3F4F6' },
+  { id: 'bedtime', label: 'Bedtime routine', icon: '😴', color: COLORS.warningBg },
+  { id: 'homework', label: 'Homework help', icon: '📚', color: COLORS.successBg },
+  { id: 'tantrum', label: 'Tantrum management', icon: '😤', color: COLORS.errorBg },
+  { id: 'screen_time', label: 'Screen time limits', icon: '📱', color: COLORS.surfaceContainerHigh },
+  { id: 'mealtime', label: 'Mealtime behavior', icon: '🍽️', color: COLORS.warningBg },
+  { id: 'siblings', label: 'Sibling conflicts', icon: '🤝', color: COLORS.surfaceContainer },
+  { id: 'general', label: 'General coaching', icon: '✨', color: COLORS.surfaceContainer },
 ] as const;
 
 export type SessionTagId = (typeof SESSION_TAGS)[number]['id'];

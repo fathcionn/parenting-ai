@@ -1,20 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { COLORS } from '../theme/colors';
 
 const lightTheme = {
-  background: '#FFFFFF',
-  card: '#FFFFFF',
-  text: '#000000',
-  muted: '#777777',
-  border: '#E5E5E5',
+  background: COLORS.background,
+  card: COLORS.cardBg,
+  text: COLORS.textPrimary,
+  muted: COLORS.textSecondary,
+  border: COLORS.border,
 };
 
 const darkTheme = {
-  background: '#1a1a2e',
-  card: '#16213e',
-  text: '#FFFFFF',
-  muted: '#C7C7D5',
-  border: '#2E3A59',
+  background: COLORS.primaryDark,
+  card: COLORS.primary,
+  text: COLORS.onPrimary,
+  muted: COLORS.surfaceContainerHigh,
+  border: COLORS.borderStrong,
 };
 
 type ThemeContextValue = {

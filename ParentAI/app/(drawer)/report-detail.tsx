@@ -5,6 +5,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { deleteDoc, doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase-config';
 import { getSessionTag, reportScoreFromData, toReportDate } from '../../src/utils/reportUtils';
+import { colors } from '../../src/theme/colors';
+import { radius, shadows, spacing } from '../../src/theme/spacing';
+import { typeScale } from '../../src/theme/typography';
 import {
   getScoreLabel,
   ImprovementsCard,
@@ -148,7 +151,7 @@ export default function ReportDetailScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <FontAwesome name="chevron-left" size={15} color="#000" />
+          <FontAwesome name="chevron-left" size={15} color={colors.light.text} />
         </TouchableOpacity>
         <View style={styles.headerText}>
           <Text style={styles.title}>Session Report</Text>
@@ -195,56 +198,55 @@ export default function ReportDetailScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.light.background,
     flex: 1,
   },
   content: {
-    gap: 16,
+    gap: spacing.md,
     paddingBottom: 42,
-    paddingHorizontal: 22,
+    paddingHorizontal: spacing.lg,
     paddingTop: 58,
   },
   centered: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    padding: spacing.lg,
   },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.sm,
   },
   backButton: {
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 19,
-    height: 38,
+    backgroundColor: colors.light.surface,
+    borderRadius: radius.full,
+    height: 40,
     justifyContent: 'center',
-    width: 38,
+    width: 40,
+    ...shadows.card,
   },
   headerText: {
     flex: 1,
   },
   title: {
-    color: '#000',
-    fontSize: 27,
-    fontWeight: '900',
+    color: colors.light.text,
+    ...typeScale.h2,
   },
   dateText: {
-    color: '#777',
-    fontSize: 14,
-    fontWeight: '700',
-    marginTop: 4,
+    color: colors.light.textSecondary,
+    ...typeScale.bodySmall,
+    marginTop: spacing.xs,
   },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
   },
   chip: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 999,
-    color: '#000',
+    backgroundColor: colors.light.surface,
+    borderRadius: radius.full,
+    color: colors.light.text,
     fontSize: 13,
     fontWeight: '800',
     paddingHorizontal: 12,
@@ -252,69 +254,67 @@ const styles = StyleSheet.create({
   },
   scoreHero: {
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
   },
   scoreLabel: {
-    color: '#000',
-    fontSize: 22,
+    color: colors.light.text,
+    ...typeScale.subheading,
     fontWeight: '900',
-    marginTop: 10,
+    marginTop: spacing.sm,
   },
   footer: {
-    gap: 4,
-    paddingVertical: 4,
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
   },
   footerText: {
-    color: '#888',
-    fontSize: 12,
+    color: colors.light.muted,
+    ...typeScale.caption,
     fontWeight: '700',
     textAlign: 'center',
   },
   primaryButton: {
     alignItems: 'center',
-    backgroundColor: '#000',
-    borderRadius: 15,
-    paddingVertical: 16,
+    backgroundColor: colors.light.primary,
+    borderRadius: radius.full,
+    paddingVertical: spacing.md,
+    ...shadows.card,
   },
   primaryText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '900',
+    color: colors.light.onPrimary,
+    ...typeScale.button,
   },
   deleteButton: {
     alignItems: 'center',
-    backgroundColor: '#fef2f2',
-    borderColor: '#fca5a5',
-    borderRadius: 15,
+    backgroundColor: colors.light.dangerBg,
+    borderColor: colors.light.danger,
+    borderRadius: radius.full,
     borderWidth: 1,
-    paddingVertical: 16,
+    paddingVertical: spacing.md,
   },
   deleteText: {
-    color: '#ef4444',
-    fontSize: 16,
-    fontWeight: '900',
+    color: colors.light.danger,
+    ...typeScale.button,
   },
   emptyTitle: {
-    color: '#000',
-    fontSize: 22,
-    fontWeight: '900',
-    marginBottom: 10,
+    color: colors.light.text,
+    ...typeScale.subheading,
+    marginBottom: spacing.sm,
   },
   emptyText: {
-    color: '#888',
-    fontSize: 14,
+    color: colors.light.muted,
+    ...typeScale.bodySmall,
     fontWeight: '700',
   },
   secondaryButton: {
-    borderColor: '#000',
-    borderRadius: 12,
+    borderColor: colors.light.primary,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    marginTop: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   secondaryText: {
-    color: '#000',
+    color: colors.light.primary,
     fontWeight: '800',
   },
 });

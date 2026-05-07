@@ -1,0 +1,24 @@
+env: load .env
+env: export GEMINI_API_KEY EXPO_PUBLIC_FIREBASE_API_KEY EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN EXPO_PUBLIC_FIREBASE_PROJECT_ID EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID EXPO_PUBLIC_FIREBASE_APP_ID EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID EXPO_PUBLIC_API_BASE_URL
+Starting project at C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8083
+Logs for your project will appear below.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  1.0% (1/1)
+λ node_modules\expo-router\node\render.js ▓░░░░░░░░░░░░░░░  8.8% ( 45/152)
+Web node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 24.7% (160/322)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓░░░░░░░░░ 46.6% (641/939)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓░░░░░░░░░░░ 35.5% (416/736)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 71.4% (1111/1315)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 67.9% ( 886/1075)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 82.3% (1505/1659)
+| Dynamic import at line 15: require(moduleName). This module may not work as intended when deployed to a runtime.
+λ Bundled 16196ms node_modules\expo-router\node\render.js (1854 modules)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.8% (1619/1621)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.8% (1619/1621)
+Web Bundled 19110ms node_modules\expo-router\entry.js (1621 modules)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 68.5% ( 979/1183)
+Web Bundled 5601ms node_modules\expo-router\entry.js (1622 modules)
+ LOG  [web] Logs will appear in the browser console

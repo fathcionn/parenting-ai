@@ -1,0 +1,57 @@
+env: load .env
+env: export GEMINI_API_KEY EXPO_PUBLIC_FIREBASE_API_KEY EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN EXPO_PUBLIC_FIREBASE_PROJECT_ID EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID EXPO_PUBLIC_FIREBASE_APP_ID EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID EXPO_PUBLIC_API_BASE_URL
+Starting project at C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8083
+Logs for your project will appear below.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  1.0% (1/1)
+λ node_modules\expo-router\node\render.js ░░░░░░░░░░░░░░░░  5.6% ( 33/169)
+Web node_modules\expo-router\entry.js ▓▓▓▓░░░░░░░░░░░░ 28.0% (113/280)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓░░░░░░░░░ 45.5% (400/695)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓░░░░░░░░░░░ 35.2% (421/738)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 57.0% ( 764/1012)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓░░░░░░░░ 52.7% (717/988)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 69.5% (1141/1405)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 77.7% (1081/1226)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 81.2% (1503/1668)
+| Dynamic import at line 15: require(moduleName). This module may not work as intended when deployed to a runtime.
+λ Bundled 20180ms node_modules\expo-router\node\render.js (1879 modules)
+λ Bundled 1068ms node_modules\expo-router\node\render.js (1 module)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1623/1623)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1623/1623)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1623/1623)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 23732ms node_modules\expo-router\entry.js (1623 modules)
+Web Bundled 4590ms node_modules\expo-router\entry.js (1 module)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓░░░░░░░ 58.4% ( 778/1018)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 98.0% (1595/1611)
+Web Bundled 7010ms node_modules\expo-router\entry.js (1619 modules)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 358ms node_modules\expo-router\node\render.js (1 module)
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 3638ms node_modules\expo-router\entry.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web Bundled 82ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Unable to resolve "../../src/components/ReportPresentation" from "app\(drawer)\report-detail.tsx"
+[0m [90m 15 |[39m   [33mTipsCard[39m[33m,[39m
+ [90m 16 |[39m   type [33mReportSafetyFlag[39m[33m,[39m
+[31m[1m>[22m[39m[90m 17 |[39m } [36mfrom[39m [32m'../../src/components/ReportPresentation'[39m[33m;[39m
+ [90m    |[39m         [31m[1m^[22m[39m
+ [90m 18 |[39m
+ [90m 19 |[39m type [33mDetailReport[39m [33m=[39m {
+ [90m 20 |[39m   id[33m:[39m string[33m;[39m[0m
+
+Import stack:
+
+ app\(drawer)\report-detail.tsx
+ | import "../../src/components/ReportPresentation"
+
+ app (require.context)
+

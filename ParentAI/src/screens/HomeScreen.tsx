@@ -1,35 +1,40 @@
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  getMicStream,
-  startRecording,
-  stopRecording,
-  transcribeAndAnalyze,
-} from '../services/geminiAudio';
-import { getRecordingMeteringLevel } from '../services/nativeAudio';
-import { saveToHistory } from '../services/history-service';
-import { checkSessionSafety, notifySafetyFlag, saveSafetyFlag } from '../services/safety-service';
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { auth, db } from '../config/firebase-config';
 import {
-  getAutoMonitorPreference,
-  setAutoMonitorPreference,
-  setMode,
+    getMicStream,
+    startRecording,
+    stopRecording,
+    transcribeAndAnalyze,
+} from '../services/geminiAudio';
+import { saveToHistory } from '../services/history-service';
+import { getRecordingMeteringLevel } from '../services/nativeAudio';
+import {
+    getAutoMonitorPreference,
+    setAutoMonitorPreference,
+    setMode,
 } from '../services/recordingState';
+import { checkSessionSafety, notifySafetyFlag, saveSafetyFlag } from '../services/safety-service';
 import { getStorageItem, STORAGE_KEYS } from '../services/storageKeys';
+import { COLORS } from '../theme/colors';
 import { calculateParentingScore, type ParentingAnalysis } from '../types/analysis';
+import { getSessionTag, reportScoreFromData, toReportDate } from '../utils/reportUtils';
 
 const DAILY_TIPS = [
   "Use 'I feel...' statements instead of 'You always...'",
@@ -91,16 +96,75 @@ function normalizeAnalysis(result: any): ParentingAnalysis {
   };
 }
 
+type HomeReport = {
+  id: string;
+  score: number;
+  date: Date;
+  summary: string;
+  durationSeconds?: number;
+  childName?: string | null;
+  tag?: string | null;
+  strengths: string[];
+  improvements: string[];
+  tips: string[];
+  safetyFlag?: any;
+};
+
+const formatSessionDate = (date: Date) =>
+  date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+
+function SkeletonCard() {
+  const opacity = React.useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: false,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0.4,
+          duration: 800,
+          useNativeDriver: false,
+        }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [opacity]);
+
+  return (
+    <Animated.View style={[styles.skeletonWrapper, { opacity }]}>
+      <View style={styles.skeletonCard}>
+        <View style={styles.skeletonTopRow}>
+          <View style={styles.skeletonTag} />
+          <View style={styles.skeletonScore} />
+        </View>
+        <View style={styles.skeletonTitle} />
+        <View style={styles.skeletonLineFull} />
+        <View style={styles.skeletonLineShort} />
+      </View>
+    </Animated.View>
+  );
+}
+
 export const HomeScreen: React.FC = () => {
   const { t } = useTranslation();
   const router = useRouter();
-  const startedAtRef = useRef(0);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const hasAutoStarted = useRef(false);
-  const animFrameRef = useRef<number>(0);
-  const meteringIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const pendingAudioRef = useRef<Blob | string | null>(null);
+  const startedAtRef = React.useRef(0);
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
+  const hasAutoStarted = React.useRef(false);
+  const animFrameRef = React.useRef<number>(0);
+  const meteringIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioContextRef = React.useRef<AudioContext | null>(null);
+  const pendingAudioRef = React.useRef<Blob | string | null>(null);
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [autoMonitor, setAutoMonitor] = useState(false);
@@ -108,6 +172,67 @@ export const HomeScreen: React.FC = () => {
   const [waveformBars, setWaveformBars] = useState<number[]>(Array(40).fill(2));
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [homeReports, setHomeReports] = useState<HomeReport[]>([]);
+  const [homeLoading, setHomeLoading] = useState(true);
+  const [homeError, setHomeError] = useState('');
+
+  const loadHomeReports = useCallback(async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      setHomeReports([]);
+      setHomeLoading(false);
+      return;
+    }
+
+    setHomeLoading(true);
+    setHomeError('');
+    try {
+      const snapshot = await getDocs(
+        query(collection(db, 'users', user.uid, 'reports'), orderBy('date', 'desc'))
+      );
+      setHomeReports(
+        snapshot.docs.map((item) => {
+          const data = item.data();
+          return {
+            id: item.id,
+            score: reportScoreFromData(data),
+            date: toReportDate(data.date || data.createdAt),
+            summary: String(data.summary || data.analysis?.impact_analysis || ''),
+            durationSeconds: Number(data.durationSeconds || 0),
+            childName: data.childName || null,
+            tag: data.tag || 'general',
+            strengths: Array.isArray(data.strengths) ? data.strengths : data.analysis?.positive_notes || [],
+            improvements: Array.isArray(data.improvements)
+              ? data.improvements
+              : data.analysis?.detected_issues || [],
+            tips: Array.isArray(data.tips) ? data.tips : data.analysis?.suggestions || [],
+            safetyFlag: data.safetyFlag || null,
+          };
+        })
+      );
+    } catch (error) {
+      console.error('Failed to load home reports:', error);
+      setHomeReports([]);
+      setHomeError('Could not load your latest sessions.');
+    } finally {
+      setHomeLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadHomeReports();
+    }, [loadHomeReports])
+  );
+
+  const homeSummary = useMemo(() => {
+    const sessions = homeReports.length;
+    const averageScore = sessions
+      ? Math.round(homeReports.reduce((sum, report) => sum + report.score, 0) / sessions)
+      : 0;
+    const focusLevel = sessions === 0 ? '--' : averageScore >= 80 ? 'High' : averageScore >= 50 ? 'Steady' : 'Needs care';
+    return { sessions, averageScore, focusLevel };
+  }, [homeReports]);
 
   useEffect(() => {
     getAutoMonitorPreference().then((value) => {
@@ -142,12 +267,12 @@ export const HomeScreen: React.FC = () => {
         Animated.timing(pulseAnim, {
           toValue: 1.15,
           duration: 1200,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
           duration: 1200,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ])
     );
@@ -264,51 +389,51 @@ export const HomeScreen: React.FC = () => {
   }
 
   async function analyzeMonitorAudio(audioData: Blob | string) {
-      const lang = await getStorageItem(STORAGE_KEYS.speechLanguage) || 'en';
-      const result = await transcribeAndAnalyze(audioData, lang);
-      const analysis = normalizeAnalysis(result);
-      const transcript = String(result.transcript || '');
+    const lang = await getStorageItem(STORAGE_KEYS.speechLanguage) || 'en';
+    const result = await transcribeAndAnalyze(audioData, lang);
+    const analysis = normalizeAnalysis(result);
+    const transcript = String(result.transcript || '');
 
-      if (transcript.trim().length < 2) {
-        setErrorMessage(t('error_no_speech'));
-        setIsLoading(false);
-        return;
+    if (transcript.trim().length < 2) {
+      setErrorMessage(t('error_no_speech'));
+      setIsLoading(false);
+      return;
+    }
+
+    const reportId = `report_${Date.now()}`;
+    await saveToHistory({
+      id: reportId,
+      createdAt: new Date().toISOString(),
+      durationSeconds: Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)),
+      audioUri: typeof audioData === 'string' ? audioData : null,
+      transcript,
+      language: lang,
+      analysis,
+      parentingScore: calculateParentingScore(analysis),
+      mode: 'background',
+      summary: String(result.summary || analysis.impact_analysis || ''),
+      strengths: Array.isArray(result.strengths) ? result.strengths : analysis.positive_notes,
+      improvements: Array.isArray(result.improvements) ? result.improvements : analysis.detected_issues,
+      tips: Array.isArray(result.tips) ? result.tips : analysis.suggestions,
+      tag: 'general',
+    });
+
+    try {
+      const safety = await checkSessionSafety(transcript);
+      if (!safety.safe) {
+        await saveSafetyFlag(reportId, safety);
+        await notifySafetyFlag(reportId, safety, () =>
+          router.push({
+            pathname: '/(drawer)/report-detail' as any,
+            params: { id: reportId },
+          })
+        );
       }
+    } catch (safetyError) {
+      console.warn('Safety check failed:', safetyError);
+    }
 
-      const reportId = `report_${Date.now()}`;
-      await saveToHistory({
-        id: reportId,
-        createdAt: new Date().toISOString(),
-        durationSeconds: Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)),
-        audioUri: typeof audioData === 'string' ? audioData : null,
-        transcript,
-        language: lang,
-        analysis,
-        parentingScore: calculateParentingScore(analysis),
-        mode: 'background',
-        summary: String(result.summary || analysis.impact_analysis || ''),
-        strengths: Array.isArray(result.strengths) ? result.strengths : analysis.positive_notes,
-        improvements: Array.isArray(result.improvements) ? result.improvements : analysis.detected_issues,
-        tips: Array.isArray(result.tips) ? result.tips : analysis.suggestions,
-        tag: 'general',
-      });
-
-      try {
-        const safety = await checkSessionSafety(transcript);
-        if (!safety.safe) {
-          await saveSafetyFlag(reportId, safety);
-          await notifySafetyFlag(reportId, safety, () =>
-            router.push({
-              pathname: '/(drawer)/report-detail' as any,
-              params: { id: reportId },
-            })
-          );
-        }
-      } catch (safetyError) {
-        console.warn('Safety check failed:', safetyError);
-      }
-
-      setSuccessMessage(t('home_session_saved'));
+    setSuccessMessage(t('home_session_saved'));
   }
 
   const handleToggleAutoMonitor = async (value: boolean) => {
@@ -322,35 +447,39 @@ export const HomeScreen: React.FC = () => {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.statusCard}>
-        <View style={styles.iconArea}>
-          {isMonitoring ? (
-            <Animated.View style={[styles.pulseCircle, { transform: [{ scale: pulseAnim }] }]}>
-              <View style={styles.pulseDot} />
-            </Animated.View>
+      <View style={styles.monitorBar}>
+        <View>
+          <Text style={styles.monitorKicker}>
+            {isMonitoring ? 'COACHING ACTIVE' : 'BACKGROUND ASSISTANT READY'}
+          </Text>
+          <Text style={styles.monitorMeta}>
+            {isMonitoring ? formatTime(elapsedSeconds) : 'Background Assistant is off'}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.monitorButton, isMonitoring && styles.monitorButtonActive]}
+          activeOpacity={0.85}
+          onPress={isMonitoring ? stopAndAnalyzeMonitor : startMonitor}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color={isMonitoring ? COLORS.primary : COLORS.cardBg} />
           ) : (
-            <View style={styles.inactiveIcon}>
-              <FontAwesome name="microphone" size={44} color="#8A8A8A" />
+            <View style={styles.monitorButtonTextWrap}>
+              <Text style={[styles.monitorButtonText, isMonitoring && styles.monitorButtonTextActive]}>
+                {isMonitoring ? 'Pause Assistant' : 'Enable Background Listening'}
+              </Text>
+              <Text style={[styles.monitorButtonCaption, isMonitoring && styles.monitorButtonCaptionActive]}>
+                Passive background mode
+              </Text>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
+      </View>
 
-        <Text style={styles.statusLabel}>
-          {isMonitoring ? t('home_monitor_on') : t('home_monitor_off')}
-        </Text>
-        <Text style={styles.subtitle}>
-          {isMonitoring
-            ? t('home_subtitle_on')
-            : t('home_subtitle_off')}
-        </Text>
-        {isMonitoring && <Text style={styles.timer}>{formatTime(elapsedSeconds)}</Text>}
-        {isMonitoring && (
-          <View style={styles.waveform}>
-            {waveformBars.map((bar, index) => (
-              <View key={index} style={[styles.waveformBar, { height: bar }]} />
-            ))}
-          </View>
-        )}
+      <View style={styles.header}>
+        <Text style={styles.greeting}>Good morning, Parent {'\u{1F44B}'}</Text>
+        <Text style={styles.headerSubtitle}>Here is your TalkWise overview for today.</Text>
       </View>
 
       {errorMessage ? (
@@ -365,25 +494,65 @@ export const HomeScreen: React.FC = () => {
         </View>
       ) : null}
 
-      <TouchableOpacity
-        style={[styles.mainButton, isMonitoring && styles.mainButtonActive]}
-        activeOpacity={0.85}
-        onPress={isMonitoring ? stopAndAnalyzeMonitor : startMonitor}
-        disabled={isLoading}
-      >
-        {isLoading ? (
-          <View style={styles.loadingRow}>
-            <ActivityIndicator color={isMonitoring ? '#000' : '#FFF'} />
-            <Text style={[styles.mainButtonText, isMonitoring && styles.mainButtonTextActive]}>
-              Analyzing your session... This may take up to 30 seconds on first use.
-            </Text>
+      {isMonitoring ? (
+        <View style={styles.liveCard}>
+          <Animated.View style={[styles.pulseCircle, { transform: [{ scale: pulseAnim }] }]}>
+            <FontAwesome name="microphone" size={24} color={COLORS.onPrimary} />
+          </Animated.View>
+          <View style={styles.waveform}>
+            {waveformBars.map((bar, index) => (
+              <View key={index} style={[styles.waveformBar, { height: bar }]} />
+            ))}
           </View>
-        ) : (
-          <Text style={[styles.mainButtonText, isMonitoring && styles.mainButtonTextActive]}>
-            {isMonitoring ? t('home_stop_analyze') : t('home_start_monitor')}
-          </Text>
-        )}
+          <Text style={styles.liveText}>{t('home_subtitle_on')}</Text>
+        </View>
+      ) : null}
+
+      <View style={styles.statsRow}>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{homeLoading ? '...' : homeSummary.sessions}</Text>
+          <Text style={styles.statLabel}>Sessions</Text>
+        </View>
+        <View style={styles.statCard}>
+          <TouchableOpacity
+            style={styles.statInfoButton}
+            onPress={() =>
+              Alert.alert(
+                'Avg Score',
+                'Your average coaching score across all sessions. Scores above 80 indicate positive, calm, and supportive communication.'
+              )
+            }
+          >
+            <Text style={styles.statInfoText}>i</Text>
+          </TouchableOpacity>
+          <Text style={styles.statValue}>{homeLoading || !homeSummary.sessions ? '--' : `${homeSummary.averageScore}%`}</Text>
+          <Text style={styles.statLabel}>Avg Score</Text>
+        </View>
+        <View style={styles.statCard}>
+          <TouchableOpacity
+            style={styles.statInfoButton}
+            onPress={() =>
+              Alert.alert(
+                'Focus Level',
+                'Measures your consistency in using coaching techniques. High means you are regularly applying what you have learned.'
+              )
+            }
+          >
+            <Text style={styles.statInfoText}>i</Text>
+          </TouchableOpacity>
+          <Text style={styles.statValue}>{homeLoading ? '...' : homeSummary.focusLevel}</Text>
+          <Text style={styles.statLabel}>Focus Level</Text>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={styles.ctaButton}
+        activeOpacity={0.85}
+        onPress={() => router.push('/(drawer)/coaching' as any)}
+      >
+        <Text style={styles.ctaButtonText}>Start Live Coaching</Text>
       </TouchableOpacity>
+      <Text style={styles.ctaCaption}>Active session with real-time feedback</Text>
 
       <View style={styles.autoCard}>
         <View style={styles.autoText}>
@@ -395,20 +564,18 @@ export const HomeScreen: React.FC = () => {
         <Switch
           value={autoMonitor}
           onValueChange={handleToggleAutoMonitor}
-          trackColor={{ false: '#DADADA', true: '#111111' }}
-          thumbColor="#FFFFFF"
+                          trackColor={{ false: COLORS.surfaceContainerHigh, true: COLORS.primary }}
+          thumbColor={COLORS.onPrimary}
         />
       </View>
 
-      <View style={styles.infoCard}>
-        <Text style={styles.lockIcon}>{'\u{1F512}'}</Text>
-        <Text style={styles.infoText}>
-          {t('home_privacy_note')}
-        </Text>
+      <View style={styles.inlinePrivacyNote}>
+        <FontAwesome name="lock" size={14} color={COLORS.success} />
+        <Text style={styles.inlinePrivacyText}>{t('home_privacy_note')}</Text>
       </View>
 
       <View style={styles.tipCard}>
-        <Text style={styles.tipIcon}>💡</Text>
+        <Text style={styles.tipIcon}>{'\u{1F4A1}'}</Text>
         <View style={styles.tipTextWrap}>
           <Text style={styles.tipTitle}>Tip of the Day</Text>
           <Text style={styles.tipText}>
@@ -416,166 +583,538 @@ export const HomeScreen: React.FC = () => {
           </Text>
         </View>
       </View>
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Recent Sessions</Text>
+        <TouchableOpacity onPress={() => router.push('/(drawer)/history' as any)}>
+          <Text style={styles.sectionLink}>View all</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.sessionsGrid}>
+        {homeLoading ? (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        ) : homeError ? (
+          <View style={styles.sessionCard}>
+            <Text style={styles.sessionTitle}>Could not load sessions</Text>
+            <Text style={styles.sessionDescription}>{homeError}</Text>
+          </View>
+        ) : homeReports.length === 0 ? (
+          <View style={styles.sessionCard}>
+            <View style={styles.sessionTopRow}>
+              <Text style={styles.categoryTag}>GENERAL</Text>
+              <View style={styles.scoreBadgeMuted}>
+                <Text style={styles.scoreTextMuted}>--</Text>
+              </View>
+            </View>
+            <Text style={styles.sessionTitle}>No sessions yet</Text>
+            <Text style={styles.sessionTime}>Start coaching</Text>
+            <Text style={styles.sessionDescription}>
+              Your latest coaching summaries will appear here after analysis.
+            </Text>
+          </View>
+        ) : (
+          homeReports.slice(0, 4).map((report) => {
+            const tag = getSessionTag(report.tag);
+            return (
+              <TouchableOpacity
+                key={report.id}
+                style={styles.sessionCard}
+                activeOpacity={0.8}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(drawer)/session-results' as any,
+                    params: {
+                      score: report.score,
+                      summary: report.summary,
+                      strengths: JSON.stringify(report.strengths),
+                      improvements: JSON.stringify(report.improvements),
+                      tips: JSON.stringify(report.tips),
+                      safetyFlag: JSON.stringify(report.safetyFlag || null),
+                      reportId: report.id,
+                      childName: report.childName || '',
+                      sessionTag: report.tag || '',
+                      durationSeconds: String(report.durationSeconds || 0),
+                    },
+                  })
+                }
+              >
+                <View style={styles.sessionTopRow}>
+                  <Text style={styles.categoryTag}>
+                    {tag.icon} {tag.label.toUpperCase()}
+                  </Text>
+                  <View style={styles.scoreBadge}>
+                    <Text style={styles.scoreText}>{report.score}</Text>
+                  </View>
+                </View>
+                <Text style={styles.sessionTitle}>{report.childName || 'Coaching Session'}</Text>
+                <Text style={styles.sessionTime}>{formatSessionDate(report.date)}</Text>
+                <Text style={styles.sessionDescription} numberOfLines={2}>
+                  {report.summary || 'Tap to review this coaching report.'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })
+        )}
+      </View>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.background,
     flex: 1,
   },
   content: {
     gap: 20,
     paddingBottom: 48,
-    paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingTop: 28,
   },
-  statusCard: {
+  monitorBar: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    elevation: 3,
-    padding: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
+    borderRadius: 9999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 8,
+    paddingLeft: 20,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.06,
-    shadowRadius: 12,
+    shadowRadius: 18,
+    elevation: 3,
   },
-  iconArea: {
-    alignItems: 'center',
-    height: 112,
-    justifyContent: 'center',
-    marginBottom: 12,
-    width: 112,
+  monitorKicker: {
+    color: COLORS.textPrimary,
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.2,
   },
-  inactiveIcon: {
+  monitorMeta: {
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  monitorButton: {
     alignItems: 'center',
-    backgroundColor: '#F4F4F4',
-    borderRadius: 56,
-    height: 112,
+    backgroundColor: COLORS.primary,
+    borderRadius: 9999,
     justifyContent: 'center',
-    width: 112,
+    minHeight: 48,
+    minWidth: 176,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  monitorButtonActive: {
+    backgroundColor: COLORS.surfaceContainer,
+  },
+  monitorButtonText: {
+    color: COLORS.cardBg,
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  monitorButtonTextActive: {
+    color: COLORS.primary,
+  },
+  monitorButtonTextWrap: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  monitorButtonCaption: {
+    color: 'rgba(255,255,255,0.7)',
+    fontFamily: 'Inter',
+    fontSize: 11,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  monitorButtonCaptionActive: {
+    color: COLORS.textSecondary,
+  },
+  header: {
+    gap: 6,
+  },
+  greeting: {
+    color: COLORS.textPrimary,
+    fontFamily: 'Inter',
+    fontSize: 32,
+    fontWeight: '700',
+    letterSpacing: -0.6,
+    lineHeight: 38,
+  },
+  headerSubtitle: {
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '400',
+    lineHeight: 24,
+  },
+  monitorOpenCard: {
+    alignItems: 'center',
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 14,
+    padding: 16,
+  },
+  monitorOpenIcon: {
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: 22,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  monitorOpenText: {
+    flex: 1,
+  },
+  monitorOpenTitle: {
+    color: COLORS.textPrimary,
+    fontFamily: 'Inter',
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  monitorOpenSubtitle: {
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 3,
+  },
+  liveCard: {
+    alignItems: 'center',
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 20,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 3,
   },
   pulseCircle: {
     alignItems: 'center',
-    backgroundColor: '#000000',
-    borderRadius: 56,
-    height: 112,
+    backgroundColor: COLORS.primary,
+    borderRadius: 34,
+    height: 68,
     justifyContent: 'center',
-    width: 112,
-  },
-  pulseDot: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    height: 36,
-    width: 36,
-  },
-  statusLabel: {
-    color: '#000000',
-    fontSize: 24,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  subtitle: {
-    color: '#777777',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  timer: {
-    color: '#000000',
-    fontFamily: 'SpaceMono',
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: 2,
-    marginTop: 22,
+    width: 68,
   },
   waveform: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 3,
-    height: 72,
+    height: 62,
     justifyContent: 'center',
-    marginTop: 16,
+    marginTop: 4,
   },
   waveformBar: {
-    backgroundColor: '#000',
+    backgroundColor: COLORS.primary,
     borderRadius: 2,
     width: 4,
   },
-  mainButton: {
+  liveText: {
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statCard: {
     alignItems: 'center',
-    backgroundColor: '#000000',
-    borderColor: '#000000',
-    borderRadius: 14,
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
+    borderRadius: 12,
     borderWidth: 1,
-    height: 60,
+    flex: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 18,
+    position: 'relative',
+  },
+  statInfoButton: {
+    alignItems: 'center',
+    height: 24,
     justifyContent: 'center',
+    position: 'absolute',
+    right: 8,
+    top: 8,
+    width: 24,
   },
-  mainButtonActive: {
-    backgroundColor: '#FFFFFF',
+  statInfoText: {
+    color: COLORS.textFaint,
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '800',
   },
-  mainButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
+  statValue: {
+    color: COLORS.primary,
+    fontFamily: 'Inter',
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  statLabel: {
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    marginTop: 6,
+    textTransform: 'uppercase',
+  },
+  ctaButton: {
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: 9999,
+    justifyContent: 'center',
+    minHeight: 58,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+  },
+  ctaButtonText: {
+    color: COLORS.cardBg,
+    fontFamily: 'Inter',
+    fontSize: 16,
     fontWeight: '700',
   },
-  mainButtonTextActive: {
-    color: '#000000',
-  },
-  loadingRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 10,
+  ctaCaption: {
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: -14,
+    textAlign: 'center',
   },
   autoCard: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E5E5',
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
     borderRadius: 12,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 16,
     padding: 16,
   },
+  inlinePrivacyNote: {
+    alignItems: 'center',
+    backgroundColor: COLORS.successBg,
+    borderRadius: 8,
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: -12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  inlinePrivacyText: {
+    color: COLORS.successText,
+    flex: 1,
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
+  },
   autoText: {
     flex: 1,
   },
   autoTitle: {
-    color: '#000000',
+    color: COLORS.textPrimary,
+    fontFamily: 'Inter',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   autoSubtitle: {
-    color: '#777777',
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
     fontSize: 13,
+    fontWeight: '500',
     lineHeight: 18,
     marginTop: 4,
   },
-  infoCard: {
+  sectionHeader: {
     alignItems: 'center',
-    backgroundColor: '#F8F8F8',
-    borderRadius: 10,
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: -4,
+  },
+  sectionTitle: {
+    color: COLORS.textPrimary,
+    fontFamily: 'Inter',
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  sectionLink: {
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  sessionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
+  },
+  skeletonWrapper: {
+    flexBasis: '47%',
+    flexGrow: 1,
+  },
+  skeletonCard: {
+    backgroundColor: COLORS.surfaceContainer,
+    borderRadius: 12,
+    gap: 12,
+    marginBottom: 12,
+    padding: 24,
+  },
+  skeletonTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  skeletonTag: {
+    backgroundColor: COLORS.surfaceContainerHigh,
+    borderRadius: 9999,
+    height: 20,
+    width: 100,
+  },
+  skeletonScore: {
+    backgroundColor: COLORS.surfaceContainerHigh,
+    borderRadius: 9999,
+    height: 20,
+    width: 40,
+  },
+  skeletonTitle: {
+    backgroundColor: COLORS.surfaceContainerHigh,
+    borderRadius: 6,
+    height: 20,
+    width: '70%',
+  },
+  skeletonLineFull: {
+    backgroundColor: COLORS.surfaceContainerHigh,
+    borderRadius: 6,
+    height: 14,
+    width: '100%',
+  },
+  skeletonLineShort: {
+    backgroundColor: COLORS.surfaceContainerHigh,
+    borderRadius: 6,
+    height: 14,
+    width: '60%',
+  },
+  sessionCard: {
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexBasis: '47%',
+    flexGrow: 1,
+    minHeight: 178,
     padding: 14,
   },
-  lockIcon: {
-    fontSize: 20,
+  sessionTopRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
-  infoText: {
-    color: '#555555',
-    flex: 1,
+  categoryTag: {
+    backgroundColor: COLORS.surfaceContainer,
+    borderRadius: 9999,
+    color: COLORS.textPrimary,
+    fontFamily: 'Inter',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    overflow: 'hidden',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  categoryTagMuted: {
+    backgroundColor: COLORS.background,
+    borderColor: COLORS.border,
+    borderRadius: 9999,
+    borderWidth: 1,
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    overflow: 'hidden',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  scoreBadge: {
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: 20,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  scoreBadgeMuted: {
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceContainerHigh,
+    borderRadius: 20,
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
+  },
+  scoreText: {
+    color: COLORS.cardBg,
+    fontFamily: 'Inter',
     fontSize: 13,
+    fontWeight: '700',
+  },
+  scoreTextMuted: {
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  sessionTitle: {
+    color: COLORS.textPrimary,
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 21,
+  },
+  sessionTime: {
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  sessionDescription: {
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '400',
     lineHeight: 18,
+    marginTop: 12,
   },
   tipCard: {
     alignItems: 'flex-start',
-    backgroundColor: '#FEF9C3',
-    borderColor: '#FDE68A',
-    borderRadius: 14,
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
+    borderRadius: 12,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 12,
@@ -588,37 +1127,44 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tipTitle: {
-    color: '#000',
-    fontSize: 15,
-    fontWeight: '900',
+    color: COLORS.textPrimary,
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '700',
     marginBottom: 4,
   },
   tipText: {
-    color: '#3F3F00',
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     lineHeight: 19,
   },
   errorCard: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FCA5A5',
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.error,
     borderRadius: 12,
     borderWidth: 1,
     padding: 14,
   },
   errorText: {
-    color: '#991B1B',
+    color: COLORS.error,
+    fontFamily: 'Inter',
     fontSize: 14,
     fontWeight: '700',
   },
   successCard: {
-    backgroundColor: '#F3F3F3',
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
     borderRadius: 12,
+    borderWidth: 1,
     padding: 14,
   },
   successText: {
-    color: '#000000',
+    color: COLORS.textPrimary,
+    fontFamily: 'Inter',
     fontSize: 14,
     fontWeight: '700',
   },
 });
+

@@ -1,19 +1,19 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Alert,
-  Animated,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useTranslation } from 'react-i18next';
 import { collection, deleteDoc, doc, getDocs, orderBy, query } from 'firebase/firestore';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+    Alert,
+    Animated,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { auth, db } from '../../src/config/firebase-config';
 import { BorderRadius, Colors, Spacing, Typography } from '../../src/constants/theme';
@@ -49,8 +49,8 @@ function SkeletonCards() {
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0.3, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 0.3, duration: 800, useNativeDriver: false }),
       ])
     );
     animation.start();
@@ -205,10 +205,10 @@ export default function HistoryScreen() {
         <SkeletonCards />
       ) : filteredHistory.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>🎙️</Text>
+          <Text style={styles.emptyIcon}>???</Text>
           <Text style={styles.emptyTitle}>No sessions yet</Text>
           <Text style={styles.emptyText}>Start your first coaching session to see your history here</Text>
-          <TouchableOpacity style={styles.emptyButton} onPress={() => router.push('/(drawer)/record' as any)}>
+          <TouchableOpacity style={styles.emptyButton} onPress={() => router.push('/(drawer)/coaching' as any)}>
             <Text style={styles.emptyButtonText}>Start First Session</Text>
           </TouchableOpacity>
         </View>
@@ -237,7 +237,7 @@ export default function HistoryScreen() {
                     </View>
                     {record.safetyFlag ? (
                       <View style={styles.warningBadge}>
-                        <Text style={styles.warningBadgeText}>⚠️ {record.safetyFlag.severity}</Text>
+                        <Text style={styles.warningBadgeText}>?? {record.safetyFlag.severity}</Text>
                       </View>
                     ) : null}
                     <View style={[styles.tagBadge, { backgroundColor: tag.color }]}>

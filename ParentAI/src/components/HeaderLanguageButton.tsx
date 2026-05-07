@@ -12,6 +12,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { getStorageItem, setStorageItem, STORAGE_KEYS } from '../services/storageKeys';
+import { COLORS } from '../theme/colors';
 
 type SpeechLanguage = 'en' | 'ar' | 'tr';
 
@@ -127,28 +128,28 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.cardBg,
     borderRadius: 16,
     maxWidth: 360,
     padding: 24,
     width: '100%',
   },
   modalTitle: {
-    color: '#000',
+    color: COLORS.textPrimary,
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 20,
   },
   languageRow: {
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: COLORS.surfaceContainer,
     borderRadius: 12,
     flexDirection: 'row',
     marginBottom: 8,
     padding: 14,
   },
   languageRowSelected: {
-    backgroundColor: '#000000',
+    backgroundColor: COLORS.primary,
   },
   languageFlag: {
     borderRadius: 3,
@@ -157,16 +158,16 @@ const styles = StyleSheet.create({
     width: 32,
   },
   languageText: {
-    color: '#000000',
+    color: COLORS.primary,
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
   },
   languageTextSelected: {
-    color: '#FFFFFF',
+    color: COLORS.cardBg,
   },
   languageCheck: {
-    color: '#fff',
+    color: COLORS.onPrimary,
     fontSize: 18,
   },
 });

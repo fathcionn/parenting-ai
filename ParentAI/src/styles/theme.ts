@@ -1,102 +1,57 @@
+import { COLORS, colors } from '../theme/colors';
+import { radius, shadows, spacing } from '../theme/spacing';
+import { typeScale } from '../theme/typography';
+
+const light = colors.light;
+
 export const theme = {
   colors: {
-    // Primary
-    background: '#FFFFFF',
-    surface: '#F5F5F5',
-    text: '#000000',
-    textSecondary: '#666666',
-    textMuted: '#9E9E9E',
-    border: '#E0E0E0',
+    background: light.background,
+    surface: light.surface,
+    text: light.text,
+    textSecondary: light.textSecondary,
+    textMuted: light.muted,
+    border: light.border,
 
-    // Accent
-    primary: '#000000',
-    primaryLight: '#F0F0F0',
-    secondary: '#FFFFFF',
+    primary: light.primary,
+    primaryLight: light.surface,
+    secondary: light.card,
 
-    // Status
-    success: '#10B981',
-    warning: '#F59E0B',
-    error: '#EF4444',
-    info: '#3B82F6',
+    success: light.success,
+    successBg: COLORS.successBg,
+    successText: COLORS.successText,
+    warning: light.warning,
+    error: light.danger,
+    info: light.accent,
 
-    // Semantic
-    calm: '#86EFAC',
-    aggressive: '#FCA5A5',
-    supportive: '#93C5FD',
-    neutral: '#D1D5DB',
+    calm: COLORS.success,
+    aggressive: COLORS.error,
+    supportive: COLORS.primary,
+    neutral: COLORS.textFaint,
   },
 
-  spacing: {
-    xs: 4,
-    sm: 8,
-    md: 16,
-    lg: 24,
-    xl: 32,
-    xxl: 48,
-  },
+  spacing,
 
   borderRadius: {
-    sm: 4,
-    md: 8,
-    lg: 16,
-    xl: 24,
+    sm: radius.sm,
+    md: radius.md,
+    lg: radius.xl,
+    xl: radius.xxl,
   },
 
   typography: {
-    h1: {
-      fontSize: 32,
-      fontWeight: '700',
-      lineHeight: 40,
-    },
-    h2: {
-      fontSize: 28,
-      fontWeight: '700',
-      lineHeight: 36,
-    },
-    h3: {
-      fontSize: 24,
-      fontWeight: '600',
-      lineHeight: 32,
-    },
-    body: {
-      fontSize: 16,
-      fontWeight: '400',
-      lineHeight: 24,
-    },
-    bodySmall: {
-      fontSize: 14,
-      fontWeight: '400',
-      lineHeight: 20,
-    },
-    label: {
-      fontSize: 12,
-      fontWeight: '600',
-      lineHeight: 16,
-    },
+    h1: typeScale.h1,
+    h2: typeScale.h2,
+    h3: typeScale.subheading,
+    body: typeScale.body,
+    bodySmall: typeScale.bodySmall,
+    label: typeScale.caption,
   },
 
   shadows: {
-    sm: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.1,
-      shadowRadius: 2,
-      elevation: 2,
-    },
-    md: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.15,
-      shadowRadius: 4,
-      elevation: 4,
-    },
-    lg: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.2,
-      shadowRadius: 8,
-      elevation: 6,
-    },
+    sm: shadows.card,
+    md: shadows.card,
+    lg: shadows.overlay,
   },
 };
 

@@ -1,8 +1,6 @@
 import React from 'react';
-import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Drawer } from 'expo-router/drawer';
-import { theme } from '../../src/styles/theme';
 import { Colors } from '../../src/constants/theme';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { HeaderLanguageButton } from '../../src/components/HeaderLanguageButton';
@@ -27,20 +25,29 @@ export default function DrawerLayout() {
         screenOptions={{
           drawerActiveTintColor: Colors.primary,
           drawerInactiveTintColor: Colors.secondary,
+          drawerActiveBackgroundColor: Colors.primaryFaded,
+          drawerInactiveBackgroundColor: 'transparent',
           headerStyle: {
             backgroundColor: Colors.background,
-            shadowColor: 'transparent', // remove header shadow
+            shadowColor: 'transparent',
             elevation: 0,
           },
           headerRight: () => <HeaderLanguageButton />,
           headerTintColor: Colors.text,
           drawerStyle: {
-            backgroundColor: Colors.backgroundLight,
-            width: 280,
+            backgroundColor: Colors.backgroundCard,
+            borderBottomRightRadius: 16,
+            borderTopRightRadius: 16,
+            width: 300,
           },
           drawerLabelStyle: {
             fontSize: 16,
-            fontWeight: '600',
+            fontWeight: '700',
+          },
+          drawerItemStyle: {
+            borderRadius: 999,
+            marginHorizontal: 10,
+            marginVertical: 4,
           },
         }}>
         <Drawer.Screen
@@ -54,7 +61,7 @@ export default function DrawerLayout() {
           }}
         />
         <Drawer.Screen
-          name="record"
+          name="coaching"
           options={{
             drawerLabel: t('nav_live_coaching'),
             title: t('nav_live_coaching'),
@@ -64,7 +71,7 @@ export default function DrawerLayout() {
           }}
         />
         <Drawer.Screen
-          name="reports"
+          name="insights"
           options={{
             drawerLabel: t('nav_insights'),
             title: t('nav_insights'),
@@ -96,26 +103,27 @@ export default function DrawerLayout() {
         <Drawer.Screen
           name="leaderboard"
           options={{
-            drawerLabel: t('profile_leaderboard'),
-            title: t('profile_leaderboard'),
+            drawerLabel: 'Community Benchmarks',
+            title: 'Community Benchmarks',
             drawerIcon: ({ color, size }) => (
               <DrawerIcon name="trophy-outline" color={color} size={size} />
             ),
           }}
         />
         <Drawer.Screen
+          name="achievements"
+          options={{
+            drawerLabel: 'Achievements',
+            title: 'Achievements',
+            drawerIcon: ({ color, size }) => (
+              <DrawerIcon name="ribbon-outline" color={color} size={size} />
+            ),
+          }}
+        />
+        <Drawer.Screen
           name="child-location"
           options={{
-            drawerLabel: () => (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={{ color: Colors.secondary, fontSize: 16, fontWeight: '600' }}>
-                  Child Location
-                </Text>
-                <View style={{ backgroundColor: '#000', borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2 }}>
-                  <Text style={{ color: '#FFF', fontSize: 9, fontWeight: '900' }}>BETA</Text>
-                </View>
-              </View>
-            ),
+            drawerLabel: 'Child Location',
             title: 'Child Location',
             drawerIcon: ({ color, size }) => (
               <DrawerIcon name="location-outline" color={color} size={size} />
@@ -127,6 +135,20 @@ export default function DrawerLayout() {
           options={{
             drawerItemStyle: { display: 'none' },
             title: t('history_view_report'),
+          }}
+        />
+        <Drawer.Screen
+          name="reports"
+          options={{
+            drawerItemStyle: { display: 'none' },
+            title: t('nav_insights'),
+          }}
+        />
+        <Drawer.Screen
+          name="record"
+          options={{
+            drawerItemStyle: { display: 'none' },
+            title: t('nav_live_coaching'),
           }}
         />
         <Drawer.Screen

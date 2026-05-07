@@ -1,149 +1,108 @@
-// TalkWise Design System
-// Minimalist Black & White palette for a calm, professional, and elegant UI
+import { COLORS, colors as nurtureColors } from '../theme/colors';
+import { radius, shadows, spacing } from '../theme/spacing';
+import { typeScale } from '../theme/typography';
+
+const light = nurtureColors.light;
 
 export const Colors = {
-  // Primary - Deep Black
-  primary: '#000000',
-  primaryLight: '#333333',
-  primaryDark: '#000000',
-  primaryFaded: 'rgba(0, 0, 0, 0.05)',
+  primary: light.primary,
+  primaryLight: light.surface,
+  primaryDark: COLORS.primaryDark,
+  primaryFaded: 'rgba(92, 122, 107, 0.10)',
 
-  // Secondary - Elegant Gray
-  secondary: '#757575',
-  secondaryLight: '#BDBDBD',
-  secondaryDark: '#424242',
+  secondary: light.secondary,
+  secondaryLight: COLORS.surfaceContainerHigh,
+  secondaryDark: COLORS.accent,
 
-  // Accent - Black
-  accent: '#000000',
-  accentLight: '#424242',
-  accentDark: '#000000',
+  accent: light.accent,
+  accentLight: COLORS.warningBg,
+  accentDark: COLORS.accent,
 
-  // Tone Colors (Grayscale for minimalism)
-  toneCalm: '#424242',
-  toneSupportive: '#757575',
-  toneNeutral: '#9E9E9E',
-  toneFrustrated: '#616161',
-  toneAngry: '#212121',
-  toneHarsh: '#000000',
+  toneCalm: COLORS.success,
+  toneSupportive: light.primary,
+  toneNeutral: light.outline,
+  toneFrustrated: light.warning,
+  toneAngry: light.danger,
+  toneHarsh: light.danger,
 
-  // Backgrounds - Clean Whites and very light grays
-  background: '#FFFFFF',
-  backgroundLight: '#FAFAFA',
-  backgroundCard: '#FFFFFF',
-  backgroundCardLight: '#F5F5F5',
-  surface: '#F5F5F5',
+  background: light.background,
+  backgroundLight: light.surface,
+  backgroundCard: light.card,
+  backgroundCardLight: light.surface,
+  surface: light.surface,
 
-  // Text
-  text: '#000000',
-  textSecondary: '#616161',
-  textMuted: '#9E9E9E',
-  textOnPrimary: '#FFFFFF',
+  text: light.text,
+  textSecondary: light.textSecondary,
+  textMuted: light.muted,
+  textOnPrimary: light.onPrimary,
 
-  // Status (Monochrome)
-  success: '#000000',
-  warning: '#757575',
-  error: '#000000',
-  info: '#424242',
+  success: light.success,
+  warning: light.warning,
+  error: light.danger,
+  info: light.accent,
 
-  // Borders
-  border: '#E0E0E0',
-  borderLight: '#F5F5F5',
+  border: light.border,
+  borderLight: light.surfaceHigh,
 
-  // Gradients
-  gradientPrimary: ['#000000', '#212121'] as const,
-  gradientAccent: ['#212121', '#424242'] as const,
-  gradientDanger: ['#424242', '#616161'] as const,
-  gradientDark: ['#FAFAFA', '#F5F5F5'] as const,
-  gradientCard: ['#FFFFFF', '#FAFAFA'] as const,
+  gradientPrimary: [COLORS.primary, COLORS.primaryDark] as const,
+  gradientAccent: [light.primary, light.secondary] as const,
+  gradientDanger: [light.danger, COLORS.errorBg] as const,
+  gradientDark: [light.background, light.surface] as const,
+  gradientCard: [light.card, light.surface] as const,
 };
 
-export const Spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
-};
+export const Spacing = spacing;
 
 export const BorderRadius = {
-  sm: 4, // More modern, slightly sharper corners
-  md: 8,
-  lg: 12,
-  xl: 16,
-  round: 999,
+  sm: radius.sm,
+  md: radius.md,
+  lg: radius.xl,
+  xl: radius.xxl,
+  round: radius.full,
 };
 
 export const Typography = {
   h1: {
-    fontSize: 32,
-    fontWeight: '700' as const,
-    letterSpacing: -0.5,
+    fontSize: typeScale.h1.fontSize,
+    fontWeight: typeScale.h1.fontWeight,
+    letterSpacing: -0.4,
+    lineHeight: typeScale.h1.lineHeight,
   },
   h2: {
-    fontSize: 24,
-    fontWeight: '700' as const,
-    letterSpacing: -0.3,
+    fontSize: typeScale.h2.fontSize,
+    fontWeight: typeScale.h2.fontWeight,
+    letterSpacing: -0.2,
+    lineHeight: typeScale.h2.lineHeight,
   },
   h3: {
-    fontSize: 20,
-    fontWeight: '600' as const,
+    fontSize: typeScale.subheading.fontSize,
+    fontWeight: typeScale.subheading.fontWeight,
+    lineHeight: typeScale.subheading.lineHeight,
   },
-  body: {
-    fontSize: 16,
-    fontWeight: '400' as const,
-    lineHeight: 24,
-  },
-  bodySmall: {
-    fontSize: 14,
-    fontWeight: '400' as const,
-    lineHeight: 20,
-  },
-  caption: {
-    fontSize: 12,
-    fontWeight: '400' as const,
-    lineHeight: 16,
-  },
+  body: typeScale.body,
+  bodySmall: typeScale.bodySmall,
+  caption: typeScale.caption,
   button: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    letterSpacing: 0.5,
+    ...typeScale.button,
+    letterSpacing: 0.2,
   },
   label: {
     fontSize: 13,
-    fontWeight: '500' as const,
-    letterSpacing: 0.5,
+    fontWeight: '600' as const,
+    letterSpacing: 0.8,
     textTransform: 'uppercase' as const,
   },
 };
 
 export const Shadows = {
-  small: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  medium: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  large: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 6,
-  },
+  small: shadows.card,
+  medium: shadows.card,
+  large: shadows.overlay,
   glow: {
-    shadowColor: '#000',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
+    shadowOpacity: 0.14,
+    shadowRadius: 18,
     elevation: 8,
   },
 };

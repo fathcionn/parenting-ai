@@ -2,9 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { API_BASE_URL } from '../config/api';
 import {
-  audioFileToBase64,
-  startNativeRecording,
-  stopNativeRecording,
+    audioFileToBase64,
+    startNativeRecording,
+    stopNativeRecording,
 } from './nativeAudio';
 
 let mediaRecorder: MediaRecorder | null = null;
@@ -48,18 +48,26 @@ export async function startRecording(micDeviceId?: string, language = 'en'): Pro
     throw new Error('Microphone permission denied or not available');
   }
 
-  const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-    ? 'audio/webm;codecs=opus'
-    : MediaRecorder.isTypeSupported('audio/webm')
-    ? 'audio/webm'
-    : MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
-    ? 'audio/ogg;codecs=opus'
-    : '';
+  const getMimeType = () => {
+    const types = [
+      'audio/wav',
+      'audio/mp4',
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg',
+    ];
+    for (const type of types) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        console.log('Using MIME type:', type);
+        return type;
+      }
+    }
+    return 'audio/webm';
+  };
 
-  mediaRecorder = mimeType
-    ? new MediaRecorder(micStream, { mimeType })
-    : new MediaRecorder(micStream);
-  console.log('Using MIME type:', mimeType || 'browser default');
+  const mimeType = getMimeType();
+
+  mediaRecorder = new MediaRecorder(micStream, { mimeType });
   mediaRecorder.ondataavailable = (event) => {
     if (event.data.size > 0) audioChunks.push(event.data);
   };
@@ -166,15 +174,30 @@ export async function transcribeAndAnalyze(
 }
 
 export const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
+  const mimeType = audioBlob.type || 'audio/webm';
+  const extension = mimeType.includes('wav') ? 'wav'
+    : mimeType.includes('mp4') ? 'mp4'
+    : mimeType.includes('ogg') ? 'ogg'
+    : 'webm';
+
   const formData = new FormData();
-  formData.append('audio', audioBlob, 'recording.webm');
+  formData.append('audio', audioBlob, `recording.${extension}`);
 
   const response = await fetch(`${API_BASE_URL}/api/transcribe`, {
     method: 'POST',
     body: formData,
   });
 
-  if (!response.ok) throw new Error('Transcription failed');
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Transcribe API error:', {
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText,
+    });
+    throw new Error(`Transcription failed: ${errorText}`);
+  }
+
   const data = await response.json();
   return data.transcript || '';
 };

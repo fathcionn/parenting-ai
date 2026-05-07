@@ -29,6 +29,9 @@ import { Container, Card } from '../components/Layout';
 import { TextField } from '../components/TextField';
 import { Button } from '../components/Button';
 import { getStorageItem, setStorageItem, STORAGE_KEYS } from '../services/storageKeys';
+import { colors } from '../theme/colors';
+import { spacing, radius, shadows } from '../theme/spacing';
+import { typeScale } from '../theme/typography';
 
 const languages = [
   { code: 'en', label: 'English', flagUrl: 'https://flagcdn.com/w40/us.png' },
@@ -101,11 +104,11 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
       if (mode === 'signup') {
         const result = await createUserWithEmailAndPassword(auth, email, password);
         setUser(result.user);
-        router.replace('/(drawer)');
+        router.replace('/(drawer)' as any);
       } else {
         const result = await signInWithEmailAndPassword(auth, email, password);
         setUser(result.user);
-        router.replace('/(drawer)');
+        router.replace('/(drawer)' as any);
       }
     } catch (error: any) {
       Alert.alert(t('common_error'), error.message);
@@ -119,7 +122,7 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       useAuthStore.getState().setUser(result.user);
-      router.replace('/(drawer)');
+      router.replace('/(drawer)' as any);
     } catch (error: any) {
       Alert.alert(t('auth_google_failed'), error.message);
     }
@@ -131,7 +134,7 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
       style={styles.container}
     >
       <TouchableOpacity onPress={() => setShowLangModal(true)} style={styles.authGlobeButton}>
-        <Ionicons name="globe-outline" size={22} color="#000" />
+        <Ionicons name="globe-outline" size={22} color={colors.light.primary} />
       </TouchableOpacity>
 
       <Modal visible={showLangModal} transparent animationType="fade">
@@ -152,7 +155,7 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
                 <Text style={[styles.langLabel, currentLang === code && styles.langLabelSelected]}>
                   {label}
                 </Text>
-                {currentLang === code && <Ionicons name="checkmark" size={18} color="#fff" />}
+                {currentLang === code && <Ionicons name="checkmark" size={18} color={colors.light.onPrimary} />}
               </TouchableOpacity>
             ))}
           </View>
@@ -168,7 +171,7 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
               resizeMode="contain"
             />
             <LinearGradient
-              colors={['transparent', '#ffffff']}
+              colors={['transparent', colors.light.card]}
               style={styles.logoFade}
             />
           </View>
@@ -251,11 +254,13 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.light.surface,
   },
   authGlobeButton: {
     alignItems: 'center',
-    backgroundColor: '#F0F0F0',
+    backgroundColor: colors.light.card,
+    borderColor: colors.light.border,
+    borderWidth: 1,
     borderRadius: 20,
     height: 40,
     justifyContent: 'center',
@@ -272,27 +277,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   langModal: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: colors.light.card,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
     width: 260,
+    ...shadows.overlay,
   },
   langTitle: {
-    color: '#000',
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 20,
+    color: colors.light.text,
+    ...typeScale.subheading,
+    marginBottom: spacing.md,
   },
   langOption: {
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
+    backgroundColor: colors.light.surface,
+    borderRadius: radius.lg,
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
     padding: 14,
   },
   langOptionSelected: {
-    backgroundColor: '#000',
+    backgroundColor: colors.light.primary,
   },
   langFlag: {
     borderRadius: 3,
@@ -301,13 +306,12 @@ const styles = StyleSheet.create({
     width: 32,
   },
   langLabel: {
-    color: '#000',
+    color: colors.light.text,
     flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
+    ...typeScale.button,
   },
   langLabelSelected: {
-    color: '#fff',
+    color: colors.light.onPrimary,
   },
   logoWrap: {
     alignSelf: 'center',
@@ -330,10 +334,9 @@ const styles = StyleSheet.create({
     right: 0,
   },
   cardTitle: {
-    color: theme.colors.text,
-    fontSize: theme.typography.h3.fontSize,
-    fontWeight: '700',
-    marginBottom: theme.spacing.md,
+    color: colors.light.text,
+    ...typeScale.h2,
+    marginBottom: spacing.md,
   },
   googleIcon: {
     height: 18,
@@ -350,16 +353,16 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: colors.light.border,
   },
   dividerText: {
     paddingHorizontal: theme.spacing.md,
-    color: theme.colors.textMuted,
+    color: colors.light.muted,
     fontSize: 14,
   },
   socialButtons: {
     flexDirection: 'row',
-    gap: theme.spacing.md,
+    gap: spacing.md,
   },
   socialButton: {
     flex: 1,
@@ -369,13 +372,13 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.surface,
+    borderColor: colors.light.border,
+    borderRadius: radius.full,
+    backgroundColor: colors.light.card,
   },
   socialButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: theme.colors.text,
+    color: colors.light.text,
   },
 });

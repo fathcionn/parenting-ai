@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Child Location - TalkWise</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-fixed-dim": "#ffb783",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-high": "#e9e6f3",
+                        "on-background": "#1b1b23",
+                        "primary-fixed": "#e1e0ff",
+                        "secondary-container": "#8455ef",
+                        "background": "#fcf8ff",
+                        "tertiary-container": "#b55d00",
+                        "outline-variant": "#c7c4d7",
+                        "inverse-surface": "#303038",
+                        "error": "#ba1a1a",
+                        "secondary-fixed-dim": "#d0bcff",
+                        "on-tertiary-fixed-variant": "#703700",
+                        "inverse-primary": "#c0c1ff",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "surface-container-low": "#f5f2fe",
+                        "outline": "#767586",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed": "#301400",
+                        "on-primary-fixed": "#07006c",
+                        "surface-container": "#efecf8",
+                        "on-tertiary-container": "#fffbff",
+                        "on-secondary-container": "#fffbff",
+                        "secondary": "#6b38d4",
+                        "on-primary-container": "#fffbff",
+                        "surface": "#fcf8ff",
+                        "on-secondary-fixed-variant": "#5516be",
+                        "on-surface-variant": "#464554",
+                        "primary-container": "#6063ee",
+                        "surface-container-highest": "#e4e1ed",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed": "#23005c",
+                        "surface-bright": "#fcf8ff",
+                        "surface-variant": "#e4e1ed",
+                        "on-error": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "primary": "#4648d4",
+                        "surface-tint": "#494bd6",
+                        "surface-dim": "#dbd8e4",
+                        "inverse-on-surface": "#f2effb",
+                        "secondary-fixed": "#e9ddff",
+                        "on-surface": "#1b1b23",
+                        "tertiary": "#904900",
+                        "on-tertiary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed": "#ffdcc5"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "base": "4px",
+                        "margin": "24px",
+                        "md": "16px",
+                        "gutter": "16px",
+                        "sm": "12px",
+                        "lg": "24px",
+                        "xl": "32px",
+                        "xs": "8px"
+                    },
+                    fontFamily: {
+                        "subheading": ["Plus Jakarta Sans"],
+                        "body-sm": ["Inter"],
+                        "h2": ["Plus Jakarta Sans"],
+                        "button": ["Plus Jakarta Sans"],
+                        "caption": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "h1": ["Plus Jakarta Sans"]
+                    },
+                    fontSize: {
+                        "subheading": ["20px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "h2": ["24px", { "lineHeight": "1.3", "fontWeight": "700" }],
+                        "button": ["16px", { "lineHeight": "1", "fontWeight": "600" }],
+                        "caption": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "body-lg": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "h1": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex antialiased">
+<aside class="fixed inset-y-0 left-0 z-50 overflow-y-auto h-full w-80 rounded-r-xl bg-surface shadow-md hidden md:flex flex-col">
+<div class="p-xl flex flex-col gap-lg border-b border-surface-variant">
+<h1 class="font-h1 text-h1 text-primary">TalkWise</h1>
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-button text-button">
+                    PU
+                </div>
+<div>
+<h2 class="font-subheading text-subheading text-on-surface">Parent Account</h2>
+<p class="font-caption text-caption text-on-surface-variant">TalkWise Premium • Active Member</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-sm py-lg flex flex-col gap-sm">
+<a class="flex items-center gap-md text-on-surface-variant px-lg py-sm rounded-full hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-button text-button">Dashboard</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant px-lg py-sm rounded-full hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-button text-button">Sessions</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant px-lg py-sm rounded-full hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-button text-button">Insights</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant px-lg py-sm rounded-full hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">emoji_events</span>
+<span class="font-button text-button">Achievements</span>
+</a>
+<a class="flex items-center gap-md bg-secondary-container text-on-secondary-container rounded-full px-lg py-sm transition-transform" href="#">
+<span class="material-symbols-outlined icon-fill">child_care</span>
+<span class="font-button text-button">Children</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant px-lg py-sm rounded-full hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-button text-button">Settings</span>
+</a>
+</nav>
+</aside>
+<div class="flex-1 flex flex-col md:pl-80 w-full relative">
+<header class="sticky top-0 w-full z-40 flex justify-between items-center px-margin py-md bg-surface border-b border-surface-variant md:border-none shadow-sm md:shadow-none">
+<div class="flex items-center gap-md">
+<button class="md:hidden text-on-surface-variant hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-h2 text-h2 text-primary">Child Location 📍 Beta</h1>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-container-highest border border-outline-variant flex items-center justify-center md:hidden">
+<span class="material-symbols-outlined text-outline">person</span>
+</div>
+</header>
+<main class="flex-1 p-margin flex flex-col gap-xl max-w-5xl mx-auto w-full pb-32 md:pb-xl">
+<section aria-label="Child Selector" class="flex items-center gap-sm overflow-x-auto pb-sm snap-x">
+<button class="snap-start flex-shrink-0 bg-primary-container text-on-primary-container px-lg py-sm rounded-full font-button text-button shadow-sm flex items-center gap-sm">
+<div class="w-6 h-6 rounded-full bg-surface bg-opacity-20 flex items-center justify-center text-xs">S</div>
+                    Sarah
+                </button>
+<button class="snap-start flex-shrink-0 bg-surface-container text-on-surface-variant px-lg py-sm rounded-full font-button text-button hover:bg-surface-container-high transition-colors flex items-center gap-sm">
+<div class="w-6 h-6 rounded-full bg-outline-variant flex items-center justify-center text-xs text-on-surface">L</div>
+                    Leo
+                </button>
+<button class="snap-start flex-shrink-0 border border-outline border-dashed text-on-surface-variant px-lg py-sm rounded-full font-button text-button hover:bg-surface-container transition-colors flex items-center gap-sm">
+<span class="material-symbols-outlined text-sm">add</span>
+                    Add Child
+                </button>
+</section>
+<div class="relative w-full flex flex-col items-center">
+<div class="relative w-full h-[530px] min-h-[450px] rounded-xl overflow-hidden shadow-lg border border-outline-variant bg-surface-container-lowest">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="A clean, modern digital map interface displaying a stylized suburban neighborhood from a top-down perspective. The map features soft, pastel colors with light grey roads, vibrant green park areas, and subtle blue water features, adhering strictly to a modern light-mode app aesthetic. The lighting is bright, even, and highly legible, giving a safe, calm, and reassuring mood suitable for a family tracking application. The visual style is highly readable, professional, and gently rounded." data-location="Suburban Neighborhood Map" style="background-image: url('https://placeholder.pics/svg/300');">
+</div>
+<div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full z-10 flex flex-col items-center group">
+<div class="bg-surface text-on-surface px-md py-xs rounded-full shadow-md font-button text-button mb-2 flex items-center gap-xs opacity-90 group-hover:opacity-100 transition-opacity">
+<span>Sarah</span>
+<span class="material-symbols-outlined text-sm text-tertiary">school</span>
+</div>
+<div class="relative w-14 h-14 bg-gradient-to-br from-[#6366f1] to-[#8b5cf6] rounded-full rounded-br-none rotate-45 flex items-center justify-center shadow-lg border-2 border-surface">
+<img class="absolute -rotate-45 w-10 h-10 rounded-full object-cover border border-surface-container-lowest" data-alt="A small, circular avatar portrait of a smiling young girl with bright, expressive eyes and curly hair, set against a soft, blurred outdoor background. The image is bright and cheerful, evoking a sense of warmth and family connection." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZVpx5HWmIVI-PYnaPklD0iqsyN1zSTRDO9jbYFcMA5oxN097TrRHkd4nikUsqnEXcJ8EnWBpsVHSC7OGk47GANRh3m5tKLAGubLXXjkGOKFy7zWk4ICCO-YUvTzQk_jvI6phfvgBm-usjnHWm-FvakfeLdZJbHhdiY-DBUStJ-aXJSkay7R5YgEr1phGX5N1pN3Uc8-G9BCnPDqY07v3ceoFrxHcmT8IX1QOUtSQFZ8sAc2uJURkk9o0KhdT1fO5EyQw3FFwwTog"/>
+</div>
+<div class="w-4 h-1 bg-on-background opacity-20 rounded-full mt-1 blur-sm"></div>
+</div>
+<div class="absolute top-md right-md flex flex-col gap-sm">
+<button class="w-12 h-12 bg-surface rounded-full shadow-md flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined">my_location</span>
+</button>
+<button class="w-12 h-12 bg-surface rounded-full shadow-md flex items-center justify-center text-on-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined">layers</span>
+</button>
+</div>
+</div>
+<div class="w-[95%] sm:w-4/5 md:w-3/4 bg-surface rounded-xl shadow-lg p-lg flex flex-col sm:flex-row gap-lg justify-between items-start sm:items-center -mt-12 relative z-20 border border-surface-variant">
+<div class="flex flex-col gap-xs">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary icon-fill">location_on</span>
+<h3 class="font-subheading text-subheading text-on-surface">Lincoln Elementary School</h3>
+</div>
+<p class="font-caption text-caption text-outline flex items-center gap-xs ml-8">
+<span class="w-2 h-2 rounded-full bg-primary opacity-80"></span>
+                            Last updated: 2 mins ago
+                        </p>
+</div>
+<div class="flex flex-col sm:flex-row gap-md w-full sm:w-auto">
+<button class="w-full sm:w-auto px-lg py-sm rounded-full border-2 border-outline-variant text-on-surface font-button text-button flex items-center justify-center gap-sm hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-sm">share</span>
+                            Share Location
+                        </button>
+<button class="w-full sm:w-auto px-lg py-sm rounded-full bg-error text-on-error font-button text-button flex items-center justify-center gap-sm shadow-md hover:brightness-110 transition-all">
+<span class="material-symbols-outlined text-sm icon-fill">call</span>
+                            Call Parent Now
+                        </button>
+</div>
+</div>
+</div>
+<section class="mt-md bg-surface-container-low rounded-xl p-lg border border-surface-variant flex gap-md items-start">
+<div class="w-1 h-full min-h-[40px] bg-secondary-container rounded-full"></div>
+<div>
+<h4 class="font-button text-button text-on-surface mb-xs">Coach Insights</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                        Sarah arrived at school 5 minutes earlier than her usual average. Her route followed the safe paths established in your settings.
+                    </p>
+</div>
+</section>
+</main>
+</div>
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-gutter py-xs bg-surface shadow-[0_-4px_16px_rgba(0,0,0,0.05)] md:hidden rounded-t-xl border-t border-surface-variant">
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-md py-xs w-16 h-16 transition-all scale-95" href="#">
+<span class="material-symbols-outlined icon-fill">home</span>
+<span class="font-caption text-caption mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 w-16 h-16 hover:bg-surface-container rounded-xl transition-colors" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-caption text-caption mt-1">History</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 w-16 h-16 hover:bg-surface-container rounded-xl transition-colors" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-caption text-caption mt-1">Insights</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 w-16 h-16 hover:bg-surface-container rounded-xl transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-caption text-caption mt-1">Profile</span>
+</a>
+</nav>
+</body></html>

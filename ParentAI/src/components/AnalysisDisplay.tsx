@@ -146,10 +146,10 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   positiveCard: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: theme.colors.successBg,
   },
   positiveText: {
-    color: '#047857',
+    color: theme.colors.successText,
     fontSize: theme.typography.body.fontSize,
     lineHeight: 24,
     marginVertical: theme.spacing.sm,

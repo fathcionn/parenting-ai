@@ -1,0 +1,122 @@
+env: load .env
+env: export GEMINI_API_KEY EXPO_PUBLIC_FIREBASE_API_KEY EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN EXPO_PUBLIC_FIREBASE_PROJECT_ID EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID EXPO_PUBLIC_FIREBASE_APP_ID EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID EXPO_PUBLIC_API_BASE_URL
+Starting project at C:\Users\Ahmed\OneDrive\Desktop\Graduation project\smart-pareting-assisstant\ParentAI
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8083
+Logs for your project will appear below.
+Web node_modules\expo-router\entry.js ▓▓░░░░░░░░░░░░░░ 16.0% ( 4/10)
+λ node_modules\expo-router\node\render.js ▓░░░░░░░░░░░░░░░  8.2% ( 17/110)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓░░░░░░░░░░░ 31.4% ( 99/263)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓░░░░░░░░░░ 41.1% (328/520)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓░░░░░░░░░░░ 33.7% (271/467)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓░░░░░░░░ 52.4% (708/981)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓░░░░░░░░░░ 39.9% (557/899)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 69.0% (1019/1227)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓░░░░░ 70.7% ( 952/1132)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 75.6% (1315/1512)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 82.8% (1256/1383)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 92.0% (1662/1733)
+| Dynamic import at line 15: require(moduleName). This module may not work as intended when deployed to a runtime.
+λ Bundled 22533ms node_modules\expo-router\node\render.js (1884 modules)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1626/1626)
+Web Bundled 26473ms node_modules\expo-router\entry.js (1626 modules)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓░░░░░░░░ 51.3% (699/976)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 85.3% (1284/1390)
+Web Bundled 8550ms node_modules\expo-router\entry.js (1627 modules)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 72ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 1086ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 60ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 558ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 680ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web Bundled 76ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 56ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 817ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 57ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 380ms node_modules\expo-router\entry.js (1 module)
+λ Bundled 508ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web Bundled 64ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 53ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 682ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 72ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console
+Unable to resolve "../theme/colors" from "src\constants\theme.ts"
+[0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { colors [36mas[39m nurtureColors } [36mfrom[39m [32m'../theme/colors'[39m[33m;[39m
+ [90m   |[39m                                          [31m[1m^[22m[39m
+ [90m 2 |[39m [36mimport[39m { radius[33m,[39m shadows[33m,[39m spacing } [36mfrom[39m [32m'../theme/spacing'[39m[33m;[39m
+ [90m 3 |[39m [36mimport[39m { typeScale } [36mfrom[39m [32m'../theme/typography'[39m[33m;[39m
+ [90m 4 |[39m[0m
+
+Import stack:
+
+ src\constants\theme.ts
+ | import "../theme/colors"
+
+ app\history\[id].tsx
+ | import "../../src/constants/theme"
+
+ app (require.context)
+
+Unable to resolve "../theme/spacing" from "src\constants\theme.ts"
+[0m [90m 1 |[39m [36mimport[39m { colors [36mas[39m nurtureColors } [36mfrom[39m [32m'../theme/colors'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 2 |[39m [36mimport[39m { radius[33m,[39m shadows[33m,[39m spacing } [36mfrom[39m [32m'../theme/spacing'[39m[33m;[39m
+ [90m   |[39m                                           [31m[1m^[22m[39m
+ [90m 3 |[39m [36mimport[39m { typeScale } [36mfrom[39m [32m'../theme/typography'[39m[33m;[39m
+ [90m 4 |[39m
+ [90m 5 |[39m [36mconst[39m light [33m=[39m nurtureColors[33m.[39mlight[33m;[39m[0m
+
+Import stack:
+
+ src\constants\theme.ts
+ | import "../theme/spacing"
+
+ app\history\[id].tsx
+ | import "../../src/constants/theme"
+
+ app (require.context)
+
+Unable to resolve "../theme/typography" from "src\constants\theme.ts"
+[0m [90m 1 |[39m [36mimport[39m { colors [36mas[39m nurtureColors } [36mfrom[39m [32m'../theme/colors'[39m[33m;[39m
+ [90m 2 |[39m [36mimport[39m { radius[33m,[39m shadows[33m,[39m spacing } [36mfrom[39m [32m'../theme/spacing'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 3 |[39m [36mimport[39m { typeScale } [36mfrom[39m [32m'../theme/typography'[39m[33m;[39m
+ [90m   |[39m                            [31m[1m^[22m[39m
+ [90m 4 |[39m
+ [90m 5 |[39m [36mconst[39m light [33m=[39m nurtureColors[33m.[39mlight[33m;[39m
+ [90m 6 |[39m[0m
+
+Import stack:
+
+ src\constants\theme.ts
+ | import "../theme/typography"
+
+ app\history\[id].tsx
+ | import "../../src/constants/theme"
+
+ app (require.context)
+
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+λ Bundled 126ms node_modules\expo-router\node\render.js (1 module)
+Firebase Messaging is not supported in this browser.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web Bundled 1104ms node_modules\expo-router\entry.js (1 module)
+Web Bundled 58ms node_modules\expo-router\entry.js (1 module)
+ LOG  [web] Logs will appear in the browser console

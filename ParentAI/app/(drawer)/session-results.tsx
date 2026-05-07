@@ -1,18 +1,16 @@
 import React, { useMemo } from 'react';
-import { ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getSessionTag } from '../../src/utils/reportUtils';
 import {
   getScoreLabel,
-  ImprovementsCard,
   SafetyBanner,
   ScoreRing,
-  StrengthsCard,
   SummaryCard,
-  TipsCard,
   type ReportSafetyFlag,
 } from '../../src/components/ReportPresentation';
+import { COLORS } from '../../src/theme/colors';
 
 function parseArray(value?: string | string[]) {
   try {
@@ -45,6 +43,7 @@ export default function SessionResultsScreen() {
     reportId?: string;
     childName?: string;
     sessionTag?: string;
+    durationSeconds?: string;
   }>();
 
   const score = Math.max(0, Math.min(100, Math.round(Number(params.score || 0))));
@@ -54,7 +53,9 @@ export default function SessionResultsScreen() {
   const tips = useMemo(() => parseArray(params.tips), [params.tips]);
   const safetyFlag = useMemo(() => parseSafety(params.safetyFlag), [params.safetyFlag]);
   const tag = getSessionTag(params.sessionTag || 'general');
-  const subtitle = [params.childName, tag.label].filter(Boolean).join(' · ');
+  const subtitle = [params.childName, tag.label].filter(Boolean).join(' • ');
+  const durationSeconds = Number(params.durationSeconds || 0);
+  const durationLabel = durationSeconds ? `${Math.max(1, Math.round(durationSeconds / 60))}m` : '';
 
   const shareReport = async () => {
     await Share.share({
@@ -69,36 +70,74 @@ export default function SessionResultsScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <FontAwesome name="chevron-left" size={15} color="#000" />
-        </TouchableOpacity>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>Session Complete 🎉</Text>
-          <Text style={styles.subtitle}>{subtitle || 'TalkWise coaching session'}</Text>
-        </View>
+        <Text style={styles.labelCaps}>SESSION OVERVIEW</Text>
+        <Text style={styles.title}>Session Complete {'\u2713'}</Text>
+        <Text style={styles.subtitle}>
+          {[durationLabel ? `Duration: ${durationLabel}` : '', subtitle ? `Context: ${subtitle}` : 'TalkWise coaching session']
+            .filter(Boolean)
+            .join(' • ')}
+        </Text>
       </View>
 
-      <View style={styles.scoreSection}>
+      <View style={styles.scoreCard}>
+        <Text style={styles.scoreCardLabel}>COACHING SCORE</Text>
         <ScoreRing score={score} />
         <Text style={styles.scoreLabel}>{getScoreLabel(score)}</Text>
+        <Text style={styles.scoreSubtitle}>Based on this session</Text>
       </View>
 
       <SafetyBanner safetyFlag={safetyFlag} />
+
+      <View style={styles.actionRow}>
+        <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace('/(drawer)' as any)}>
+          <Text style={styles.primaryText}>Done</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButton} onPress={shareReport}>
+          <Text style={styles.secondaryText}>Share</Text>
+        </TouchableOpacity>
+      </View>
+
       <SummaryCard summary={summary} />
-      <StrengthsCard strengths={strengths} />
-      <ImprovementsCard improvements={improvements} />
-      <TipsCard tips={tips} />
 
-      <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/(drawer)/history' as any)}>
-        <Text style={styles.primaryText}>View Full History →</Text>
-      </TouchableOpacity>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>What Worked Well</Text>
+        {(strengths.length ? strengths : ['Completed a coaching session']).map((item, index) => (
+          <View key={`${item}-${index}`} style={styles.tipRow}>
+            <FontAwesome name="check-circle" size={18} color={COLORS.primary} />
+            <Text style={styles.tipText}>{item}</Text>
+          </View>
+        ))}
+      </View>
 
-      <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('/(drawer)/record' as any)}>
-        <Text style={styles.secondaryText}>Start New Session</Text>
-      </TouchableOpacity>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Areas to Improve</Text>
+        {(improvements.length ? improvements : ['Keep practicing calm, clear communication.']).map((item, index) => (
+          <View key={`${item}-${index}`} style={styles.moduleRow}>
+            <View style={styles.tipRowText}>
+              <FontAwesome name="arrow-right" size={16} color={COLORS.primary} />
+              <Text style={styles.tipText}>{item}</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.moduleButton}
+              onPress={() => Alert.alert('Module Library', 'Coaching modules will open here when they are available.')}
+            >
+              <Text style={styles.moduleButtonText}>View Module</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
 
-      <TouchableOpacity style={styles.shareLink} onPress={shareReport}>
-        <Text style={styles.shareText}>Share Report</Text>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Coaching Tips</Text>
+        {(tips.length ? tips : ['Try a short, focused session next time.']).map((item, index) => (
+          <Text key={`${item}-${index}`} style={styles.tipText}>
+            {index + 1}. {item}
+          </Text>
+        ))}
+      </View>
+
+      <TouchableOpacity style={styles.newSessionButton} onPress={() => router.push('/(drawer)/coaching' as any)}>
+        <Text style={styles.newSessionText}>Start New Session</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -106,84 +145,173 @@ export default function SessionResultsScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.background,
     flex: 1,
   },
   content: {
-    gap: 16,
+    gap: 20,
     paddingBottom: 42,
-    paddingHorizontal: 22,
-    paddingTop: 58,
+    paddingHorizontal: 20,
+    paddingTop: 28,
   },
   header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
+    borderBottomColor: COLORS.cardBorder,
+    borderBottomWidth: 1,
+    paddingBottom: 24,
   },
-  backButton: {
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    borderRadius: 19,
-    height: 38,
-    justifyContent: 'center',
-    width: 38,
-  },
-  headerText: {
-    flex: 1,
+  labelCaps: {
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
   title: {
-    color: '#000',
-    fontSize: 27,
-    fontWeight: '900',
+    color: COLORS.textPrimary,
+    fontFamily: 'Inter',
+    fontSize: 48,
+    fontWeight: '800',
+    letterSpacing: -2,
+    lineHeight: 54,
+    marginTop: 10,
   },
   subtitle: {
-    color: '#777',
-    fontSize: 14,
-    fontWeight: '700',
-    marginTop: 4,
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '500',
+    lineHeight: 20,
+    marginTop: 8,
   },
-  scoreSection: {
+  scoreCard: {
     alignItems: 'center',
-    paddingVertical: 10,
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.cardBorder,
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 32,
+  },
+  scoreCardLabel: {
+    alignSelf: 'flex-start',
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    marginBottom: 12,
+    textTransform: 'uppercase',
   },
   scoreLabel: {
-    color: '#000',
-    fontSize: 22,
-    fontWeight: '900',
+    color: COLORS.textPrimary,
+    fontFamily: 'Inter',
+    fontSize: 20,
+    fontWeight: '600',
     marginTop: 10,
+  },
+  scoreSubtitle: {
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '400',
+    marginTop: 4,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 16,
   },
   primaryButton: {
     alignItems: 'center',
-    backgroundColor: '#000',
-    borderRadius: 15,
-    paddingVertical: 16,
+    backgroundColor: COLORS.primary,
+    borderRadius: 9999,
+    flex: 1,
+    paddingVertical: 14,
   },
   primaryText: {
-    color: '#fff',
+    color: COLORS.onPrimary,
+    fontFamily: 'Inter',
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   secondaryButton: {
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderColor: '#000',
-    borderRadius: 15,
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.primary,
+    borderRadius: 9999,
     borderWidth: 1,
-    paddingVertical: 16,
+    flex: 1,
+    paddingVertical: 14,
   },
   secondaryText: {
-    color: '#000',
+    color: COLORS.primary,
+    fontFamily: 'Inter',
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '700',
   },
-  shareLink: {
+  section: {
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.cardBorder,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 12,
+    padding: 24,
+  },
+  sectionTitle: {
+    color: COLORS.textPrimary,
+    fontFamily: 'Inter',
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  tipRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  tipRowText: {
+    alignItems: 'flex-start',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  moduleRow: {
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  tipText: {
+    color: COLORS.textSecondary,
+    flex: 1,
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '400',
+    lineHeight: 24,
+  },
+  moduleButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.primary,
+    borderRadius: 9999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  moduleButtonText: {
+    color: COLORS.primary,
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  newSessionButton: {
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 10,
   },
-  shareText: {
-    color: '#555',
-    fontSize: 14,
-    fontWeight: '800',
+  newSessionText: {
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '700',
     textDecorationLine: 'underline',
   },
 });

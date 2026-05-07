@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { getScoreColor } from '../utils/reportUtils';
+import { COLORS } from '../theme/colors';
 
 export type ReportSafetyFlag = {
   safe?: boolean;
@@ -11,11 +12,11 @@ export type ReportSafetyFlag = {
 } | null;
 
 export function getScoreLabel(score: number) {
-  if (score >= 90) return 'Outstanding! 🌟';
-  if (score >= 80) return 'Excellent! 🎉';
-  if (score >= 70) return 'Great Work! 👍';
-  if (score >= 50) return 'Good Progress 📈';
-  return 'Keep Practicing 💪';
+  if (score >= 90) return 'Outstanding! \u{1F31F}';
+  if (score >= 80) return 'Excellent! \u{1F389}';
+  if (score >= 70) return 'Great Work! \u{1F44D}';
+  if (score >= 50) return 'Good Progress \u{1F4C8}';
+  return 'Keep Practicing \u{1F4AA}';
 }
 
 export function SafetyBanner({ safetyFlag }: { safetyFlag?: ReportSafetyFlag }) {
@@ -25,7 +26,9 @@ export function SafetyBanner({ safetyFlag }: { safetyFlag?: ReportSafetyFlag }) 
   if (isUnsafe && ['moderate', 'severe'].includes(severity)) {
     return (
       <View style={[styles.banner, styles.redBanner]}>
-        <Text style={styles.redBannerText}>⚠️ Communication Alert — please review this session</Text>
+        <Text style={styles.redBannerText}>
+          {'\u26A0\uFE0F'} Communication Alert - please review this session
+        </Text>
       </View>
     );
   }
@@ -33,24 +36,26 @@ export function SafetyBanner({ safetyFlag }: { safetyFlag?: ReportSafetyFlag }) 
   if (isUnsafe && severity === 'mild') {
     return (
       <View style={[styles.banner, styles.yellowBanner]}>
-        <Text style={styles.yellowBannerText}>💛 Tip: Some communication patterns worth noting</Text>
+        <Text style={styles.yellowBannerText}>
+          {'\u{1F49B}'} Tip: Some communication patterns worth noting
+        </Text>
       </View>
     );
   }
 
   return (
     <View style={[styles.banner, styles.greenBanner]}>
-      <Text style={styles.greenBannerText}>✅ Healthy communication detected</Text>
+      <Text style={styles.greenBannerText}>{'\u2705'} Status: Healthy Communication</Text>
     </View>
   );
 }
 
 export function ScoreRing({ score }: { score: number }) {
   const [displayScore, setDisplayScore] = useState(0);
-  const size = 184;
-  const strokeWidth = 16;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
+  const size = 164;
+  const strokeWidth = 12;
+  const ringRadius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * ringRadius;
   const color = getScoreColor(score);
   const dashOffset = useMemo(
     () => circumference * (1 - Math.max(0, Math.min(100, displayScore)) / 100),
@@ -78,15 +83,15 @@ export function ScoreRing({ score }: { score: number }) {
         <Circle
           cx={size / 2}
           cy={size / 2}
-          r={radius}
-          stroke="#ECECEC"
+          r={ringRadius}
+          stroke={COLORS.surfaceContainer}
           strokeWidth={strokeWidth}
           fill="transparent"
         />
         <Circle
           cx={size / 2}
           cy={size / 2}
-          r={radius}
+          r={ringRadius}
           stroke={color}
           strokeWidth={strokeWidth}
           fill="transparent"
@@ -107,11 +112,9 @@ export function ScoreRing({ score }: { score: number }) {
 
 export function SummaryCard({ summary }: { summary: string }) {
   return (
-    <View style={styles.card}>
-      <Text style={styles.cardTitle}>📋 Session Summary</Text>
-      <Text style={styles.paragraph}>
-        {summary || 'Session completed. Review your coaching feedback below.'}
-      </Text>
+    <View style={[styles.card, styles.summaryCard]}>
+      <Text style={styles.cardTitle}>{'\u{1F4CB}'} Session Summary</Text>
+      <Text style={styles.paragraph}>{summary || 'Session completed. Review your coaching feedback below.'}</Text>
     </View>
   );
 }
@@ -119,10 +122,10 @@ export function SummaryCard({ summary }: { summary: string }) {
 export function StrengthsCard({ strengths }: { strengths: string[] }) {
   return (
     <View style={[styles.card, styles.greenCard]}>
-      <Text style={styles.cardTitle}>✅ What You Did Well</Text>
+      <Text style={styles.cardTitle}>{'\u2705'} What Worked Well</Text>
       {(strengths.length ? strengths : ['Completed a coaching session']).map((item, index) => (
         <View key={`${item}-${index}`} style={styles.row}>
-          <Text style={[styles.dot, styles.greenDot]}>•</Text>
+          <Text style={[styles.dot, styles.greenDot]}>{'\u2022'}</Text>
           <Text style={styles.rowText}>{item}</Text>
         </View>
       ))}
@@ -133,15 +136,13 @@ export function StrengthsCard({ strengths }: { strengths: string[] }) {
 export function ImprovementsCard({ improvements }: { improvements: string[] }) {
   return (
     <View style={[styles.card, styles.orangeCard]}>
-      <Text style={styles.cardTitle}>🔧 Areas to Grow</Text>
-      {(improvements.length ? improvements : ['Keep practicing calm, clear communication.']).map(
-        (item, index) => (
-          <View key={`${item}-${index}`} style={styles.row}>
-            <Text style={[styles.dot, styles.orangeDot]}>•</Text>
-            <Text style={styles.rowText}>{item}</Text>
-          </View>
-        )
-      )}
+      <Text style={styles.cardTitle}>{'\u{1F527}'} Areas to Improve</Text>
+      {(improvements.length ? improvements : ['Keep practicing calm, clear communication.']).map((item, index) => (
+        <View key={`${item}-${index}`} style={styles.row}>
+          <Text style={[styles.dot, styles.orangeDot]}>{'\u2192'}</Text>
+          <Text style={styles.rowText}>{item}</Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -149,7 +150,7 @@ export function ImprovementsCard({ improvements }: { improvements: string[] }) {
 export function TipsCard({ tips }: { tips: string[] }) {
   return (
     <View style={[styles.card, styles.blueCard]}>
-      <Text style={styles.cardTitle}>💡 Personalized Tips for Next Time</Text>
+      <Text style={styles.cardTitle}>{'\u{1F4A1}'} Coaching Tips</Text>
       {(tips.length ? tips : ['Try a short, focused session next time.']).map((item, index) => (
         <Text key={`${item}-${index}`} style={styles.tipText}>
           {index + 1}. {item}
@@ -163,97 +164,103 @@ const styles = StyleSheet.create({
   ringWrap: {
     alignItems: 'center',
     alignSelf: 'center',
-    height: 184,
+    height: 164,
     justifyContent: 'center',
-    width: 184,
+    width: 164,
   },
   ringCenter: {
     alignItems: 'center',
     position: 'absolute',
   },
   scoreNumber: {
+    fontFamily: 'Inter',
     fontSize: 48,
-    fontWeight: '900',
+    fontWeight: '800',
+    letterSpacing: -2,
   },
   scoreOutOf: {
-    color: '#888',
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '500',
   },
   banner: {
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
   },
   greenBanner: {
-    backgroundColor: '#ecfdf5',
-    borderColor: '#bbf7d0',
-    borderWidth: 1,
+    backgroundColor: COLORS.successBg,
+    borderColor: COLORS.successBorder,
   },
   greenBannerText: {
-    color: '#047857',
-    fontSize: 14,
-    fontWeight: '900',
+    color: COLORS.successText,
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '700',
   },
   yellowBanner: {
-    backgroundColor: '#fefce8',
-    borderColor: '#fde68a',
-    borderWidth: 1,
+    backgroundColor: COLORS.warningBg,
+    borderColor: COLORS.warning,
   },
   yellowBannerText: {
-    color: '#92400e',
-    fontSize: 14,
-    fontWeight: '900',
+    color: COLORS.warning,
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '700',
   },
   redBanner: {
-    backgroundColor: '#fef2f2',
-    borderColor: '#fca5a5',
-    borderWidth: 1,
+    backgroundColor: COLORS.errorBg,
+    borderColor: COLORS.error,
   },
   redBannerText: {
-    color: '#b91c1c',
-    fontSize: 14,
-    fontWeight: '900',
+    color: COLORS.error,
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '700',
   },
   card: {
-    backgroundColor: '#fff',
-    borderColor: '#eeeeee',
-    borderRadius: 18,
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.cardBorder,
+    borderRadius: 12,
     borderWidth: 1,
-    elevation: 3,
-    padding: 18,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
+    padding: 24,
+  },
+  summaryCard: {
+    borderTopColor: COLORS.primary,
+    borderTopWidth: 3,
   },
   greenCard: {
-    backgroundColor: '#f0fdf4',
-    borderColor: '#bbf7d0',
+    backgroundColor: COLORS.successBg,
+    borderColor: COLORS.successBorder,
   },
   orangeCard: {
-    backgroundColor: '#fff7ed',
-    borderColor: '#fed7aa',
+    backgroundColor: COLORS.warningBg,
+    borderColor: COLORS.warning,
   },
   blueCard: {
-    backgroundColor: '#eff6ff',
-    borderColor: '#bfdbfe',
+    backgroundColor: COLORS.background,
+    borderColor: COLORS.cardBorder,
   },
   cardTitle: {
-    color: '#000',
-    fontSize: 17,
-    fontWeight: '900',
-    marginBottom: 12,
+    color: COLORS.textPrimary,
+    fontFamily: 'Inter',
+    fontSize: 20,
+    fontWeight: '600',
+    lineHeight: 24,
+    marginBottom: 8,
   },
   paragraph: {
-    color: '#222',
-    fontSize: 15,
-    fontWeight: '500',
-    lineHeight: 24,
+    color: COLORS.textSecondary,
+    fontFamily: 'Inter',
+    fontSize: 18,
+    fontWeight: '400',
+    lineHeight: 28,
   },
   row: {
     alignItems: 'flex-start',
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
     marginVertical: 5,
   },
   dot: {
@@ -262,23 +269,25 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   greenDot: {
-    color: '#22c55e',
+    color: COLORS.successText,
   },
   orangeDot: {
-    color: '#f97316',
+    color: COLORS.primary,
   },
   rowText: {
-    color: '#111',
+    color: COLORS.textPrimary,
     flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-    lineHeight: 22,
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '400',
+    lineHeight: 24,
   },
   tipText: {
-    color: '#111',
-    fontSize: 15,
-    fontWeight: '600',
-    lineHeight: 23,
+    color: COLORS.textPrimary,
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '400',
+    lineHeight: 24,
     marginVertical: 4,
   },
 });

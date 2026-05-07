@@ -63,8 +63,8 @@
   },
   "gamification": {
     "parentingScore": "Ebeveynlik Puanı",
-    "leaderboard": "Liderlik Tablosu",
-    "enableLeaderboard": "Liderlik Tablosu",
+    "leaderboard": "Topluluk Karşılaştırmaları",
+    "enableLeaderboard": "Topluluk Karşılaştırmaları",
     "stayAnonymous": "Anonim Kal",
     "rank": "Sıra",
     "points": "puan"
@@ -148,7 +148,7 @@
   "profile_add_child": "Çocuk Ekle",
   "profile_parenting_score": "Ebeveynlik Puanı",
   "profile_score_subtitle": "Olumlu etkileşimlere dayalı puanınız",
-  "profile_leaderboard": "Liderlik Tablosu",
+  "profile_leaderboard": "Topluluk Karşılaştırmaları",
   "profile_stay_anonymous": "Anonim Kal",
   "profile_microphone": "Mikrofon",
   "profile_mic_subtitle": "Kayıt için mikrofon seçin",
@@ -195,14 +195,14 @@
   "common_member_since": "Üyelik başlangıcı",
   "common_are_you_sure": "Emin misiniz?",
   "common_failed_logout": "Çıkış yapılamadı",
-  "leaderboard_title": "Küresel Liderlik Tablosu",
-  "leaderboard_participate": "Liderlik Tablosuna Katıl",
+  "leaderboard_title": "Topluluk Karşılaştırmaları",
+  "leaderboard_participate": "Topluluk Karşılaştırmalarına Katıl",
   "leaderboard_compare": "Ebeveynlik puanınızı küresel olarak karşılaştırın",
   "leaderboard_hide_name": "Görünen adınızı gizleyin",
-  "leaderboard_disabled": "Liderlik Tablosu Devre Dışı",
+  "leaderboard_disabled": "Topluluk Karşılaştırmaları Devre Dışı",
   "leaderboard_empty": "Puanınızı karşılaştırmak ve diğer ebeveynler arasındaki sıranızı görmek için katılın.",
   "leaderboard_you": "Siz",
-  "leaderboard_anonymous_parent": "Anonim Ebeveyn",
+  "leaderboard_anonymous_parent": "Anonim",
   "leaderboard_points": "puan",
-  "leaderboard_local_note": "Sıralamalar yerel oturum geçmişinize dayanır. Bulut liderlik tablosu yakında."
+  "leaderboard_local_note": "Karşılaştırmalar yerel oturum geçmişinize dayanır. Topluluk ortalamaları yakında."
 }

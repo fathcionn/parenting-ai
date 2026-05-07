@@ -63,8 +63,8 @@
   },
   "gamification": {
     "parentingScore": "نقاط التربية",
-    "leaderboard": "لوحة المتصدرين",
-    "enableLeaderboard": "لوحة المتصدرين",
+    "leaderboard": "مؤشرات المجتمع",
+    "enableLeaderboard": "مؤشرات المجتمع",
     "stayAnonymous": "البقاء مجهول الهوية",
     "rank": "الترتيب",
     "points": "نقطة"
@@ -148,7 +148,7 @@
   "profile_add_child": "إضافة طفل",
   "profile_parenting_score": "نقاط التربية",
   "profile_score_subtitle": "نقاطك بناءً على التفاعلات الإيجابية",
-  "profile_leaderboard": "لوحة المتصدرين",
+  "profile_leaderboard": "مؤشرات المجتمع",
   "profile_stay_anonymous": "البقاء مجهول الهوية",
   "profile_microphone": "الميكروفون",
   "profile_mic_subtitle": "اختر الميكروفون للتسجيل",
@@ -195,14 +195,14 @@
   "common_member_since": "عضو منذ",
   "common_are_you_sure": "هل أنت متأكد؟",
   "common_failed_logout": "فشل تسجيل الخروج",
-  "leaderboard_title": "لوحة المتصدرين العالمية",
-  "leaderboard_participate": "المشاركة في لوحة المتصدرين",
+  "leaderboard_title": "مؤشرات المجتمع",
+  "leaderboard_participate": "المشاركة في مؤشرات المجتمع",
   "leaderboard_compare": "قارن نقاط تربيتك عالمياً",
   "leaderboard_hide_name": "إخفاء اسم العرض",
-  "leaderboard_disabled": "لوحة المتصدرين معطلة",
+  "leaderboard_disabled": "مؤشرات المجتمع معطلة",
   "leaderboard_empty": "اشترك لمقارنة نقاطك ومعرفة ترتيبك بين الآباء الآخرين.",
   "leaderboard_you": "أنت",
-  "leaderboard_anonymous_parent": "والد مجهول",
+  "leaderboard_anonymous_parent": "مجهول",
   "leaderboard_points": "نقطة",
-  "leaderboard_local_note": "تعتمد التصنيفات على سجل جلساتك المحلي. ستتوفر لوحة المتصدرين السحابية قريباً."
+  "leaderboard_local_note": "تعتمد المؤشرات على سجل جلساتك المحلي. ستتوفر متوسطات المجتمع قريباً."
 }

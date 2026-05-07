@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { theme } from '../styles/theme';
+import { COLORS } from '../theme/colors';
 
 interface AudioWaveformProps {
   amplitude: number;
@@ -67,7 +68,7 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
         toValue: 0,
         duration: 550,
         easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start();
       return;
     }
@@ -75,7 +76,7 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
     Animated.timing(opacity, {
       toValue: 1,
       duration: 180,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
   }, [isFading, opacity]);
 
@@ -111,8 +112,8 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
     outputRange: [0.35, 0.75],
   });
 
-  const activeColor = dark ? '#FFFFFF' : '#000000';
-  const idleColor = dark ? 'rgba(255,255,255,0.42)' : '#BDBDBD';
+  const activeColor = dark ? COLORS.onPrimary : COLORS.primary;
+  const idleColor = dark ? 'rgba(255,255,255,0.42)' : COLORS.textFaint;
 
   return (
     <Animated.View style={[styles.container, { height, opacity }]}>

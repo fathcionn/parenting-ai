@@ -66,7 +66,7 @@ export default function RootLayout() {
 
   const [isInitialized, setIsInitialized] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
-  const { setUser } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const router = useRouter();
   const segments = useSegments();
 
@@ -101,6 +101,24 @@ export default function RootLayout() {
       }
     });
   }, [isInitialized, loaded, onboardingChecked, router, segments]);
+
+  useEffect(() => {
+    if (!loaded || !isInitialized || !onboardingChecked) return;
+
+    const firstSegment = String(segments[0] || '');
+    const isAuthRoute = firstSegment === 'login' || firstSegment === 'signup';
+    const isPublicRoute = isAuthRoute || firstSegment === 'onboarding';
+    const isProtectedRoute = !isPublicRoute;
+
+    if (!user && isProtectedRoute) {
+      router.replace('/login');
+      return;
+    }
+
+    if (user && isAuthRoute) {
+      router.replace('/(drawer)' as any);
+    }
+  }, [isInitialized, loaded, onboardingChecked, router, segments, user]);
 
   if (!loaded || !isInitialized) {
     return null;

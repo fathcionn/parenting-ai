@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TalkWise - Session History</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed-dim": "#ffb783",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-high": "#e9e6f3",
+                        "on-background": "#1b1b23",
+                        "primary-fixed": "#e1e0ff",
+                        "secondary-container": "#8455ef",
+                        "background": "#fcf8ff",
+                        "tertiary-container": "#b55d00",
+                        "outline-variant": "#c7c4d7",
+                        "inverse-surface": "#303038",
+                        "error": "#ba1a1a",
+                        "secondary-fixed-dim": "#d0bcff",
+                        "on-tertiary-fixed-variant": "#703700",
+                        "inverse-primary": "#c0c1ff",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "surface-container-low": "#f5f2fe",
+                        "outline": "#767586",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed": "#301400",
+                        "on-primary-fixed": "#07006c",
+                        "surface-container": "#efecf8",
+                        "on-tertiary-container": "#fffbff",
+                        "on-secondary-container": "#fffbff",
+                        "secondary": "#6b38d4",
+                        "on-primary-container": "#fffbff",
+                        "surface": "#fcf8ff",
+                        "on-secondary-fixed-variant": "#5516be",
+                        "on-surface-variant": "#464554",
+                        "primary-container": "#6063ee",
+                        "surface-container-highest": "#e4e1ed",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed": "#23005c",
+                        "surface-bright": "#fcf8ff",
+                        "surface-variant": "#e4e1ed",
+                        "on-error": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "primary": "#4648d4",
+                        "surface-tint": "#494bd6",
+                        "surface-dim": "#dbd8e4",
+                        "inverse-on-surface": "#f2effb",
+                        "secondary-fixed": "#e9ddff",
+                        "on-surface": "#1b1b23",
+                        "tertiary": "#904900",
+                        "on-tertiary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed": "#ffdcc5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "margin": "24px",
+                        "md": "16px",
+                        "gutter": "16px",
+                        "sm": "12px",
+                        "lg": "24px",
+                        "xl": "32px",
+                        "xs": "8px"
+                    },
+                    "fontFamily": {
+                        "subheading": ["Plus Jakarta Sans"],
+                        "body-sm": ["Inter"],
+                        "h2": ["Plus Jakarta Sans"],
+                        "button": ["Plus Jakarta Sans"],
+                        "caption": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "h1": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "subheading": ["20px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "h2": ["24px", { "lineHeight": "1.3", "fontWeight": "700" }],
+                        "button": ["16px", { "lineHeight": "1", "fontWeight": "600" }],
+                        "caption": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "body-lg": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "h1": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-lg min-h-screen flex flex-col md:flex-row">
+<!-- TopAppBar (Mobile & Web) -->
+<header class="sticky top-0 w-full z-40 flex justify-between items-center px-margin py-md bg-surface dark:bg-surface-dim">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim hover:opacity-80 transition-opacity cursor-pointer md:hidden" data-icon="menu">menu</span>
+<h1 class="font-h1 text-h1 font-bold text-primary dark:text-primary-fixed-dim">TalkWise</h1>
+</div>
+<div>
+<div class="w-10 h-10 rounded-full bg-surface-variant overflow-hidden border border-outline-variant">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="A professional headshot of a friendly parent with warm lighting, perfect for a modern app avatar. The image should be well-lit, natural, and inviting, fitting a clean UI aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-mfQVxcZCnzl_i_8UC1PSFgQ-dS9oUmZ1T8e-wKHw0Fjedjc_MxdqBwwP5Q-mIwpcgfWIl7tqggoid77UhRbtFRKUPrrWWg19fAqBcBjJOcbGuKT-hPjKHpdeMd-IUrD5JnJ39zkBIY4kIBotyTDFApS-9PYFUf0M8TUE89094KsIHbRkOXEwTXOwzeQPqi6oB1iXOXlptPcfifypQ4U__4Cm442x6xyrFxsLlRoTJEBbLS0WTtFybISjs-NmXGdeH5XpfU44ttY"/>
+</div>
+</div>
+</header>
+<!-- NavigationDrawer (Web only) -->
+<nav class="hidden md:flex bg-surface dark:bg-inverse-surface shadow-md h-full w-80 rounded-r-xl fixed inset-y-0 left-0 z-50 overflow-y-auto flex-col pt-20">
+<div class="px-margin mb-xl">
+<div class="flex items-center gap-sm mb-md">
+<div class="w-12 h-12 rounded-full bg-surface-variant overflow-hidden">
+<img alt="Parent User Profile" class="w-full h-full object-cover" data-alt="A professional headshot of a friendly parent with warm lighting, perfect for a modern app avatar. The image should be well-lit, natural, and inviting, fitting a clean UI aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDI7d7F8q5HbqcxpjTyOLi3VNFwqrhKOy3dcHIpOdjVxZ3RwgSmTQyHsKHZG-sEs3dRtz6ZXAT-veBTV90rZlrl7CHrJyG3cKvksAndOcH5j3vws9MurBkmh4vFgAJtoWUn6XqiC5l5rxsD5TRGbtC0bsDMws-RpUBBGNe9QpZh73nfd_QE5W8DiaurtgQYJpocQg8QarCfUAqiqZDfqDcR8Hj8atxqvQQJI8_do50Vdylv15oJkaLel9Cz-mwJ4a4rgNDadaqYAg0"/>
+</div>
+<div>
+<h2 class="font-subheading text-subheading text-primary dark:text-inverse-primary">Parent Account</h2>
+<p class="font-caption text-caption text-on-surface-variant">TalkWise Premium</p>
+</div>
+</div>
+</div>
+<ul class="flex flex-col gap-xs px-sm">
+<li>
+<a class="flex items-center gap-md text-on-surface-variant dark:text-surface-variant px-lg py-sm hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-full" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-lg">Dashboard</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md bg-secondary-container text-on-secondary-container rounded-full px-lg py-sm Active: scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-body-lg">Sessions</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md text-on-surface-variant dark:text-surface-variant px-lg py-sm hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-full" href="#">
+<span class="material-symbols-outlined" data-icon="insights">insights</span>
+<span class="font-body-lg">Insights</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md text-on-surface-variant dark:text-surface-variant px-lg py-sm hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-full" href="#">
+<span class="material-symbols-outlined" data-icon="emoji_events">emoji_events</span>
+<span class="font-body-lg">Achievements</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md text-on-surface-variant dark:text-surface-variant px-lg py-sm hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-full" href="#">
+<span class="material-symbols-outlined" data-icon="child_care">child_care</span>
+<span class="font-body-lg">Children</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md text-on-surface-variant dark:text-surface-variant px-lg py-sm hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-full" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-lg">Settings</span>
+</a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 px-gutter md:px-margin py-lg md:ml-80 pb-32 md:pb-lg max-w-5xl mx-auto w-full">
+<header class="mb-xl">
+<h2 class="font-h2 text-h2 text-on-background mb-sm">Session History</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Review past insights and track progress over time.</p>
+</header>
+<!-- Filters (Horizontal Scroll) -->
+<div class="mb-xl overflow-x-auto no-scrollbar pb-xs">
+<div class="flex gap-sm w-max">
+<button class="bg-primary-container text-on-primary-container font-button text-button px-md py-xs rounded-full whitespace-nowrap shadow-sm">All</button>
+<button class="bg-surface-container text-on-surface-variant font-button text-button px-md py-xs rounded-full whitespace-nowrap border border-outline-variant hover:bg-surface-variant transition-colors">Bedtime</button>
+<button class="bg-surface-container text-on-surface-variant font-button text-button px-md py-xs rounded-full whitespace-nowrap border border-outline-variant hover:bg-surface-variant transition-colors">Homework</button>
+<button class="bg-surface-container text-on-surface-variant font-button text-button px-md py-xs rounded-full whitespace-nowrap border border-outline-variant hover:bg-surface-variant transition-colors">Tantrum</button>
+<button class="bg-surface-container text-on-surface-variant font-button text-button px-md py-xs rounded-full whitespace-nowrap border border-outline-variant hover:bg-surface-variant transition-colors">Screen Time</button>
+</div>
+</div>
+<!-- Session List -->
+<div class="flex flex-col gap-md">
+<!-- Card 1 -->
+<div class="relative bg-surface-container-lowest rounded-xl p-md shadow-[0_2px_12px_rgba(99,102,241,0.08)] border border-outline-variant/30 flex items-center justify-between group overflow-hidden">
+<div class="flex-1 pr-sm">
+<div class="flex items-center gap-xs mb-xs">
+<span class="font-subheading text-subheading text-on-background">Leo</span>
+<span class="bg-[#e9ddff] text-[#5516be] px-xs py-[2px] rounded-full font-caption text-[10px] uppercase tracking-wider font-semibold">Bedtime</span>
+</div>
+<p class="font-caption text-caption text-outline mb-xs">Oct 24, 2023 • 8:15 PM</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Successfully navigated stall tactics using choice architecture.</p>
+</div>
+<div class="flex items-center gap-md relative z-10 bg-surface-container-lowest pl-sm">
+<!-- Circular Score -->
+<div class="relative w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-low">
+<svg class="absolute inset-0 w-full h-full transform -rotate-90" viewbox="0 0 36 36">
+<path class="text-surface-variant" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+<path class="text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="85, 100" stroke-linecap="round" stroke-width="3"></path>
+</svg>
+<span class="font-button text-caption font-bold text-primary">85</span>
+</div>
+</div>
+<!-- Swipe Reveal Action (Visual Demo) -->
+<div class="absolute inset-y-0 right-0 w-20 bg-error text-on-error flex items-center justify-center transform translate-x-full group-hover:translate-x-0 transition-transform duration-300 cursor-pointer rounded-r-xl">
+<span class="material-symbols-outlined" data-icon="delete">delete</span>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="relative bg-surface-container-lowest rounded-xl p-md shadow-[0_2px_12px_rgba(99,102,241,0.08)] border border-outline-variant/30 flex items-center justify-between group overflow-hidden">
+<div class="flex-1 pr-sm">
+<div class="flex items-center gap-xs mb-xs">
+<span class="font-subheading text-subheading text-on-background">Maya</span>
+<span class="bg-[#c0c1ff] text-[#07006c] px-xs py-[2px] rounded-full font-caption text-[10px] uppercase tracking-wider font-semibold">Homework</span>
+</div>
+<p class="font-caption text-caption text-outline mb-xs">Oct 23, 2023 • 4:30 PM</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">De-escalated frustration over math assignment with structured breaks.</p>
+</div>
+<div class="flex items-center gap-md relative z-10 bg-surface-container-lowest pl-sm">
+<div class="relative w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-low">
+<svg class="absolute inset-0 w-full h-full transform -rotate-90" viewbox="0 0 36 36">
+<path class="text-surface-variant" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+<path class="text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="92, 100" stroke-linecap="round" stroke-width="3"></path>
+</svg>
+<span class="font-button text-caption font-bold text-primary">92</span>
+</div>
+</div>
+<div class="absolute inset-y-0 right-0 w-20 bg-error text-on-error flex items-center justify-center transform translate-x-full group-hover:translate-x-0 transition-transform duration-300 cursor-pointer rounded-r-xl">
+<span class="material-symbols-outlined" data-icon="delete">delete</span>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="relative bg-surface-container-lowest rounded-xl p-md shadow-[0_2px_12px_rgba(99,102,241,0.08)] border border-outline-variant/30 flex items-center justify-between group overflow-hidden">
+<div class="flex-1 pr-sm">
+<div class="flex items-center gap-xs mb-xs">
+<span class="font-subheading text-subheading text-on-background">Leo</span>
+<span class="bg-[#ffdcc5] text-[#703700] px-xs py-[2px] rounded-full font-caption text-[10px] uppercase tracking-wider font-semibold">Tantrum</span>
+</div>
+<p class="font-caption text-caption text-outline mb-xs">Oct 20, 2023 • 10:15 AM</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Managed transition out of the park using empathy and clear warnings.</p>
+</div>
+<div class="flex items-center gap-md relative z-10 bg-surface-container-lowest pl-sm">
+<div class="relative w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-low">
+<svg class="absolute inset-0 w-full h-full transform -rotate-90" viewbox="0 0 36 36">
+<path class="text-surface-variant" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+<path class="text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="78, 100" stroke-linecap="round" stroke-width="3"></path>
+</svg>
+<span class="font-button text-caption font-bold text-primary">78</span>
+</div>
+</div>
+<div class="absolute inset-y-0 right-0 w-20 bg-error text-on-error flex items-center justify-center transform translate-x-full group-hover:translate-x-0 transition-transform duration-300 cursor-pointer rounded-r-xl">
+<span class="material-symbols-outlined" data-icon="delete">delete</span>
+</div>
+</div>
+</div>
+<!-- Empty State Example (Hidden visually, provided for context as requested) -->
+<!--
+        <div class="flex flex-col items-center justify-center py-xl text-center mt-xl border-2 border-dashed border-outline-variant rounded-xl p-lg bg-surface-container-low">
+            <span class="material-symbols-outlined text-[48px] text-primary-fixed-dim mb-md" data-icon="history">history</span>
+            <p class="font-subheading text-subheading text-on-background mb-xs">No sessions yet.</p>
+            <p class="font-body-sm text-body-sm text-on-surface-variant mb-md">Start your first coaching session to see insights here.</p>
+            <button class="bg-gradient-to-br from-[#6366f1] to-[#8b5cf6] text-on-primary font-button text-button px-lg py-sm rounded-full shadow-md hover:brightness-105 transition-all">Start Session</button>
+        </div>
+        -->
+</main>
+<!-- BottomNavBar (Mobile only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-gutter py-xs bg-surface dark:bg-surface-container-lowest shadow-lg rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline p-2 hover:bg-surface-container dark:hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-caption text-caption mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-md py-xs Active: scale-90 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="history" data-weight="fill" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="font-caption text-caption mt-1">History</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline p-2 hover:bg-surface-container dark:hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-caption text-caption mt-1">Insights</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline p-2 hover:bg-surface-container dark:hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-caption text-caption mt-1">Profile</span>
+</a>
+</nav>
+</body></html>

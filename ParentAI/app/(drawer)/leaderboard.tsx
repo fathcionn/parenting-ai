@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Switch } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Colors, Spacing, Typography, BorderRadius } from '../../src/constants/theme';
+import { COLORS } from '../../src/theme/colors';
 import { historyService } from '../../src/services/history-service';
 import { calculateParentingScore } from '../../src/types/analysis';
-import { useAuthStore } from '../../src/stores/auth-store';
 
 type LeaderboardItem = {
   rank: number;
@@ -15,7 +15,6 @@ type LeaderboardItem = {
 
 export default function LeaderboardScreen() {
   const { t } = useTranslation();
-  const { user } = useAuthStore();
   const [isOptedIn, setIsOptedIn] = useState(true);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [myScore, setMyScore] = useState(0);
@@ -36,22 +35,19 @@ export default function LeaderboardScreen() {
     loadScore();
   }, []);
 
-  const localLeaderboard: LeaderboardItem[] = [
+  const localLeaderboard: LeaderboardItem[] = myScore > 0 ? [
     {
       rank: 1,
-      name: isAnonymous ? t('leaderboard_anonymous_parent') : user?.displayName || user?.email || t('leaderboard_you'),
+      name: 'You',
       score: myScore,
       isMe: true,
     },
-    { rank: 2, name: 'Parent A', score: Math.max(0, myScore - 5) },
-    { rank: 3, name: 'Parent B', score: Math.max(0, myScore - 12) },
-    { rank: 4, name: 'Parent C', score: Math.max(0, myScore - 18) },
-    { rank: 5, name: 'Parent D', score: Math.max(0, myScore - 25) },
-  ].filter((item) => item.score >= 0);
+  ] : [];
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{t('leaderboard_title')}</Text>
+      <Text style={styles.title}>Community Benchmarks</Text>
+      <Text style={styles.subtitle}>Anonymous averages from the TalkWise community</Text>
 
       <View style={styles.settingsCard}>
         <View style={styles.settingRow}>
@@ -122,6 +118,11 @@ const styles = StyleSheet.create({
   title: {
     ...Typography.h1,
     color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  subtitle: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
     marginBottom: Spacing.lg,
   },
   settingsCard: {
@@ -193,7 +194,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   localNote: {
-    color: '#888',
+    color: Colors.textSecondary,
     fontSize: 12,
     marginTop: 12,
     textAlign: 'center',

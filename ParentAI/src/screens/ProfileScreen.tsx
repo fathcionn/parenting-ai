@@ -1,30 +1,33 @@
-import React, { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  Alert,
-  Image,
-  Modal,
-  Platform,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { useTranslation } from 'react-i18next';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { signOut, updateProfile as updateFirebaseProfile } from 'firebase/auth';
 import { addDoc, collection, getDocs, orderBy, query, serverTimestamp } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import * as ImagePicker from 'expo-image-picker';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+    Alert,
+    Image,
+    Linking,
+    Modal,
+    Platform,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
+import { Button } from '../components/Button';
+import { Card, Container } from '../components/Layout';
 import { auth, db, storage } from '../config/firebase-config';
+import { useAppTheme } from '../context/ThemeContext';
+import { getStorageItem, setStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 import { useAuthStore } from '../stores/auth-store';
 import { theme } from '../styles/theme';
-import { Container, Card } from '../components/Layout';
-import { Button } from '../components/Button';
-import { getStorageItem, setStorageItem, STORAGE_KEYS } from '../services/storageKeys';
-import { useAppTheme } from '../context/ThemeContext';
+import { COLORS } from '../theme/colors';
 import { reportScoreFromData, toReportDate } from '../utils/reportUtils';
 
 type ProfileStats = {
@@ -43,6 +46,20 @@ const calculateDayStreak = (dates: Date[]) => {
   }
   return streak;
 };
+
+function ChildIcon({ size = 24 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="7" r="4" stroke={COLORS.primary} strokeWidth="2" />
+      <Path
+        d="M4 20C4 16 7.58 13 12 13C16.42 13 20 16 20 20"
+        stroke={COLORS.primary}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
 
 export const ProfileScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -67,12 +84,20 @@ export const ProfileScreen: React.FC = () => {
   const [medicalNotes, setMedicalNotes] = useState('');
   const [schoolName, setSchoolName] = useState('');
   const [safeZoneRadius, setSafeZoneRadius] = useState('500');
+  const [showMicPicker, setShowMicPicker] = useState(false);
 
   const displayName =
     profile?.displayName || user?.displayName || user?.email?.split('@')[0] || 'TalkWise User';
   const email = user?.email || profile?.email || '';
   const avatarUrl = profile?.photoURL || user?.photoURL || '';
   const avatarInitial = displayName.trim()[0]?.toUpperCase() || 'T';
+  const micOptions = [
+    { id: 'default', name: 'This device' },
+    ...microphones.map((mic, index) => ({
+      id: mic.deviceId,
+      name: mic.label || `${t('profile_microphone')} ${index + 1}`,
+    })),
+  ];
 
   useEffect(() => {
     setNameInput(displayName);
@@ -255,8 +280,260 @@ export const ProfileScreen: React.FC = () => {
     await setStorageItem(STORAGE_KEYS.micId, deviceId);
   }
 
+  const handleAnonymousToggle = (value: boolean) => {
+    updateProfile({ isAnonymous: value });
+  };
+
+  const handleDeleteData = () => {
+    Alert.alert(
+      'Delete My Data',
+      'This will permanently delete all your sessions, insights, and account data. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Everything',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert('Coming Soon', 'Contact support@talkwise.app to delete your data.');
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <Container scroll>
+      <View style={styles.avatarSectionNew}>
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={styles.avatarImageNew} />
+        ) : (
+          <View style={styles.avatarNew}>
+            <Text style={styles.avatarText}>{avatarInitial}</Text>
+          </View>
+        )}
+        <Text style={styles.profileNameNew}>{displayName}</Text>
+        <Text style={styles.profileEmailNew}>{email}</Text>
+        <TouchableOpacity style={styles.editProfileButton} onPress={() => setShowNameModal(true)}>
+          <Text style={styles.editProfileText}>Edit Profile</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.sectionHeaderNew}>Account & Profile</Text>
+      <View style={styles.cardNew}>
+        <View style={styles.cardTitleRow}>
+          <ChildIcon />
+          <Text style={styles.cardTitle}>Child Profiles</Text>
+        </View>
+        {(profile?.children?.length ?? 0) > 0 ? (
+          profile?.children?.map((child) => (
+            <View key={child.id} style={styles.childRowNew}>
+              <Text style={styles.childNameNew}>{child.name}</Text>
+              <Text style={styles.childAgeNew}>Age {child.age}</Text>
+            </View>
+          ))
+        ) : (
+          <View style={styles.childEmptyStateNew}>
+            <Text style={styles.childEmptyTitleNew}>No children added yet</Text>
+            <Text style={styles.childEmptyTextNew}>
+              Add your child's profile to get personalized coaching insights.
+            </Text>
+          </View>
+        )}
+        <TouchableOpacity style={styles.outlinePillButton} onPress={() => setShowChildModal(true)}>
+          <Text style={styles.outlinePillText}>+ Add Child</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.sectionHeaderNew}>App Preferences</Text>
+      <View style={styles.cardNew}>
+        <View style={[styles.preferenceRow, styles.preferenceDivider]}>
+          <View style={styles.preferenceText}>
+            <View style={styles.preferenceLabelRow}>
+              <Text style={styles.preferenceIcon}>☾</Text>
+              <Text style={styles.preferenceLabel}>Dark Mode</Text>
+            </View>
+          </View>
+          <Switch
+            value={isDarkMode}
+            onValueChange={setDarkMode}
+            trackColor={{ false: COLORS.surfaceContainerHigh, true: COLORS.primary }}
+            thumbColor={COLORS.onPrimary}
+          />
+        </View>
+        <View style={styles.preferenceRow}>
+          <View style={styles.preferenceText}>
+            <View style={styles.preferenceLabelRow}>
+              <Text style={styles.preferenceIcon}>◇</Text>
+              <Text style={styles.preferenceLabel}>Stay Anonymous</Text>
+            </View>
+            <Text style={styles.preferenceSubLabel}>Hide your identity in Community Benchmarks</Text>
+          </View>
+          <Switch
+            value={Boolean(profile?.isAnonymous)}
+            onValueChange={handleAnonymousToggle}
+            trackColor={{ false: COLORS.surfaceContainerHigh, true: COLORS.primary }}
+            thumbColor={COLORS.onPrimary}
+          />
+        </View>
+      </View>
+
+      <Text style={styles.sectionHeaderNew}>Device Setup</Text>
+      <View style={styles.cardNew}>
+        <Text style={styles.preferenceLabel}>Microphone</Text>
+        <Text style={styles.preferenceSubLabel}>Select input device</Text>
+        <TouchableOpacity
+          style={{
+            borderWidth: 1,
+            borderColor: COLORS.border,
+            borderRadius: 10,
+            padding: 14,
+            marginTop: 8,
+            backgroundColor: COLORS.cardBg,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+          onPress={() => setShowMicPicker(true)}
+        >
+          <Text style={{ 
+            color: COLORS.textPrimary, 
+            fontSize: 16 
+          }}>
+            {selectedMicId 
+              ? micOptions.find(m => m.id === selectedMicId)?.name 
+                ?? 'Select microphone'
+              : 'Select microphone'}
+          </Text>
+          <Text style={{ color: COLORS.textSecondary }}>
+            ▾
+          </Text>
+        </TouchableOpacity>
+        {microphones.length === 0 ? <Text style={styles.emptyTextNew}>{t('profile_no_mics')}</Text> : null}
+      </View>
+
+      {/* Microphone Picker Modal */}
+      <Modal
+        visible={showMicPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowMicPicker(false)}
+      >
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.4)',
+            justifyContent: 'flex-end',
+          }}
+          activeOpacity={1}
+          onPress={() => setShowMicPicker(false)}
+        >
+          <View style={{
+            backgroundColor: COLORS.cardBg,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            paddingTop: 16,
+            paddingBottom: 40,
+          }}>
+            {/* Handle bar */}
+            <View style={{
+              width: 40,
+              height: 4,
+              backgroundColor: COLORS.border,
+              borderRadius: 2,
+              alignSelf: 'center',
+              marginBottom: 16,
+            }} />
+      
+            <Text style={{
+              fontSize: 16,
+              fontWeight: '700',
+              color: COLORS.textPrimary,
+              paddingHorizontal: 24,
+              marginBottom: 12,
+            }}>
+              Select Microphone
+            </Text>
+      
+            {micOptions.map(mic => (
+              <TouchableOpacity
+                key={mic.id}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingHorizontal: 24,
+                  paddingVertical: 14,
+                  borderBottomWidth: 1,
+                  borderBottomColor: COLORS.border,
+                }}
+                onPress={() => {
+                  selectMic(mic.id);
+                  setShowMicPicker(false);
+                }}
+              >
+                <Text style={{
+                  fontSize: 16,
+                  color: COLORS.textPrimary,
+                }}>
+                  {mic.name}
+                </Text>
+                {selectedMicId === mic.id && (
+                  <Text style={{ 
+                    color: COLORS.primary, 
+                    fontSize: 18 
+                  }}>
+                    ✓
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      <Text style={styles.sectionHeaderNew}>About & Actions</Text>
+      <View style={styles.cardNew}>
+        <View style={[styles.aboutRowNew, styles.preferenceDivider]}>
+          <Text style={styles.preferenceLabel}>App Version</Text>
+          <Text style={styles.aboutValue}>1.0.0</Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.aboutRowNew, styles.preferenceDivider]}
+          onPress={() => Linking.openURL('your-privacy-url')}
+        >
+          <View style={styles.preferenceLabelRow}>
+            <Text style={styles.preferenceIcon}>◇</Text>
+            <Text style={styles.preferenceLabel}>Privacy Policy</Text>
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.aboutRowNew, styles.preferenceDivider]}
+          onPress={() => Linking.openURL('your-privacy-url')}
+        >
+          <View style={styles.preferenceLabelRow}>
+            <Text style={styles.preferenceIcon}>□</Text>
+            <Text style={styles.preferenceLabel}>Terms of Service</Text>
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
+        <View style={styles.safetyNotice}>
+          <Text style={styles.safetyText}>
+            ⚠️ Audio is processed locally and never uploaded. Only text insights are stored in the cloud.
+          </Text>
+        </View>
+      </View>
+
+      <TouchableOpacity style={styles.signOutButton} onPress={handleLogout}>
+        <Text style={styles.signOutText}>{t('profile_sign_out')}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteData}>
+        <Text style={styles.deleteText}>Delete My Data</Text>
+      </TouchableOpacity>
+
+      {false && (
+        <>
       <View style={[styles.avatarSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
         {avatarUrl ? (
           <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
@@ -288,8 +565,8 @@ export const ProfileScreen: React.FC = () => {
       </View>
 
       <Card title={t('profile_child_profile')}>
-        {profile?.children && profile.children.length > 0 ? (
-          profile.children.map((child) => (
+        {(profile?.children?.length ?? 0) > 0 ? (
+          profile?.children?.map((child) => (
             <View key={child.id} style={styles.childItem}>
               <Text style={styles.childName}>{child.name}</Text>
               <Text style={styles.childAge}>{child.age}</Text>
@@ -332,16 +609,16 @@ export const ProfileScreen: React.FC = () => {
           <Switch
             value={isDarkMode}
             onValueChange={setDarkMode}
-            trackColor={{ false: '#DADADA', true: '#111111' }}
-            thumbColor="#FFFFFF"
+            trackColor={{ false: COLORS.surfaceContainerHigh, true: COLORS.primary }}
+            thumbColor={COLORS.onPrimary}
           />
         </View>
       </View>
 
-      <Card title={t('profile_leaderboard')}>
+      <Card title="Community Benchmarks">
         <Button
-          title={profile?.isAnonymous ? t('profile_leaderboard') : t('profile_stay_anonymous')}
-          onPress={() => {}}
+          title={profile?.isAnonymous ? 'Community Benchmarks' : t('profile_stay_anonymous')}
+          onPress={() => router.push('/(drawer)/leaderboard' as any)}
           variant="outline"
           fullWidth
         />
@@ -394,6 +671,8 @@ export const ProfileScreen: React.FC = () => {
       </View>
 
       <Button title={t('profile_sign_out')} onPress={handleLogout} variant="outline" fullWidth />
+        </>
+      )}
 
       <Modal visible={showNameModal} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
@@ -403,7 +682,7 @@ export const ProfileScreen: React.FC = () => {
               value={nameInput}
               onChangeText={setNameInput}
               placeholder="Display name"
-              placeholderTextColor="#888"
+          placeholderTextColor={COLORS.textFaint}
               style={styles.modalInput}
             />
             <View style={styles.modalActions}>
@@ -434,14 +713,14 @@ export const ProfileScreen: React.FC = () => {
               value={childName}
               onChangeText={setChildName}
               placeholder="Child name"
-              placeholderTextColor="#888"
+            placeholderTextColor={COLORS.textFaint}
               style={styles.modalInput}
             />
             <TextInput
               value={childAge}
               onChangeText={setChildAge}
               placeholder="Age"
-              placeholderTextColor="#888"
+              placeholderTextColor={COLORS.textFaint}
               keyboardType="numeric"
               style={styles.modalInput}
             />
@@ -449,14 +728,14 @@ export const ProfileScreen: React.FC = () => {
               value={physicalDescription}
               onChangeText={setPhysicalDescription}
               placeholder="Physical description"
-              placeholderTextColor="#888"
+              placeholderTextColor={COLORS.textFaint}
               style={styles.modalInput}
             />
             <TextInput
               value={emergencyContact}
               onChangeText={setEmergencyContact}
               placeholder="Emergency contact number"
-              placeholderTextColor="#888"
+              placeholderTextColor={COLORS.textFaint}
               keyboardType="phone-pad"
               style={styles.modalInput}
             />
@@ -464,7 +743,7 @@ export const ProfileScreen: React.FC = () => {
               value={medicalNotes}
               onChangeText={setMedicalNotes}
               placeholder="Medical notes / allergies"
-              placeholderTextColor="#888"
+              placeholderTextColor={COLORS.textFaint}
               multiline
               style={[styles.modalInput, styles.multilineInput]}
             />
@@ -472,14 +751,14 @@ export const ProfileScreen: React.FC = () => {
               value={schoolName}
               onChangeText={setSchoolName}
               placeholder="School name"
-              placeholderTextColor="#888"
+            placeholderTextColor={COLORS.textFaint}
               style={styles.modalInput}
             />
             <TextInput
               value={safeZoneRadius}
               onChangeText={setSafeZoneRadius}
               placeholder="Safe zone radius in meters"
-              placeholderTextColor="#888"
+            placeholderTextColor={COLORS.textFaint}
               keyboardType="numeric"
               style={styles.modalInput}
             />
@@ -502,16 +781,258 @@ export const ProfileScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  avatarSectionNew: {
+    alignItems: 'center',
+    paddingBottom: 8,
+    paddingTop: 16,
+  },
+  avatarNew: {
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: 40,
+    height: 80,
+    justifyContent: 'center',
+    width: 80,
+  },
+  avatarImageNew: {
+    borderRadius: 40,
+    height: 80,
+    width: 80,
+  },
+  profileNameNew: {
+    color: COLORS.textPrimary,
+    fontSize: 24,
+    fontWeight: '700',
+    marginTop: 14,
+    textAlign: 'center',
+  },
+  profileEmailNew: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  editProfileButton: {
+    borderColor: COLORS.borderStrong,
+    borderRadius: 9999,
+    borderWidth: 1,
+    marginTop: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+  },
+  editProfileText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  sectionHeaderNew: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    marginBottom: 8,
+    marginTop: 24,
+    paddingHorizontal: 4,
+    textTransform: 'uppercase',
+  },
+  cardNew: {
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+  },
+  cardTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  cardTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  childRowNew: {
+    borderBottomColor: COLORS.border,
+    borderBottomWidth: 1,
+    paddingVertical: 12,
+  },
+  childNameNew: {
+    color: COLORS.textPrimary,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  childAgeNew: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    marginTop: 3,
+  },
+  childEmptyStateNew: {
+    paddingVertical: 12,
+  },
+  childEmptyTitleNew: {
+    color: COLORS.textPrimary,
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  childEmptyTextNew: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  outlinePillButton: {
+    alignItems: 'center',
+    borderColor: COLORS.borderStrong,
+    borderRadius: 9999,
+    borderWidth: 1,
+    marginTop: 12,
+    paddingVertical: 11,
+  },
+  outlinePillText: {
+    color: COLORS.primary,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  preferenceRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 16,
+    paddingVertical: 14,
+  },
+  preferenceDivider: {
+    borderBottomColor: COLORS.border,
+    borderBottomWidth: 1,
+  },
+  preferenceText: {
+    flex: 1,
+  },
+  preferenceLabelRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  preferenceIcon: {
+    color: COLORS.primary,
+    fontSize: 18,
+    fontWeight: '700',
+    width: 22,
+  },
+  preferenceLabel: {
+    color: COLORS.textPrimary,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  preferenceSubLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  pickerWrap: {
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 8,
+    overflow: 'hidden',
+  },
+  picker: {
+    color: COLORS.textPrimary,
+  },
+  webPickerRow: {
+    paddingHorizontal: 12,
+    paddingVertical: 13,
+  },
+  webPickerRowSelected: {
+    backgroundColor: COLORS.surfaceContainer,
+  },
+  webPickerText: {
+    color: COLORS.textPrimary,
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  webPickerTextSelected: {
+    color: COLORS.primary,
+    fontWeight: '800',
+  },
+  emptyTextNew: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    marginTop: 10,
+  },
+  aboutRowNew: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 52,
+    paddingVertical: 12,
+  },
+  aboutValue: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  chevron: {
+    color: COLORS.textSecondary,
+    fontSize: 26,
+    lineHeight: 28,
+  },
+  safetyNotice: {
+    backgroundColor: COLORS.warningBg,
+    borderRadius: 10,
+    marginTop: 14,
+    padding: 12,
+  },
+  safetyText: {
+    color: COLORS.warning,
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  signOutButton: {
+    alignItems: 'center',
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 20,
+    padding: 16,
+  },
+  signOutText: {
+    color: COLORS.error,
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  deleteButton: {
+    alignItems: 'center',
+    backgroundColor: COLORS.errorBg,
+    borderRadius: 12,
+    marginBottom: 48,
+    marginTop: 12,
+    padding: 16,
+  },
+  deleteText: {
+    color: COLORS.error,
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
   avatarSection: {
     alignItems: 'center',
-    borderRadius: 18,
+    borderRadius: theme.borderRadius.xl,
     borderWidth: 1,
     marginVertical: theme.spacing.md,
-    padding: 22,
+    padding: theme.spacing.xl,
   },
   avatar: {
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: theme.colors.primary,
     borderRadius: 45,
     height: 90,
     justifyContent: 'center',
@@ -523,7 +1044,7 @@ const styles = StyleSheet.create({
     width: 90,
   },
   avatarText: {
-    color: '#FFF',
+    color: COLORS.onPrimary,
     fontSize: 36,
     fontWeight: '900',
   },
@@ -538,14 +1059,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   editNameButton: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.primaryLight,
     borderRadius: 999,
     marginTop: 14,
     paddingHorizontal: 16,
     paddingVertical: 9,
   },
   editNameText: {
-    color: '#000',
+    color: theme.colors.primary,
     fontSize: 13,
     fontWeight: '900',
   },
@@ -556,7 +1077,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
     flex: 1,
     padding: 12,
@@ -596,12 +1117,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   childEmptyTitle: {
-    color: '#000',
+    color: theme.colors.text,
     fontSize: 17,
     fontWeight: '900',
   },
   childEmptyText: {
-    color: '#777',
+    color: theme.colors.textSecondary,
     fontSize: 13,
     fontWeight: '600',
     lineHeight: 19,
@@ -638,19 +1159,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   sectionCard: {
-    borderRadius: 12,
+    borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
     marginBottom: 16,
     padding: 16,
   },
   sectionTitle: {
-    color: '#000',
+    color: COLORS.textPrimary,
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 4,
   },
   sectionSubtitle: {
-    color: '#888',
+    color: COLORS.textFaint,
     fontSize: 13,
     marginBottom: 12,
   },
@@ -663,30 +1184,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   micRow: {
-    backgroundColor: '#F8F8F8',
-    borderRadius: 8,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
     padding: 12,
   },
   selectedStyle: {
-    backgroundColor: '#000',
+    backgroundColor: theme.colors.primary,
   },
   micLabel: {
-    color: '#000',
+    color: theme.colors.text,
     flex: 1,
     fontSize: 14,
   },
   micLabelSelected: {
-    color: '#FFF',
+    color: COLORS.onPrimary,
   },
   checkmark: {
-    color: '#FFF',
+    color: COLORS.onPrimary,
     fontSize: 16,
   },
   aboutCard: {
-    borderRadius: 16,
+    borderRadius: theme.borderRadius.xl,
     borderWidth: 1,
     marginBottom: 16,
     padding: 18,
@@ -719,23 +1240,23 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.xl,
     maxWidth: 360,
     padding: 20,
     width: '100%',
   },
   modalTitle: {
-    color: '#000',
+    color: theme.colors.text,
     fontSize: 18,
     fontWeight: '800',
     marginBottom: 16,
   },
   modalInput: {
-    borderColor: '#E5E5E5',
-    borderRadius: 10,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
     borderWidth: 1,
-    color: '#000',
+    color: theme.colors.text,
     fontSize: 15,
     marginBottom: 12,
     padding: 12,
@@ -746,15 +1267,15 @@ const styles = StyleSheet.create({
   },
   photoButton: {
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderColor: '#E5E5E5',
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.border,
     borderRadius: 10,
     borderWidth: 1,
     marginBottom: 12,
     padding: 12,
   },
   photoButtonText: {
-    color: '#000',
+    color: theme.colors.text,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -765,24 +1286,24 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   modalSecondaryButton: {
-    borderColor: '#DADADA',
+    borderColor: COLORS.border,
     borderRadius: 10,
     borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
   modalSecondaryText: {
-    color: '#000',
+    color: theme.colors.text,
     fontWeight: '700',
   },
   modalPrimaryButton: {
-    backgroundColor: '#000',
+    backgroundColor: theme.colors.primary,
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
   modalPrimaryText: {
-    color: '#FFF',
+    color: COLORS.onPrimary,
     fontWeight: '800',
   },
 });
