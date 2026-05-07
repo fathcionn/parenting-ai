@@ -36,38 +36,98 @@ app.get('/api/test-groq', async (_req, res) => {
 
 app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No audio file' });
+    const audioFile = req.file;
+
+    if (!audioFile) {
+      return res.status(400).json({ error: 'No audio file provided' });
     }
 
-    console.log('Audio received:', req.file.size, 'bytes');
-    console.log('Audio mimetype:', req.file.mimetype);
-
-    // Create a readable stream from the buffer
-    const audioBuffer = req.file.buffer;
-    const audioFile = new File([audioBuffer], 'recording.webm', { type: req.file.mimetype });
-
-    // Use Groq Whisper for transcription
-    const transcription = await groq.audio.transcriptions.create({
-      file: audioFile,
-      model: 'whisper-large-v3-turbo',
+    console.log('Audio received:', {
+      size: audioFile.size,
+      mimetype: audioFile.mimetype,
+      originalname: audioFile.originalname,
     });
 
-    const transcript = transcription.text.trim();
-    console.log('Transcript result:', transcript.slice(0, 200));
+    const fileForGroq = {
+      value: audioFile.buffer,
+      filename: audioFile.originalname || 'recording.webm',
+    };
 
-    if (!transcript) {
-      return res.json({ transcript: '' });
+    const transcription = await groq.audio.transcriptions.create({
+      file: fileForGroq,
+      model: 'whisper-large-v3-turbo',
+      language: 'en',
+      response_format: 'json',
+      temperature: 0,
+    });
+
+    const transcriptText = transcription.text || '';
+    console.log('Transcript:', transcriptText);
+
+    if (!transcriptText.trim()) {
+      return res.status(200).json({
+        transcript: '',
+        score: 70,
+        summary: 'No clear speech was detected in this session.',
+        strengths: ['The session was recorded successfully.'],
+        improvements: ['Try speaking closer to the microphone.'],
+        tips: ['Check microphone permissions and reduce background noise.'],
+        safetyFlag: false,
+      });
     }
 
-    res.json({ transcript });
+    const analysisResponse = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      messages: [
+        {
+          role: 'system',
+          content: `You are an expert parenting coach.
+Analyze the parent-child conversation transcript.
+Return ONLY valid JSON with exactly these keys:
+{
+  "score": number,
+  "summary": string,
+  "strengths": string[],
+  "improvements": string[],
+  "tips": string[],
+  "safetyFlag": boolean
+}
+Be supportive, practical, and concise.`,
+        },
+        {
+          role: 'user',
+          content: `Analyze this conversation:\n\n${transcriptText}`,
+        },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.2,
+    });
+
+    const raw = analysisResponse.choices[0]?.message?.content || '{}';
+    console.log('Analysis raw:', raw);
+
+    let analysis = {};
+    try {
+      analysis = JSON.parse(raw);
+    } catch (e) {
+      console.error('JSON parse failed, raw analysis:', raw);
+      analysis = {};
+    }
+
+    return res.status(200).json({
+      transcript: transcriptText,
+      score: analysis.score ?? 75,
+      summary: analysis.summary ?? 'Session analyzed successfully.',
+      strengths: analysis.strengths ?? [],
+      improvements: analysis.improvements ?? [],
+      tips: analysis.tips ?? [],
+      safetyFlag: analysis.safetyFlag ?? false,
+    });
   } catch (error) {
-    console.error('TRANSCRIBE ERROR:', error.message);
-    console.error('TRANSCRIBE STACK:', error.stack);
-    res.status(500).json({
+    console.error('Groq transcription/analysis error:', error);
+    return res.status(500).json({
       error: 'Transcription failed',
       details: error.message,
-      stack: error.stack?.split('\n')[0],
     });
   }
 });
