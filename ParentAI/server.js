@@ -2,16 +2,13 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const Groq = require('groq-sdk');
-const { toFile } = require('groq-sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 
 const app = express();
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(cors());
@@ -21,16 +18,13 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/api/test-groq', async (_req, res) => {
+app.get('/api/test-gemini', async (_req, res) => {
   try {
-    const response = await groq.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
-      messages: [{ role: 'user', content: 'Say hello in one word' }],
-      response_format: { type: 'json_object' },
-    });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const result = await model.generateContent('Say hello in one word');
     res.json({
       success: true,
-      response: response.choices[0].message.content,
+      response: result.response.text(),
     });
   } catch (error) {
     res.status(500).json({
@@ -54,98 +48,67 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
       originalname: audioFile.originalname,
     });
 
-    const filename = audioFile.originalname || 'recording.mp4';
+    // Convert audio buffer to base64
+    const audioBase64 = audioFile.buffer.toString('base64');
+    const mimeType = audioFile.mimetype || 'audio/mp4';
 
-    const groqFile = await toFile(audioFile.buffer, filename, {
-      type: audioFile.mimetype || 'audio/mp4',
-    });
+    // Use Gemini to transcribe AND analyze in one single call
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    const transcription = await groq.audio.transcriptions.create({
-      file: groqFile,
-      model: 'whisper-large-v3-turbo',
-      language: 'en',
-      response_format: 'json',
-      temperature: 0,
-    });
-
-    const transcriptText = transcription.text || '';
-    console.log('Transcript:', transcriptText);
-
-    if (!transcriptText.trim()) {
-      return res.status(200).json({
-        transcript: '',
-        score: 70,
-        summary: 'No clear speech was detected in this session.',
-        strengths: ['The session was recorded successfully.'],
-        improvements: ['Try speaking closer to the microphone.'],
-        tips: ['Check microphone permissions and reduce background noise.'],
-        safetyFlag: false,
-      });
-    }
-
-    const analysisResponse = await groq.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
-      messages: [
-        {
-          role: 'system',
-          content: `You are an expert parenting coach.
-Return ONLY valid JSON with exactly these keys:
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          data: audioBase64,
+          mimeType: mimeType,
+        },
+      },
+      `You are an expert parenting coach.
+Listen to this audio and do two things:
+1. Transcribe everything that was said word for word.
+2. Analyze the conversation and return ONLY valid JSON with exactly these fields:
 {
-  "score": number,
-  "summary": string,
-  "strengths": string[],
-  "improvements": string[],
-  "tips": string[],
-  "safetyFlag": boolean
-}`,
-        },
-        {
-          role: 'user',
-          content: `Analyze this conversation:\n\n${transcriptText}`,
-        },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.2,
-    });
+  "transcript": "full transcription here",
+  "score": number between 0 and 100,
+  "summary": "brief summary of the interaction",
+  "strengths": ["strength 1", "strength 2"],
+  "improvements": ["improvement 1", "improvement 2"],
+  "tips": ["tip 1", "tip 2"],
+  "safetyFlag": true or false
+}
+Return ONLY the JSON object, no extra text.`,
+    ]);
 
-    const raw = analysisResponse.choices[0]?.message?.content || '{}';
-    console.log('Analysis raw:', raw);
+    const raw = result.response.text();
+    console.log('Gemini raw response:', raw);
 
+    // Parse the JSON from Gemini response
     let analysis = {};
     try {
-      analysis = JSON.parse(raw);
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        analysis = JSON.parse(jsonMatch[0]);
+      }
     } catch (err) {
-      console.error('Analysis JSON parse failed:', raw);
+      console.error('JSON parse error:', err);
     }
 
     return res.status(200).json({
-      transcript: transcriptText,
-      score: analysis.score ?? 75,
-      summary: analysis.summary ?? 'Session analyzed successfully.',
+      transcript: analysis.transcript ?? '',
+      score: analysis.score ?? 70,
+      summary: analysis.summary ?? 'Session analyzed.',
       strengths: analysis.strengths ?? [],
       improvements: analysis.improvements ?? [],
       tips: analysis.tips ?? [],
       safetyFlag: analysis.safetyFlag ?? false,
     });
   } catch (error) {
-    console.error('Groq transcription/analysis error:', error);
+    console.error('Gemini error:', error);
     return res.status(500).json({
       error: 'Transcription failed',
       details: error.message,
     });
   }
 });
-
-function buildStrictJsonPrompt(language, transcript) {
-  const transcriptText = String(transcript || '').slice(0, 2000);
-
-  return `Analyze this parenting coaching transcript.
-Return ONLY valid JSON, no extra text:
-{"score":0-100,"summary":"brief","strengths":["x"],"improvements":["x"],"tips":["x"]}
-Write summary, strengths, improvements, and tips in ${language}.
-
-Transcript: ${transcriptText}`;
-}
 
 const fallbackAnalysis = {
   score: 65,
@@ -162,52 +125,41 @@ const fallbackSafety = {
   recommendation: 'No concerning content was detected.',
 };
 
-const callGroqWithTimeout = async (input, language = 'English', isSafetyCheck = false) => {
+const callGeminiWithTimeout = async (input, language = 'English', isSafetyCheck = false) => {
   const timeoutPromise = new Promise((resolve) => {
     setTimeout(() => {
-      resolve(isSafetyCheck ? fallbackSafety : fallbackAnalysis);
+      resolve(isSafetyCheck ? JSON.stringify(fallbackSafety) : JSON.stringify(fallbackAnalysis));
     }, 30000);
   });
 
-  const messages = isSafetyCheck ? [
-    {
-      role: 'system',
-      content: 'You are a child safety AI. Analyze the transcript for concerning content and return JSON.'
-    },
-    {
-      role: 'user',
-      content: input
-    }
-  ] : [
-    {
-      role: 'system',
-      content: `You are an expert parenting coach.
-      Analyze this parent-child conversation transcript
-      and return a JSON response with:
-      {
-        "score": number (0-100),
-        "summary": string,
-        "strengths": string[],
-        "improvements": string[],
-        "tips": string[]
-      }`
-    },
-    {
-      role: 'user',
-      content: input
-    }
-  ];
+  const systemPrompt = isSafetyCheck 
+    ? 'You are a child safety AI. Analyze the transcript for concerning content and return ONLY valid JSON with these fields: {safe: boolean, severity: string, detected: [], recommendation: string}'
+    : `You are an expert parenting coach. Analyze this parent-child conversation transcript and return ONLY valid JSON with exactly these fields:
+{
+  "score": number between 0 and 100,
+  "summary": string,
+  "strengths": ["string"],
+  "improvements": ["string"],
+  "tips": ["string"]
+}`;
 
-  const groqPromise = groq.chat.completions.create({
-    model: 'llama-3.1-8b-instant',
-    messages,
-    response_format: { type: 'json_object' }
-  }).then((response) => response.choices[0].message.content);
+  const geminiPromise = (async () => {
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const result = await model.generateContent({
+      contents: [{
+        role: 'user',
+        parts: [{
+          text: `${systemPrompt}\n\n${input}`
+        }]
+      }]
+    });
+    return result.response.text();
+  })();
 
-  return Promise.race([groqPromise, timeoutPromise]);
+  return Promise.race([geminiPromise, timeoutPromise]);
 };
 
-const parseGroqResponse = (rawText) => {
+const parseGeminiResponse = (rawText) => {
   try {
     return JSON.parse(rawText);
   } catch {
@@ -229,10 +181,10 @@ const parseGroqResponse = (rawText) => {
 
 function extractSafeJson(rawText, transcript = '') {
   rawText = String(rawText || '').trim();
-  console.log('RAW GROQ RESPONSE:', rawText.substring(0, 600));
-  console.log('GROQ raw response:', rawText.substring(0, 300));
+  console.log('RAW GEMINI RESPONSE:', rawText.substring(0, 600));
+  console.log('Gemini raw response:', rawText.substring(0, 300));
 
-  const parsed = parseGroqResponse(rawText);
+  const parsed = parseGeminiResponse(rawText);
   const score = typeof parsed.score === 'number' ? Math.max(0, Math.min(100, Math.round(parsed.score))) : 50;
   const strengths = Array.isArray(parsed.strengths) ? parsed.strengths : [];
   const improvements = Array.isArray(parsed.improvements) ? parsed.improvements : [];
@@ -263,10 +215,10 @@ app.post('/api/analyze', async (req, res) => {
     const languageNames = { en: 'English', ar: 'Arabic', tr: 'Turkish' };
     const langName = languageNames[language] || 'English';
 
-  const responseText = await callGroqWithTimeout(transcript, langName, false);
+    const responseText = await callGeminiWithTimeout(transcript, langName, false);
     res.json(extractSafeJson(responseText, transcript));
   } catch (err) {
-    console.error('Groq error:', err);
+    console.error('Gemini error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -277,26 +229,42 @@ app.post('/api/analyze-audio', async (req, res) => {
     const audioPayload = audioBase64 || audio;
     const promptLanguage = language || lang || 'English';
 
-    // Convert base64 to buffer for Groq
-    const audioBuffer = Buffer.from(audioPayload, 'base64');    const audioFile = new File([audioBuffer], 'recording.webm', { type: mimeType || 'audio/webm' });
+    // Use Gemini to transcribe and analyze audio in one call
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    // First transcribe with Groq Whisper
-    const transcription = await groq.audio.transcriptions.create({
-      file: audioFile,
-      model: 'whisper-large-v3-turbo',
-    });
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          data: audioPayload,
+          mimeType: mimeType || 'audio/webm',
+        },
+      },
+      `You are an expert parenting coach.
+Listen to this audio and do two things:
+1. Transcribe everything that was said word for word.
+2. Analyze the conversation and return ONLY valid JSON with exactly these fields:
+{
+  "transcript": "full transcription here",
+  "score": number between 0 and 100,
+  "summary": "brief summary of the interaction",
+  "strengths": ["strength 1", "strength 2"],
+  "improvements": ["improvement 1", "improvement 2"],
+  "tips": ["tip 1", "tip 2"],
+  "safetyFlag": true or false
+}
+Return ONLY the JSON object, no extra text.`,
+    ]);
 
-    const transcript = transcription.text.trim();
+    const raw = result.response.text();
+    const transcript = raw;
 
     if (!transcript) {
       return res.json(extractSafeJson(JSON.stringify(fallbackAnalysis)));
     }
 
-    // Then analyze with Groq
-    const responseText = await callGroqWithTimeout(transcript, promptLanguage);
-    res.json(extractSafeJson(responseText, transcript));
+    res.json(extractSafeJson(raw, transcript));
   } catch (err) {
-    console.error('Groq audio error:', err);
+    console.error('Gemini audio error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -316,18 +284,18 @@ Transcript:
 ${String(transcript || '').slice(0, 2000)}
 """
 
-Return ONLY this JSON:
+Return ONLY this JSON, no extra text:
 {
-  "safe": true,
-  "severity": "none",
-  "detected": [],
+  "safe": true or false,
+  "severity": "none" or "mild" or "moderate" or "severe",
+  "detected": ["concern 1", "concern 2"],
   "recommendation": "brief advice for parent"
 }
 
 If concerning content is found, set safe to false and severity to mild, moderate, or severe.`;
 
-    const responseText = await callGroqWithTimeout(safetyPrompt, 'English', true);
-    const parsed = parseGroqResponse(responseText);
+    const responseText = await callGeminiWithTimeout(safetyPrompt, 'English', true);
+    const parsed = parseGeminiResponse(responseText);
     const severityValues = ['none', 'mild', 'moderate', 'severe'];
 
     res.json({
