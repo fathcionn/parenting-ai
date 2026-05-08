@@ -9,6 +9,7 @@ const multer = require('multer');
 
 const app = express();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+console.log('GEMINI KEY loaded:', process.env.GEMINI_API_KEY ? 'YES (length: ' + process.env.GEMINI_API_KEY.length + ')' : 'MISSING');
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(cors());
