@@ -358,6 +358,17 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
 
     try {
       const audioData = await stopRecording();
+      if (audioData instanceof Blob && audioData.size < 10000) {
+        Alert.alert(
+          'Recording Too Short',
+          'Please record for at least 5 seconds while speaking clearly.',
+          [{ text: 'Try Again' }]
+        );
+        setIsLoading(false);
+        setIsAnalyzing(false);
+        setProcessingStep('idle');
+        return;
+      }
       console.log('STEP 2: transcription started');
       pendingAudioRef.current = audioData;
       await analyzeAudioData(audioData);
