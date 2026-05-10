@@ -1,10 +1,10 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase-config';
 import { reportScoreFromData, toReportDate } from '../../src/utils/reportUtils';
-import { COLORS } from '../../src/theme/colors';
 
 type Report = {
   id: string;
@@ -21,6 +21,33 @@ type Badge = {
   earnedLabel: string;
   progress: number;
 };
+
+const earnedBadgeStyles: Record<
+  string,
+  { backgroundColor: string; icon: React.ComponentProps<typeof MaterialIcons>['name'] }
+> = {
+  'first-step': { backgroundColor: '#6366F1', icon: 'celebration' },
+  'three-day-streak': { backgroundColor: '#B55D00', icon: 'local-fire-department' },
+  'calm-voice': { backgroundColor: '#4648D4', icon: 'star' },
+  'role-model': { backgroundColor: '#4648D4', icon: 'workspace-premium' },
+};
+
+const lockedIcons: React.ComponentProps<typeof MaterialIcons>['name'][] = [
+  'event-available',
+  'calendar-month',
+  'workspace-premium',
+];
+
+function getUnlockCondition(badge: Badge) {
+  if (badge.id === 'first-step') return 'Unlock at 1 session';
+  if (badge.id === 'three-day-streak') return 'Unlock at 3 active days';
+  if (badge.id === 'calm-voice') return 'Unlock at 80+ score';
+  if (badge.id === 'role-model') return 'Unlock at 90+ score';
+  if (badge.id === 'active-listener') return 'Unlock at 10 sessions';
+  if (badge.id === 'consistent-routine') return 'Unlock at 5 active days';
+  if (badge.id === 'expert-parent') return 'Unlock at 12 sessions';
+  return `Unlock at ${badge.description}`;
+}
 
 function buildBadges(reports: Report[]): Badge[] {
   const uniqueDays = new Set(reports.map((report) => report.date.toISOString().slice(0, 10)));
@@ -159,10 +186,10 @@ export default function AchievementsScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <Text style={styles.title}>Achievements</Text>
-      <Text style={styles.subtitle}>
-        Track your personal growth as a parent. These badges celebrate your coaching milestones.
-      </Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Your Achievements 🏆</Text>
+        <Text style={styles.subtitle}>Celebrate your milestones and see what's next on your journey.</Text>
+      </View>
 
       {loading ? (
         <View style={styles.progressCard}>
@@ -212,26 +239,36 @@ export default function AchievementsScreen() {
 
       <View style={styles.grid}>
         {visibleBadges.map((badge) => (
-          <TouchableOpacity
-            key={badge.id}
-            activeOpacity={0.82}
-            style={[styles.badgeCard, !badge.earned && styles.badgeCardLocked]}
-          >
-            {!badge.earned ? <Text style={styles.lockIcon}>{'\u{1F512}'}</Text> : null}
-            <Text style={[styles.badgeEmoji, !badge.earned && styles.badgeEmojiLocked]}>{badge.emoji}</Text>
-            <Text style={styles.badgeTitle}>{badge.title}</Text>
-            <Text style={styles.badgeDescription}>{badge.description}</Text>
+          <TouchableOpacity key={badge.id} activeOpacity={0.82} style={[styles.badgeCard, !badge.earned && styles.badgeCardLocked]}>
             {badge.earned ? (
-              <View style={styles.earnedFooter}>
-                <Text style={styles.earnedText}>{badge.earnedLabel}</Text>
+              <View
+                style={[
+                  styles.badgeIconCircle,
+                  { backgroundColor: earnedBadgeStyles[badge.id]?.backgroundColor || '#6366F1' },
+                ]}
+              >
+                <MaterialIcons
+                  name={earnedBadgeStyles[badge.id]?.icon || 'emoji-events'}
+                  size={40}
+                  color="#FFFFFF"
+                />
               </View>
             ) : (
-              <View style={styles.lockedFooter}>
-                <View style={styles.smallTrack}>
-                  <View style={[styles.smallFill, { width: `${badge.progress}%` }]} />
+              <View style={styles.lockedIconOuter}>
+                <MaterialIcons
+                  name={lockedIcons[visibleBadges.indexOf(badge) % lockedIcons.length]}
+                  size={40}
+                  color="#767586"
+                />
+                <View style={styles.lockOverlay}>
+                  <MaterialIcons name="lock" size={13} color="#464554" />
                 </View>
               </View>
             )}
+            <Text style={[styles.badgeTitle, !badge.earned && styles.badgeTitleLocked]}>{badge.title}</Text>
+            <Text style={[styles.badgeMeta, !badge.earned && styles.badgeMetaLocked]}>
+              {badge.earned ? badge.earnedLabel : getUnlockCondition(badge)}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -241,116 +278,121 @@ export default function AchievementsScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: COLORS.background,
     flex: 1,
+    backgroundColor: '#FCF8FF',
   },
   content: {
-    gap: 24,
-    paddingBottom: 48,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingTop: 28,
+    paddingBottom: 64,
+    gap: 22,
+  },
+  header: {
+    marginBottom: 10,
   },
   title: {
-    color: COLORS.primary,
-    fontFamily: 'Inter',
-    fontSize: 48,
-    fontWeight: '800',
-    letterSpacing: -2,
-    lineHeight: 54,
+    color: '#1B1B23',
+    fontSize: 32,
+    lineHeight: 39,
+    fontWeight: '900',
+    letterSpacing: -0.6,
+    marginBottom: 8,
   },
   subtitle: {
-    color: COLORS.textSecondary,
-    fontFamily: 'Inter',
+    color: '#464554',
     fontSize: 16,
-    fontWeight: '400',
     lineHeight: 24,
-    marginBottom: 24,
-    marginTop: -12,
   },
   progressCard: {
-    backgroundColor: COLORS.cardBg,
-    borderColor: COLORS.cardBorder,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E4E1ED',
     borderRadius: 16,
     borderWidth: 1,
-    padding: 24,
+    padding: 20,
+    shadowColor: '#312E81',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 22,
+    elevation: 4,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 16px 32px rgba(49, 46, 129, 0.10)',
+      } as any,
+    }),
   },
   progressHeader: {
     alignItems: 'flex-end',
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 16,
+    gap: 12,
   },
   labelCaps: {
-    color: COLORS.textSecondary,
-    fontFamily: 'Inter',
+    color: '#767586',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '900',
     letterSpacing: 1.2,
     marginBottom: 4,
     textTransform: 'uppercase',
   },
   progressTitle: {
-    color: COLORS.primary,
-    fontFamily: 'Inter',
-    fontSize: 20,
-    fontWeight: '600',
+    color: '#1B1B23',
+    fontSize: 18,
+    fontWeight: '900',
   },
   progressCaption: {
-    color: COLORS.textSecondary,
-    fontFamily: 'Inter',
+    color: '#767586',
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '700',
   },
   progressTrack: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 6,
-    height: 12,
+    backgroundColor: '#E4E1ED',
+    borderRadius: 999,
+    height: 10,
     overflow: 'hidden',
   },
   progressFill: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 6,
-    height: 12,
+    backgroundColor: '#6366F1',
+    borderRadius: 999,
+    height: 10,
   },
   badgeHeader: {
-    gap: 16,
+    gap: 14,
   },
   sectionTitle: {
-    color: COLORS.primary,
-    fontFamily: 'Inter',
-    fontSize: 24,
-    fontWeight: '700',
-    letterSpacing: -0.2,
+    color: '#1B1B23',
+    fontSize: 20,
+    fontWeight: '900',
   },
   filterRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   filterChip: {
-    backgroundColor: COLORS.cardBg,
-    borderColor: COLORS.cardBorder,
-    borderRadius: 9999,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E4E1ED',
+    borderRadius: 999,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
   },
   filterChipActive: {
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: '#6366F1',
+    borderColor: '#6366F1',
   },
   filterText: {
-    color: COLORS.textSecondary,
-    fontFamily: 'Inter',
+    color: '#464554',
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.2,
+    fontWeight: '900',
+    letterSpacing: 0.9,
     textTransform: 'uppercase',
   },
   filterTextActive: {
-    color: COLORS.primary,
-    fontFamily: 'Inter',
+    color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.2,
+    fontWeight: '900',
+    letterSpacing: 0.9,
     textTransform: 'uppercase',
   },
   grid: {
@@ -360,86 +402,84 @@ const styles = StyleSheet.create({
   },
   badgeCard: {
     alignItems: 'center',
-    backgroundColor: COLORS.cardBg,
-    borderColor: COLORS.primary,
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E4E1ED',
     borderRadius: 16,
-    borderWidth: 2,
+    borderWidth: 1,
     flexBasis: '47%',
     flexGrow: 1,
-    minHeight: 250,
-    overflow: 'hidden',
-    padding: 24,
-    position: 'relative',
+    minHeight: 210,
+    padding: 20,
+    shadowColor: '#312E81',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 22,
+    elevation: 4,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 16px 32px rgba(49, 46, 129, 0.10)',
+      } as any,
+    }),
   },
   badgeCardLocked: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderColor: COLORS.cardBorder,
-    borderWidth: 1,
-    opacity: 0.5,
+    opacity: 0.9,
   },
-  lockIcon: {
-    color: COLORS.textSecondary,
-    fontSize: 16,
+  badgeIconCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lockedIconOuter: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E4E1ED',
+    position: 'relative',
+  },
+  lockOverlay: {
     position: 'absolute',
-    right: 12,
-    top: 12,
-  },
-  badgeEmoji: {
-    fontSize: 48,
-    lineHeight: 56,
-    marginBottom: 14,
-  },
-  badgeEmojiLocked: {
-    opacity: 0.45,
+    right: 0,
+    bottom: 0,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E4E1ED',
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
   },
   badgeTitle: {
-    color: COLORS.primary,
-    fontFamily: 'Inter',
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 8,
+    color: '#1B1B23',
+    fontSize: 18,
+    fontWeight: '900',
+    marginTop: 16,
     textAlign: 'center',
+  },
+  badgeTitleLocked: {
+    color: '#464554',
+  },
+  badgeMeta: {
+    color: '#4648D4',
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 17,
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  badgeMetaLocked: {
+    color: '#767586',
   },
   badgeDescription: {
-    color: COLORS.textSecondary,
-    flex: 1,
-    fontFamily: 'Inter',
-    fontSize: 16,
-    fontWeight: '400',
-    lineHeight: 24,
+    color: '#464554',
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 8,
     textAlign: 'center',
-  },
-  earnedFooter: {
-    borderTopColor: COLORS.cardBorder,
-    borderTopWidth: 1,
-    marginTop: 16,
-    paddingTop: 14,
-    width: '100%',
-  },
-  earnedText: {
-    color: COLORS.textSecondary,
-    fontFamily: 'Inter',
-    fontSize: 13,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  lockedFooter: {
-    borderTopColor: COLORS.cardBorder,
-    borderTopWidth: 1,
-    marginTop: 16,
-    paddingTop: 14,
-    width: '100%',
-  },
-  smallTrack: {
-    backgroundColor: COLORS.progressTrack,
-    borderRadius: 9999,
-    height: 6,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  smallFill: {
-    backgroundColor: COLORS.textSecondary,
-    borderRadius: 9999,
-    height: 6,
   },
 });

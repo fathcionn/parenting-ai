@@ -1,4 +1,4 @@
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { collection, deleteDoc, doc, getDocs, orderBy, query } from 'firebase/firestore';
@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import {
     Alert,
     Animated,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -16,8 +17,8 @@ import {
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { auth, db } from '../../src/config/firebase-config';
-import { BorderRadius, Colors, Spacing, Typography } from '../../src/constants/theme';
-import { SESSION_TAGS, getScoreColor, getSessionTag, reportScoreFromData, toReportDate } from '../../src/utils/reportUtils';
+import { SESSION_TAGS, getSessionTag, reportScoreFromData, toReportDate } from '../../src/utils/reportUtils';
+import Svg, { Circle } from 'react-native-svg';
 
 type HistoryReport = {
   id: string;
@@ -35,13 +36,65 @@ type HistoryReport = {
   } | null;
 };
 
-const formatDate = (date: Date) =>
-  date.toLocaleString(undefined, {
+const formatDate = (date: Date) => {
+  const datePart = date.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
+    year: 'numeric',
+  });
+  const timePart = date.toLocaleTimeString(undefined, {
     hour: 'numeric',
     minute: '2-digit',
   });
+  return `${datePart} • ${timePart}`;
+};
+
+function ScoreCircle({ score }: { score: number }) {
+  const size = 58;
+  const strokeWidth = 5;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const clampedScore = Math.max(0, Math.min(100, score));
+  const dashOffset = circumference * (1 - clampedScore / 100);
+
+  return (
+    <View style={styles.scoreCircleWrap}>
+      <Svg width={size} height={size}>
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="#E4E1ED"
+          strokeWidth={strokeWidth}
+          fill="transparent"
+        />
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="#6366F1"
+          strokeWidth={strokeWidth}
+          fill="transparent"
+          strokeDasharray={`${circumference} ${circumference}`}
+          strokeDashoffset={dashOffset}
+          strokeLinecap="round"
+          rotation="-90"
+          origin={`${size / 2}, ${size / 2}`}
+        />
+      </Svg>
+      <Text style={styles.scoreCircleText}>{clampedScore}</Text>
+    </View>
+  );
+}
+
+const tagPalette: Record<string, { bg: string; text: string }> = {
+  bedtime: { bg: '#E9DDFF', text: '#5516BE' },
+  homework: { bg: '#C0C1FF', text: '#07006C' },
+  tantrum: { bg: '#FFDCC5', text: '#703700' },
+  screen_time: { bg: '#FFE2C6', text: '#703700' },
+  mealtime: { bg: '#DCFCE7', text: '#166534' },
+  general: { bg: '#E4E1ED', text: '#464554' },
+};
 
 function SkeletonCards() {
   const pulse = useRef(new Animated.Value(0.3)).current;
@@ -157,7 +210,7 @@ export default function HistoryScreen() {
 
   const renderRightActions = (record: HistoryReport) => (
     <TouchableOpacity style={styles.swipeDelete} onPress={() => deleteRecord(record)}>
-      <FontAwesome name="trash-o" size={20} color="#FFF" />
+      <MaterialIcons name="delete-outline" size={26} color="#FFF" />
       <Text style={styles.swipeDeleteText}>Delete</Text>
     </TouchableOpacity>
   );
@@ -168,20 +221,28 @@ export default function HistoryScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.title}>{t('history_title')}</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Session History</Text>
+        <Text style={styles.subtitle}>Review past insights and track progress over time.</Text>
+      </View>
 
       <View style={styles.searchBar}>
-        <FontAwesome name="search" size={14} color={Colors.textMuted} />
+        <MaterialIcons name="search" size={18} color="#767586" />
         <TextInput
           value={queryText}
           onChangeText={setQueryText}
           placeholder={t('history_search')}
-          placeholderTextColor={Colors.textMuted}
+          placeholderTextColor="#767586"
           style={styles.searchInput}
         />
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagFilter}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tagFilter}
+        contentContainerStyle={styles.tagFilterContent}
+      >
         <TouchableOpacity
           style={[styles.filterPill, selectedTag === 'all' && styles.filterPillActive]}
           onPress={() => setSelectedTag('all')}
@@ -205,9 +266,9 @@ export default function HistoryScreen() {
         <SkeletonCards />
       ) : filteredHistory.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>???</Text>
-          <Text style={styles.emptyTitle}>No sessions yet</Text>
-          <Text style={styles.emptyText}>Start your first coaching session to see your history here</Text>
+          <MaterialIcons name="history" size={58} color="#6366F1" />
+          <Text style={styles.emptyTitle}>No sessions yet.</Text>
+          <Text style={styles.emptyText}>Start your first coaching session to see your history here.</Text>
           <TouchableOpacity style={styles.emptyButton} onPress={() => router.push('/(drawer)/coaching' as any)}>
             <Text style={styles.emptyButtonText}>Start First Session</Text>
           </TouchableOpacity>
@@ -215,7 +276,7 @@ export default function HistoryScreen() {
       ) : (
         filteredHistory.map((record) => {
           const tag = getSessionTag(record.tag);
-          const scoreColor = getScoreColor(record.score);
+          const palette = tagPalette[String(record.tag || 'general')] || tagPalette.general;
           return (
             <Swipeable key={record.id} renderRightActions={() => renderRightActions(record)}>
               <TouchableOpacity
@@ -229,40 +290,34 @@ export default function HistoryScreen() {
                 }
               >
                 <View style={styles.cardMain}>
-                  <Text style={styles.dateText}>{formatDate(record.date)}</Text>
-                  {record.childName ? <Text style={styles.childText}>{record.childName}</Text> : null}
-                  <View style={styles.badgeRow}>
-                    <View style={styles.toneBadge}>
-                      <Text style={styles.toneBadgeText}>{record.tone}</Text>
-                    </View>
-                    {record.safetyFlag ? (
-                      <View style={styles.warningBadge}>
-                        <Text style={styles.warningBadgeText}>?? {record.safetyFlag.severity}</Text>
-                      </View>
-                    ) : null}
-                    <View style={[styles.tagBadge, { backgroundColor: tag.color }]}>
-                      <Text style={styles.tagBadgeText}>
-                        {tag.icon} {tag.label}
+                  <View style={styles.cardHeaderRow}>
+                    <Text style={styles.childText}>{record.childName || 'Leo'}</Text>
+                    <View style={[styles.tagBadge, { backgroundColor: palette.bg }]}>
+                      <Text style={[styles.tagBadgeText, { color: palette.text }]}>
+                        {tag.label}
                       </Text>
                     </View>
+                  </View>
+
+                  <Text style={styles.dateText}>{formatDate(record.date)}</Text>
+
+                  <Text style={styles.summaryText} numberOfLines={1}>
+                    {record.summary || record.transcript || 'Successfully navigated this parenting moment.'}
+                  </Text>
+
+                  <View style={styles.badgeRow}>
+                    {record.safetyFlag ? (
+                      <View style={styles.warningBadge}>
+                        <MaterialIcons name="warning-amber" size={13} color="#B91C1C" />
+                        <Text style={styles.warningBadgeText}>{record.safetyFlag.severity}</Text>
+                      </View>
+                    ) : null}
                   </View>
                 </View>
 
                 <View style={styles.scoreArea}>
-                  <Text style={[styles.score, { color: scoreColor }]}>{record.score}</Text>
-                  <Text style={styles.scoreLabel}>{t('profile_parenting_score')}</Text>
+                  <ScoreCircle score={record.score} />
                 </View>
-
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={(event) => {
-                    event.stopPropagation();
-                    deleteRecord(record);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <FontAwesome name="trash-o" size={18} color={Colors.textSecondary} />
-                </TouchableOpacity>
               </TouchableOpacity>
             </Swipeable>
           );
@@ -274,205 +329,246 @@ export default function HistoryScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.background,
     flex: 1,
+    backgroundColor: '#FCF8FF',
   },
   content: {
-    paddingBottom: Spacing.xxl,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: 60,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 48,
+  },
+  header: {
+    marginBottom: 24,
   },
   title: {
-    ...Typography.h1,
-    color: Colors.text,
-    marginBottom: Spacing.lg,
+    color: '#1B1B23',
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: '900',
+    letterSpacing: -0.6,
+    marginBottom: 8,
+  },
+  subtitle: {
+    color: '#464554',
+    fontSize: 16,
+    lineHeight: 24,
   },
   searchBar: {
+    minHeight: 50,
     alignItems: 'center',
-    backgroundColor: Colors.backgroundCard,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.md,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E4E1ED',
+    borderRadius: 16,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-    paddingHorizontal: Spacing.md,
+    gap: 10,
+    marginBottom: 16,
+    paddingHorizontal: 14,
   },
   searchInput: {
-    ...Typography.bodySmall,
-    color: Colors.text,
     flex: 1,
-    paddingVertical: 12,
+    color: '#1B1B23',
+    fontSize: 15,
+    paddingVertical: Platform.OS === 'web' ? 14 : 0,
+    outlineStyle: 'none' as any,
   },
   tagFilter: {
-    marginBottom: Spacing.lg,
+    flexGrow: 0,
+    marginBottom: 24,
+  },
+  tagFilterContent: {
+    gap: 8,
+    paddingRight: 24,
   },
   filterPill: {
-    backgroundColor: '#F5F5F5',
-    borderColor: '#E5E5E5',
+    backgroundColor: '#F8F9FA',
+    borderColor: '#E4E1ED',
     borderRadius: 999,
     borderWidth: 1,
-    marginRight: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   filterPillActive: {
-    backgroundColor: '#000',
-    borderColor: '#000',
+    backgroundColor: '#6366F1',
+    borderColor: '#6366F1',
   },
   filterText: {
-    color: '#000',
-    fontSize: 12,
-    fontWeight: '700',
+    color: '#464554',
+    fontSize: 13,
+    fontWeight: '800',
   },
   filterTextActive: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '800',
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '900',
   },
   card: {
     alignItems: 'center',
-    backgroundColor: Colors.backgroundCard,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.lg,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E4E1ED',
+    borderRadius: 16,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: Spacing.md,
-    marginBottom: Spacing.sm,
-    padding: Spacing.md,
+    gap: 14,
+    marginBottom: 14,
+    padding: 16,
+    shadowColor: '#312E81',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 22,
+    elevation: 4,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 16px 32px rgba(49, 46, 129, 0.10)',
+      } as any,
+    }),
   },
   cardMain: {
     flex: 1,
-    gap: 8,
+    minWidth: 0,
   },
-  dateText: {
-    ...Typography.body,
-    color: Colors.text,
-    fontWeight: '700',
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 5,
   },
   childText: {
-    color: '#777',
+    color: '#1B1B23',
+    fontSize: 20,
+    lineHeight: 25,
+    fontWeight: '900',
+  },
+  tagBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  tagBadgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+  },
+  dateText: {
+    color: '#767586',
     fontSize: 12,
     fontWeight: '700',
+    marginBottom: 6,
+  },
+  summaryText: {
+    color: '#464554',
+    fontSize: 14,
+    lineHeight: 20,
   },
   badgeRow: {
     alignItems: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
-  toneBadge: {
-    backgroundColor: Colors.primaryFaded,
-    borderRadius: BorderRadius.round,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  toneBadgeText: {
-    ...Typography.caption,
-    color: Colors.text,
-    fontWeight: '700',
-    textTransform: 'capitalize',
-  },
-  tagBadge: {
-    borderRadius: BorderRadius.round,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    gap: 8,
+    marginTop: 8,
   },
   warningBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: '#FEF2F2',
-    borderRadius: BorderRadius.round,
-    paddingHorizontal: 10,
+    borderRadius: 999,
+    paddingHorizontal: 9,
     paddingVertical: 4,
   },
   warningBadgeText: {
     color: '#B91C1C',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '900',
-    textTransform: 'capitalize',
-  },
-  tagBadgeText: {
-    color: '#000',
-    fontSize: 11,
-    fontWeight: '800',
+    textTransform: 'uppercase',
   },
   scoreArea: {
     alignItems: 'center',
-    minWidth: 52,
-  },
-  score: {
-    fontSize: 26,
-    fontWeight: '800',
-  },
-  scoreLabel: {
-    ...Typography.caption,
-    color: Colors.textMuted,
-  },
-  deleteButton: {
-    alignItems: 'center',
-    height: 40,
     justifyContent: 'center',
-    width: 36,
+    width: 64,
+  },
+  scoreCircleWrap: {
+    width: 58,
+    height: 58,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scoreCircleText: {
+    position: 'absolute',
+    color: '#6366F1',
+    fontSize: 16,
+    fontWeight: '900',
   },
   swipeDelete: {
     alignItems: 'center',
-    backgroundColor: '#EF4444',
-    borderRadius: BorderRadius.lg,
+    backgroundColor: '#BA1A1A',
+    borderRadius: 16,
     justifyContent: 'center',
-    marginBottom: Spacing.sm,
-    paddingHorizontal: 18,
+    marginBottom: 14,
+    marginLeft: 8,
+    paddingHorizontal: 20,
   },
   swipeDeleteText: {
-    color: '#FFF',
+    color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '900',
     marginTop: 4,
   },
   skeletonCard: {
-    backgroundColor: '#E5E5E5',
-    borderRadius: BorderRadius.lg,
-    height: 88,
-    marginBottom: Spacing.sm,
+    backgroundColor: '#EDEAF7',
+    borderRadius: 16,
+    height: 100,
+    marginBottom: 14,
     padding: 16,
   },
   skeletonLineWide: {
-    backgroundColor: '#D2D2D2',
+    backgroundColor: '#DBD8E4',
     borderRadius: 8,
-    height: 16,
-    marginBottom: 12,
+    height: 18,
+    marginBottom: 14,
     width: '55%',
   },
   skeletonLine: {
-    backgroundColor: '#D2D2D2',
+    backgroundColor: '#DBD8E4',
     borderRadius: 8,
-    height: 12,
-    width: '35%',
+    height: 13,
+    width: '72%',
   },
   emptyState: {
     alignItems: 'center',
-    gap: Spacing.md,
-    paddingVertical: Spacing.xxl * 2,
-  },
-  emptyIcon: {
-    fontSize: 48,
+    justifyContent: 'center',
+    gap: 14,
+    backgroundColor: '#F5F2FE',
+    borderColor: '#DBD8E4',
+    borderRadius: 24,
+    borderStyle: 'dashed',
+    borderWidth: 1.5,
+    paddingHorizontal: 28,
+    paddingVertical: 56,
   },
   emptyTitle: {
-    ...Typography.h3,
-    color: Colors.text,
+    color: '#1B1B23',
+    fontSize: 22,
+    fontWeight: '900',
+    textAlign: 'center',
   },
   emptyText: {
-    ...Typography.bodySmall,
-    color: Colors.textMuted,
-    lineHeight: 20,
+    color: '#464554',
+    fontSize: 15,
+    lineHeight: 22,
     textAlign: 'center',
   },
   emptyButton: {
-    backgroundColor: '#000',
-    borderRadius: 14,
-    paddingHorizontal: 18,
+    backgroundColor: '#6366F1',
+    borderRadius: 999,
+    marginTop: 4,
+    paddingHorizontal: 20,
     paddingVertical: 12,
   },
   emptyButtonText: {
-    color: '#FFF',
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '900',
   },

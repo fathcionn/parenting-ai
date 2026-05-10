@@ -1,21 +1,21 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, colors } from '../theme/colors';
-import { radius, spacing, shadows } from '../theme/spacing';
-import { typeScale } from '../theme/typography';
 
 export function SplashScreen() {
   return (
-    <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={styles.container}>
-      <View style={styles.iconCard}>
-        <FontAwesome name="users" size={58} color={colors.light.onPrimary} />
+    <LinearGradient colors={['#4648D4', '#6B38D4']} style={styles.container}>
+      <View style={styles.centerContent}>
+        <View style={styles.logoContainer}>
+          <MaterialIcons name="family-restroom" size={64} color="#FFFFFF" />
+        </View>
+        <Text style={styles.title}>TalkWise</Text>
+        <Text style={styles.subtitle}>Your AI Parenting Coach</Text>
       </View>
-      <Text style={styles.title}>TalkWise</Text>
-      <Text style={styles.subtitle}>Your AI Parenting Coach</Text>
+
       <View style={styles.loadingWrap}>
-        <ActivityIndicator color={colors.light.onPrimary} size="large" />
+        <ActivityIndicator color="#FFFFFF" size="large" />
         <Text style={styles.loadingText}>Warming up...</Text>
       </View>
     </LinearGradient>
@@ -24,41 +24,67 @@ export function SplashScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
     flex: 1,
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  iconCard: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderColor: 'rgba(255,255,255,0.18)',
-    borderRadius: radius.xxl,
-    borderWidth: 1,
     justifyContent: 'center',
-    marginBottom: spacing.lg,
-    padding: spacing.md,
-    ...shadows.overlay,
+    paddingHorizontal: 24,
+    paddingVertical: 48,
+  },
+  centerContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoContainer: {
+    width: 116,
+    height: 116,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 24,
+    shadowColor: '#1B1B23',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    elevation: 10,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 22px 50px rgba(27, 27, 35, 0.22)',
+        backdropFilter: 'blur(18px)',
+      } as any,
+    }),
   },
   title: {
-    ...typeScale.h1,
-    color: colors.light.onPrimary,
+    color: '#FFFFFF',
+    fontSize: 32,
+    lineHeight: 39,
+    fontWeight: '900',
     textAlign: 'center',
+    marginTop: 28,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
   },
   subtitle: {
-    ...typeScale.subheading,
-    color: COLORS.onPrimary,
-    marginTop: spacing.sm,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '700',
+    marginTop: 8,
     textAlign: 'center',
   },
   loadingWrap: {
+    position: 'absolute',
+    bottom: 74,
     alignItems: 'center',
-    gap: spacing.md,
-    marginTop: spacing.xl,
+    gap: 14,
   },
   loadingText: {
-    ...typeScale.bodySmall,
-    color: COLORS.onPrimary,
+    color: 'rgba(225, 224, 255, 0.8)',
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });
 

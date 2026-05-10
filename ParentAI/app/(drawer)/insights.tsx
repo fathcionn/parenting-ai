@@ -1,10 +1,9 @@
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { getAuth } from 'firebase/auth';
 import { collection, doc, getDocs, orderBy, query, setDoc } from 'firebase/firestore';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
     Animated,
     ScrollView,
@@ -12,11 +11,11 @@ import {
     Text,
     TouchableOpacity,
     View,
+    Platform,
 } from 'react-native';
-import Svg, { Circle, Polyline } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
 import { db } from '../../src/config/firebase-config';
-import { BorderRadius, Colors, Spacing, Typography } from '../../src/constants/theme';
-import { getScoreColor, reportScoreFromData, toReportDate } from '../../src/utils/reportUtils';
+import { reportScoreFromData, toReportDate } from '../../src/utils/reportUtils';
 
 type FirestoreReport = {
   id: string;
@@ -113,11 +112,12 @@ const calculateStreak = (reports: FirestoreReport[]) => {
 };
 
 function ScoreRing({ score }: { score: number }) {
-  const size = 150;
-  const strokeWidth = 14;
+  const size = 184;
+  const strokeWidth = 16;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const dashOffset = circumference * (1 - score / 100);
+  const safeScore = Math.max(0, Math.min(100, score));
+  const dashOffset = circumference * (1 - safeScore / 100);
 
   return (
     <View style={styles.ringWrapper}>
@@ -126,7 +126,7 @@ function ScoreRing({ score }: { score: number }) {
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#E7E7E7"
+          stroke="#E4E1ED"
           strokeWidth={strokeWidth}
           fill="transparent"
         />
@@ -134,7 +134,7 @@ function ScoreRing({ score }: { score: number }) {
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={getScoreColor(score)}
+          stroke="#6366F1"
           strokeWidth={strokeWidth}
           fill="transparent"
           strokeDasharray={`${circumference} ${circumference}`}
@@ -145,60 +145,74 @@ function ScoreRing({ score }: { score: number }) {
         />
       </Svg>
       <View style={styles.ringCenter}>
-        <Text style={[styles.ringScore, { color: getScoreColor(score) }]}>{score}%</Text>
-        <Text style={styles.ringLabel}>Average</Text>
+        <Text style={styles.ringScore}>{safeScore}</Text>
+        <Text style={styles.ringLabel}>/ 100</Text>
       </View>
     </View>
   );
 }
 
 function ProgressLine({ reports }: { reports: FirestoreReport[] }) {
-  const width = 310;
-  const height = 160;
-  const padding = 24;
   const chartReports = reports.slice(-7);
-  const points = chartReports.map((report, index) => {
-    const x =
-      chartReports.length === 1
-        ? width / 2
-        : padding + (index * (width - padding * 2)) / (chartReports.length - 1);
-    const y = padding + ((100 - report.score) * (height - padding * 2)) / 100;
-    return `${x},${y}`;
-  });
 
-  if (chartReports.length < 2) {
+  if (chartReports.length === 0) {
     return <Text style={styles.placeholderText}>Complete more sessions to see progress.</Text>;
   }
 
   return (
-    <View>
-      <Svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`}>
-        <Polyline
-          points={`${padding},${padding} ${padding},${height - padding} ${width - padding},${height - padding}`}
-          fill="none"
-          stroke="#E5E5E5"
-          strokeWidth={2}
-        />
-        <Polyline
-          points={points.join(' ')}
-          fill="none"
-          stroke="#000"
-          strokeWidth={3}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        {chartReports.map((report, index) => {
-          const [x, y] = points[index].split(',').map(Number);
-          return <Circle key={report.id} cx={x} cy={y} r={5} fill={getScoreColor(report.score)} />;
-        })}
-      </Svg>
-      <View style={styles.chartLabels}>
-        {chartReports.map((report) => (
-          <Text key={report.id} style={styles.chartLabel}>
-            {report.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-          </Text>
-        ))}
+    <View style={styles.barChart}>
+      {chartReports.map((report, index) => {
+        const height = Math.max(18, Math.min(132, (report.score / 100) * 132));
+        const isLatest = index === chartReports.length - 1;
+        return (
+          <View key={report.id} style={styles.barColumn}>
+            <View style={styles.barTrack}>
+              <View
+                style={[
+                  styles.barFill,
+                  isLatest && styles.barFillLatest,
+                  { height },
+                ]}
+              />
+            </View>
+            <Text style={styles.chartLabel}>
+              {report.date.toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 1)}
+            </Text>
+          </View>
+        );
+      })}
+      {Array.from({ length: Math.max(0, 7 - chartReports.length) }).map((_, index) => (
+        <View key={`empty-${index}`} style={styles.barColumn}>
+          <View style={styles.barTrack}>
+            <View style={[styles.barFill, { height: 18, opacity: 0.35 }]} />
+          </View>
+          <Text style={styles.chartLabel}>-</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function StatCard({
+  icon,
+  iconBg,
+  iconColor,
+  value,
+  label,
+}: {
+  icon: React.ComponentProps<typeof MaterialIcons>['name'];
+  iconBg: string;
+  iconColor: string;
+  value: string;
+  label: string;
+}) {
+  return (
+    <View style={styles.statCard}>
+      <View style={[styles.statIcon, { backgroundColor: iconBg }]}>
+        <MaterialIcons name={icon} size={22} color={iconColor} />
       </View>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
 }
@@ -231,7 +245,7 @@ function InsightCard({
   value,
   subtitle,
 }: {
-  icon: React.ComponentProps<typeof FontAwesome>['name'];
+  icon: React.ComponentProps<typeof MaterialIcons>['name'];
   title: string;
   value: string;
   subtitle?: string;
@@ -240,7 +254,7 @@ function InsightCard({
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.iconBubble}>
-          <FontAwesome name={icon} size={18} color="#000" />
+          <MaterialIcons name={icon} size={18} color="#6366F1" />
         </View>
         <Text style={styles.sectionTitle}>{title}</Text>
       </View>
@@ -255,7 +269,7 @@ function AchievementsSection({ badges }: { badges: BadgeState[] }) {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.iconBubble}>
-          <FontAwesome name="certificate" size={18} color="#000" />
+          <MaterialIcons name="emoji-events" size={18} color="#6366F1" />
         </View>
         <Text style={styles.sectionTitle}>Achievements</Text>
       </View>
@@ -277,11 +291,11 @@ function AchievementsSection({ badges }: { badges: BadgeState[] }) {
 }
 
 export default function ReportsScreen() {
-  const { t } = useTranslation();
   const router = useRouter();
   const [reports, setReports] = useState<FirestoreReport[]>([]);
   const [children, setChildren] = useState<ChildFilter[]>([]);
   const [selectedChildId, setSelectedChildId] = useState('all');
+  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | '3m'>('week');
   const [badges, setBadges] = useState<BadgeState[]>(badgeDefinitions([]));
   const [loading, setLoading] = useState(true);
 
@@ -376,9 +390,13 @@ export default function ReportsScreen() {
   );
 
   const visibleReports = useMemo(() => {
-    if (selectedChildId === 'all') return reports;
-    return reports.filter((report) => report.childId === selectedChildId);
-  }, [reports, selectedChildId]);
+    const now = Date.now();
+    const days = selectedPeriod === 'week' ? 7 : selectedPeriod === 'month' ? 30 : 90;
+    const cutoff = now - days * 24 * 60 * 60 * 1000;
+    const periodReports = reports.filter((report) => report.date.getTime() >= cutoff);
+    if (selectedChildId === 'all') return periodReports;
+    return periodReports.filter((report) => report.childId === selectedChildId);
+  }, [reports, selectedChildId, selectedPeriod]);
 
   const summary = useMemo(() => {
     const totalSessions = visibleReports.length;
@@ -403,16 +421,23 @@ export default function ReportsScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <Text style={styles.pageTitle}>{t('insights_overview')}</Text>
-      <Text style={styles.pageSubtitle}>Real progress from your saved coaching reports</Text>
+      <View style={styles.header}>
+        <Text style={styles.pageTitle}>Your Parenting Overview</Text>
+        <Text style={styles.pageSubtitle}>Insights and progress for this week.</Text>
+      </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.childFilters}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.childFilters}
+        contentContainerStyle={styles.childFiltersContent}
+      >
         <TouchableOpacity
           style={[styles.childFilter, selectedChildId === 'all' && styles.childFilterActive]}
           onPress={() => setSelectedChildId('all')}
         >
           <Text style={selectedChildId === 'all' ? styles.childFilterTextActive : styles.childFilterText}>
-            All children
+            All
           </Text>
         </TouchableOpacity>
         {children.map((child) => (
@@ -427,6 +452,25 @@ export default function ReportsScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      <View style={styles.periodTabs}>
+        {[
+          { id: 'week', label: 'Week' },
+          { id: 'month', label: 'Month' },
+          { id: '3m', label: '3M' },
+        ].map((period) => (
+          <TouchableOpacity
+            key={period.id}
+            style={[styles.periodTab, selectedPeriod === period.id && styles.periodTabActive]}
+            onPress={() => setSelectedPeriod(period.id as 'week' | 'month' | '3m')}
+            activeOpacity={0.8}
+          >
+            <Text style={selectedPeriod === period.id ? styles.periodTabTextActive : styles.periodTabText}>
+              {period.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       {loading ? (
         <>
@@ -449,77 +493,105 @@ export default function ReportsScreen() {
         </>
       ) : (
         <>
-          <View style={styles.topGrid}>
-            <InsightCard
-              icon="check-circle"
-              title="Total Sessions"
-              value={String(summary.totalSessions)}
-              subtitle="Completed coaching sessions"
-            />
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={styles.iconBubble}>
-                  <FontAwesome name="percent" size={16} color="#000" />
-                </View>
-                <Text style={styles.sectionTitle}>Average Score</Text>
-              </View>
-              <ScoreRing score={summary.averageScore} />
-            </View>
+          <View style={styles.averageCard}>
+            <Text style={styles.averageTitle}>Average Score</Text>
+            <ScoreRing score={summary.averageScore} />
+            <Text style={styles.averageFooter}>Consistent positive engagement this week.</Text>
           </View>
 
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.iconBubble}>
-                <FontAwesome name="line-chart" size={18} color="#000" />
-              </View>
-              <Text style={styles.sectionTitle}>Progress Over Time</Text>
-            </View>
+          <View style={styles.statsGrid}>
+            <StatCard
+              icon="event-note"
+              iconBg="#F0EEFF"
+              iconColor="#6366F1"
+              value={String(summary.totalSessions)}
+              label="Sessions"
+            />
+            <StatCard
+              icon="speed"
+              iconBg="#EEF2FF"
+              iconColor="#4F46E5"
+              value={String(summary.averageScore)}
+              label="Avg Score"
+            />
+            <StatCard
+              icon="local-fire-department"
+              iconBg="#FFF3E8"
+              iconColor="#EA580C"
+              value={`${summary.streak}🔥`}
+              label="Streak Days"
+            />
+          </View>
+
+          <View style={styles.chartCard}>
+            <Text style={styles.chartTitle}>Score Over Last 7 Sessions</Text>
             <ProgressLine reports={summary.chronologicalReports} />
           </View>
 
-          <InsightCard icon="star" title="Top Strength" value={summary.topStrength} subtitle="Most frequent positive behavior" />
-          <InsightCard icon="wrench" title="Top Area To Improve" value={summary.topImprovement} subtitle="Most frequent flagged improvement" />
-          <InsightCard
-            icon="fire"
-            title="Streak"
-            value={`${summary.streak} day${summary.streak === 1 ? '' : 's'}`}
-            subtitle="Days in a row with at least one session"
-          />
+          <View style={styles.coachSection}>
+            <Text style={styles.sectionHeading}>Coach Insights</Text>
+            <View style={[styles.coachCard, styles.strengthCard]}>
+              <View style={styles.coachIconWrap}>
+                <MaterialIcons name="check-circle" size={24} color="#6366F1" />
+              </View>
+              <View style={styles.coachTextWrap}>
+                <Text style={styles.coachCardTitle}>Top Strength</Text>
+                <Text style={styles.coachCardText}>
+                  {summary.topStrength === 'No data yet'
+                    ? 'Using calm voice tone during transitions.'
+                    : summary.topStrength}
+                </Text>
+              </View>
+            </View>
+            <View style={[styles.coachCard, styles.improvementCard]}>
+              <View style={styles.coachIconWrap}>
+                <MaterialIcons name="build" size={24} color="#D97706" />
+              </View>
+              <View style={styles.coachTextWrap}>
+                <Text style={styles.coachCardTitle}>Top Improvement</Text>
+                <Text style={styles.coachCardText}>
+                  {summary.topImprovement === 'No data yet'
+                    ? 'Reduce repetitive commands and pause for response.'
+                    : summary.topImprovement}
+                </Text>
+              </View>
+            </View>
+          </View>
 
           {summary.lastSession && (
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={styles.iconBubble}>
-                  <FontAwesome name="file-text-o" size={18} color="#000" />
+            <View style={styles.recentSection}>
+              <Text style={styles.sectionHeading}>Recent</Text>
+              <View style={styles.recentCard}>
+                <View style={styles.recentIcon}>
+                  <MaterialIcons name="description" size={24} color="#6366F1" />
                 </View>
-                <Text style={styles.sectionTitle}>Last Session Summary</Text>
+                <View style={styles.recentCopy}>
+                  <Text style={styles.recentTitle}>
+                    Last Session: {summary.lastSession.childName || 'Bedtime Negotiation'}
+                  </Text>
+                  <Text style={styles.recentTime}>
+                    {summary.lastSession.date.toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                    })}{' '}
+                    · {summary.lastSession.score}/100
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.reportButton}
+                  activeOpacity={0.8}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/(drawer)/report-detail' as any,
+                      params: { id: summary.lastSession?.id },
+                    })
+                  }
+                >
+                  <Text style={styles.reportButtonText}>View Report</Text>
+                </TouchableOpacity>
               </View>
-              <Text style={[styles.cardValue, { color: getScoreColor(summary.lastSession.score) }]}>
-                {summary.lastSession.score}%
-              </Text>
-              <Text style={styles.cardSubtitle}>
-                {summary.lastSession.date.toLocaleDateString(undefined, {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </Text>
-              <TouchableOpacity
-                style={styles.reportButton}
-                activeOpacity={0.8}
-                onPress={() =>
-                  router.push({
-                    pathname: '/(drawer)/report-detail' as any,
-                    params: { id: summary.lastSession?.id },
-                  })
-                }
-              >
-                <Text style={styles.reportButtonText}>View Full Report</Text>
-              </TouchableOpacity>
             </View>
           )}
-
-          <AchievementsSection badges={badges} />
         </>
       )}
     </ScrollView>
@@ -527,46 +599,351 @@ export default function ReportsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: Colors.background, flex: 1 },
-  content: {
-    gap: 16,
-    paddingBottom: Spacing.xxl,
-    paddingHorizontal: Spacing.lg,
-    paddingTop: 60,
+  container: {
+    flex: 1,
+    backgroundColor: '#FCF8FF',
   },
-  pageTitle: { ...Typography.h1, color: Colors.text },
+  content: {
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 48,
+    gap: 20,
+  },
+  header: {
+    marginBottom: 2,
+  },
+  pageTitle: {
+    color: '#1B1B23',
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: '800',
+    letterSpacing: -0.6,
+  },
   pageSubtitle: {
-    ...Typography.bodySmall,
-    color: Colors.textMuted,
+    color: '#464554',
+    fontSize: 16,
+    lineHeight: 24,
+    marginTop: 8,
+  },
+  childFilters: {
+    flexGrow: 0,
+    marginBottom: 2,
+  },
+  childFiltersContent: {
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E4E1ED',
+    borderRadius: 999,
+    padding: 4,
+    gap: 4,
+  },
+  childFilter: {
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    backgroundColor: 'transparent',
+  },
+  childFilterActive: {
+    backgroundColor: '#6366F1',
+  },
+  childFilterText: {
+    color: '#464554',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  childFilterTextActive: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  periodTabs: {
+    flexDirection: 'row',
+    gap: 10,
     marginTop: -8,
   },
-  childFilters: { marginBottom: 2 },
-  childFilter: {
-    backgroundColor: '#F5F5F5',
-    borderColor: '#E5E5E5',
+  periodTab: {
+    borderColor: '#E4E1ED',
     borderRadius: 999,
     borderWidth: 1,
-    marginRight: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 18,
     paddingVertical: 9,
   },
-  childFilterActive: { backgroundColor: '#000', borderColor: '#000' },
-  childFilterText: { color: '#000', fontSize: 13, fontWeight: '700' },
-  childFilterTextActive: { color: '#FFF', fontSize: 13, fontWeight: '800' },
-  topGrid: { gap: 16 },
-  card: {
-    backgroundColor: Colors.backgroundCard,
-    borderColor: Colors.border,
-    borderLeftColor: '#000',
-    borderLeftWidth: 3,
-    borderRadius: 16,
+  periodTabActive: {
+    backgroundColor: '#6366F1',
+    borderColor: '#6366F1',
+  },
+  periodTabText: {
+    color: '#464554',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  periodTabTextActive: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  averageCard: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 26,
+    shadowColor: '#312E81',
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.12,
+    shadowRadius: 34,
+    elevation: 10,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 24px 60px rgba(49, 46, 129, 0.14)',
+      } as any,
+    }),
+  },
+  averageTitle: {
+    alignSelf: 'flex-start',
+    color: '#1B1B23',
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 18,
+  },
+  averageFooter: {
+    color: '#464554',
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 18,
+    textAlign: 'center',
+  },
+  ringWrapper: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    height: 184,
+    justifyContent: 'center',
+    width: 184,
+  },
+  ringCenter: {
+    alignItems: 'center',
+    position: 'absolute',
+  },
+  ringScore: {
+    color: '#6366F1',
+    fontSize: 42,
+    lineHeight: 48,
+    fontWeight: '900',
+  },
+  ringLabel: {
+    color: '#767586',
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  statCard: {
+    flexGrow: 1,
+    flexBasis: 104,
+    minWidth: 100,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
     borderWidth: 1,
+    borderColor: '#F0EEF8',
+    shadowColor: '#312E81',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.07,
+    shadowRadius: 18,
     elevation: 3,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 12px 24px rgba(49, 46, 129, 0.08)',
+      } as any,
+    }),
+  },
+  statIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  statValue: {
+    color: '#1B1B23',
+    fontSize: 25,
+    fontWeight: '900',
+    lineHeight: 30,
+  },
+  statLabel: {
+    color: '#767586',
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  chartCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
+    borderWidth: 1,
+    borderColor: '#F0EEF8',
+    shadowColor: '#312E81',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 22,
+    elevation: 4,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 16px 32px rgba(49, 46, 129, 0.10)',
+      } as any,
+    }),
+  },
+  chartTitle: {
+    color: '#1B1B23',
+    fontSize: 17,
+    fontWeight: '800',
+    marginBottom: 18,
+  },
+  barChart: {
+    height: 170,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 9,
+  },
+  barColumn: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 8,
+  },
+  barTrack: {
+    height: 132,
+    width: '100%',
+    maxWidth: 28,
+    justifyContent: 'flex-end',
+    backgroundColor: '#F5F2FE',
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  barFill: {
+    width: '100%',
+    backgroundColor: '#C0C1FF',
+    borderRadius: 999,
+  },
+  barFillLatest: {
+    backgroundColor: '#6366F1',
+  },
+  chartLabel: {
+    color: '#767586',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  coachSection: {
+    gap: 12,
+  },
+  sectionHeading: {
+    color: '#1B1B23',
+    fontSize: 22,
+    fontWeight: '900',
+    marginBottom: 2,
+  },
+  coachCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    borderRadius: 18,
+    padding: 16,
+    borderLeftWidth: 5,
+  },
+  strengthCard: {
+    backgroundColor: '#F5F2FE',
+    borderLeftColor: '#6366F1',
+  },
+  improvementCard: {
+    backgroundColor: '#FFF7ED',
+    borderLeftColor: '#D97706',
+  },
+  coachIconWrap: {
+    marginTop: 2,
+  },
+  coachTextWrap: {
+    flex: 1,
+  },
+  coachCardTitle: {
+    color: '#1B1B23',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  coachCardText: {
+    color: '#464554',
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  recentSection: {
+    gap: 12,
+  },
+  recentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F0EEF8',
+    shadowColor: '#312E81',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 22,
+    elevation: 4,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 16px 32px rgba(49, 46, 129, 0.10)',
+      } as any,
+    }),
+  },
+  recentIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0EEFF',
+  },
+  recentCopy: {
+    flex: 1,
+  },
+  recentTitle: {
+    color: '#1B1B23',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  recentTime: {
+    color: '#767586',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 5,
+  },
+  reportButton: {
+    borderWidth: 1,
+    borderColor: '#6366F1',
+    borderRadius: 999,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+  },
+  reportButtonText: {
+    color: '#6366F1',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#F0EEF8',
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 18,
   },
   cardHeader: {
     alignItems: 'center',
@@ -576,90 +953,92 @@ const styles = StyleSheet.create({
   },
   iconBubble: {
     alignItems: 'center',
-    backgroundColor: '#F2F2F2',
+    backgroundColor: '#F0EEFF',
     borderRadius: 18,
     height: 36,
     justifyContent: 'center',
     width: 36,
   },
   sectionTitle: {
-    color: '#888',
+    color: '#767586',
     flex: 1,
     fontSize: 13,
     fontWeight: '800',
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
-  cardValue: { color: '#000', fontSize: 30, fontWeight: '900', lineHeight: 38 },
+  cardValue: {
+    color: '#1B1B23',
+    fontSize: 28,
+    fontWeight: '900',
+    lineHeight: 34,
+  },
   cardSubtitle: {
-    ...Typography.bodySmall,
-    color: Colors.textMuted,
+    color: '#767586',
+    fontSize: 13,
     lineHeight: 20,
     marginTop: 6,
   },
-  ringWrapper: {
-    alignItems: 'center',
-    alignSelf: 'center',
-    height: 150,
-    justifyContent: 'center',
-    width: 150,
-  },
-  ringCenter: { alignItems: 'center', position: 'absolute' },
-  ringScore: { fontSize: 32, fontWeight: '900' },
-  ringLabel: {
-    color: Colors.textMuted,
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  chartLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: -4,
-  },
-  chartLabel: { color: Colors.textMuted, fontSize: 10, fontWeight: '700' },
-  reportButton: {
-    alignItems: 'center',
-    backgroundColor: '#000',
-    borderRadius: BorderRadius.md,
-    marginTop: 16,
-    paddingVertical: 12,
-  },
-  reportButtonText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
   skeletonCard: {
-    backgroundColor: '#E5E5E5',
-    borderRadius: 16,
+    backgroundColor: '#EDEAF7',
+    borderRadius: 20,
     height: 130,
     marginBottom: 16,
   },
-  badgeGrid: { gap: 10 },
-  badgeCard: { backgroundColor: '#F7F7F7', borderRadius: 12, padding: 14 },
-  badgeCardLocked: { opacity: 0.45 },
-  badgeIcon: { fontSize: 26 },
-  badgeName: { color: '#000', fontSize: 15, fontWeight: '900', marginTop: 6 },
-  badgeDate: { color: '#777', fontSize: 12, fontWeight: '600', marginTop: 3 },
+  badgeGrid: {
+    gap: 10,
+  },
+  badgeCard: {
+    backgroundColor: '#F7F4FF',
+    borderRadius: 12,
+    padding: 14,
+  },
+  badgeCardLocked: {
+    opacity: 0.45,
+  },
+  badgeIcon: {
+    fontSize: 26,
+  },
+  badgeName: {
+    color: '#1B1B23',
+    fontSize: 15,
+    fontWeight: '900',
+    marginTop: 6,
+  },
+  badgeDate: {
+    color: '#767586',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 3,
+  },
   emptyState: {
     alignItems: 'center',
-    gap: Spacing.md,
-    paddingVertical: Spacing.xxl * 2,
+    gap: 16,
+    paddingVertical: 96,
   },
-  emptyIcon: { fontSize: 48 },
-  emptyTitle: { ...Typography.h3, color: Colors.text },
+  emptyIcon: {
+    fontSize: 48,
+  },
+  emptyTitle: {
+    color: '#1B1B23',
+    fontSize: 22,
+    fontWeight: '900',
+  },
   emptyButton: {
-    backgroundColor: '#000',
-    borderRadius: 14,
+    backgroundColor: '#6366F1',
+    borderRadius: 999,
     marginTop: 4,
-    paddingHorizontal: 18,
+    paddingHorizontal: 20,
     paddingVertical: 12,
   },
   emptyButtonText: {
-    color: '#FFF',
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '900',
   },
   placeholderText: {
-    ...Typography.bodySmall,
-    color: Colors.textMuted,
+    color: '#767586',
+    fontSize: 14,
     lineHeight: 20,
     textAlign: 'center',
   },

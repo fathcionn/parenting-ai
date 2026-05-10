@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,8 +26,6 @@ import { setMode } from '../services/recordingState';
 import { checkSessionSafety, notifySafetyFlag, saveSafetyFlag } from '../services/safety-service';
 import { getStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 import { useCoachingStore } from '../stores/coaching-store';
-import { theme } from '../styles/theme';
-import { COLORS } from '../theme/colors';
 import {
     calculateParentingScore,
     type CoachingReport,
@@ -34,8 +33,6 @@ import {
 } from '../types/analysis';
 import { SESSION_TAGS } from '../utils/reportUtils';
 import { AnalysisDisplay } from './AnalysisDisplay';
-import { Button } from './Button';
-import { Card } from './Layout';
 
 interface RecordingComponentProps {
   childId?: string | null;
@@ -71,14 +68,21 @@ function isConnectionError(error: any) {
   return message.includes('fetch') || message.includes('network') || message.includes('server');
 }
 
+function formatRecordingTime(seconds: number) {
+  const totalSeconds = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+  const remainingSeconds = (totalSeconds % 60).toString().padStart(2, '0');
+  return `${minutes}:${remainingSeconds}`;
+}
+
+const decorativeWaveHeights = [18, 32, 24, 46, 30, 58, 36, 48, 26, 40, 22, 34, 18, 28];
+
 export const RecordingComponent: React.FC<RecordingComponentProps> = ({
   childId,
-  title,
   onReport,
 }) => {
   const { t } = useTranslation();
   const router = useRouter();
-  const cardTitle = title || t('coaching_session_title');
   const { currentAnalysis, setCurrentAnalysis, setIsAnalyzing } = useCoachingStore();
   const animFrameRef = useRef<number>(0);
   const meteringIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -94,10 +98,12 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
   const [children, setChildren] = useState<ChildOption[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(childId || null);
   const [selectedTag, setSelectedTag] = useState('general');
+  const [processingStep, setProcessingStep] = useState<'idle' | 'transcribing' | 'insights'>('idle');
 
   useEffect(() => {
     return () => {
       stopWaveform();
+      setProcessingStep('idle');
     };
   }, []);
 
@@ -186,6 +192,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     setIsLoading(false);
     setIsAnalyzing(false);
     setRecordingSeconds(0);
+    setProcessingStep('idle');
 
     try {
       const lang = (await getStorageItem(STORAGE_KEYS.speechLanguage)) || 'en';
@@ -214,7 +221,9 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
 
     try {
       console.log('STEP 3: transcription result:', 'starting');
+      setProcessingStep('transcribing');
       const result = await transcribeAndAnalyze(audioData, lang);
+      setProcessingStep('insights');
       console.log('STEP 4: analysis started');
       console.log('STEP 5: analysis response raw:', result);
       console.log('STEP 6: navigating to results');
@@ -285,6 +294,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     // Clear loading before navigation
     setIsLoading(false);
     setIsAnalyzing(false);
+    setProcessingStep('idle');
 
     try {
       router.push({
@@ -316,6 +326,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       // Clear loading on error
       setIsLoading(false);
       setIsAnalyzing(false);
+      setProcessingStep('idle');
       return;
     }
   }
@@ -324,6 +335,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     if (!pendingAudioRef.current) return;
     setIsLoading(true);
     setIsAnalyzing(true);
+    setProcessingStep('transcribing');
     setError(null);
     try {
       await analyzeAudioData(pendingAudioRef.current);
@@ -332,6 +344,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     } finally {
       setIsLoading(false);
       setIsAnalyzing(false);
+      setProcessingStep('idle');
     }
   }
 
@@ -365,41 +378,71 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     }
   }
 
+  const selectedChild = children.find((item) => item.id === selectedChildId);
+
   return (
-    <Card title={cardTitle}>
-      <Text style={styles.selectorTitle}>Which child is this session for?</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
-        {children.length === 0 ? (
-          <View style={[styles.selectorPill, styles.selectorPillActive]}>
-            <Text style={styles.selectorPillTextActive}>No child linked</Text>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.closeButton} onPress={() => router.back()} activeOpacity={0.75}>
+          <MaterialIcons name="close" size={24} color="#1B1B23" />
+        </TouchableOpacity>
+
+        <Text style={styles.title}>Live{'\n'}Coaching</Text>
+
+        <View style={styles.childSelectorPill}>
+          <View style={styles.childAvatar}>
+            <Text style={styles.childAvatarText}>
+              {(selectedChild?.name || 'Sarah').charAt(0).toUpperCase()}
+            </Text>
           </View>
-        ) : (
-          children.map((childOption) => {
+          <Text style={styles.childSelectorText} numberOfLines={1}>
+            {selectedChild?.name || 'Sarah'} {'\uD83D\uDC76'}
+          </Text>
+          <MaterialIcons name="keyboard-arrow-down" size={18} color="#767586" />
+        </View>
+      </View>
+
+      {children.length > 1 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.childScroll}
+          contentContainerStyle={styles.childScrollContent}
+        >
+          {children.map((childOption) => {
             const isSelected = selectedChildId === childOption.id;
             return (
               <TouchableOpacity
                 key={childOption.id}
-                style={[styles.selectorPill, isSelected && styles.selectorPillActive]}
+                style={[styles.childChip, isSelected && styles.childChipActive]}
                 onPress={() => setSelectedChildId(childOption.id)}
                 activeOpacity={0.8}
               >
-                <Text style={isSelected ? styles.selectorPillTextActive : styles.selectorPillText}>
+                <Text style={[styles.childChipText, isSelected && styles.childChipTextActive]}>
                   {childOption.name}
                 </Text>
               </TouchableOpacity>
             );
-          })
-        )}
-      </ScrollView>
+          })}
+        </ScrollView>
+      ) : null}
 
-      <Text style={styles.selectorTitle}>Session topic</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tagScroll}
+        contentContainerStyle={styles.tagScrollContent}
+      >
         {SESSION_TAGS.map((tag) => {
           const isSelected = selectedTag === tag.id;
           return (
             <TouchableOpacity
               key={tag.id}
-              style={[styles.tagPill, { backgroundColor: isSelected ? COLORS.primary : tag.color }]}
+              style={[styles.tagPill, isSelected && styles.tagPillActive]}
               onPress={() => setSelectedTag(tag.id)}
               activeOpacity={0.8}
             >
@@ -411,22 +454,108 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
         })}
       </ScrollView>
 
-      <View style={styles.waveform}>
-        {waveformBars.map((bar, index) => (
-          <View key={index} style={[styles.waveformBar, { height: bar }]} />
-        ))}
+      <Text style={styles.contextText}>
+        Place your device nearby. TalkWise will listen and provide guidance based on the interaction.
+      </Text>
+
+      <View style={styles.timerSection}>
+        <View style={styles.timerRow}>
+          <View style={styles.recordingDot} />
+          <Text style={styles.timerText}>{formatRecordingTime(recordingSeconds)}</Text>
+        </View>
+        <Text style={styles.timerSubtitle}>
+          {isRecording ? 'RECORDING SESSION' : isLoading ? 'PROCESSING SESSION' : 'READY TO RECORD'}
+        </Text>
       </View>
 
-      {isRecording ? (
-        <View style={styles.recordingStatus}>
-          <Text style={styles.recordingStatusText}>Recording... speak clearly</Text>
-          <Text style={styles.recordingTimer}>ðŸŽ™ï¸ Recording: {recordingSeconds.toFixed(1)} seconds</Text>
+      <View style={styles.recordingInterface}>
+        <View style={[styles.pulseRing, styles.pulseRingOuter]} />
+        <View style={[styles.pulseRing, styles.pulseRingMiddle]} />
+        <View style={[styles.pulseRing, styles.pulseRingInner]} />
+        <TouchableOpacity
+          style={[styles.micButton, isLoading && styles.micButtonDisabled]}
+          onPress={isRecording ? handleStop : handleStart}
+          activeOpacity={0.85}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="#FFFFFF" size="large" />
+          ) : (
+            <MaterialIcons name="mic" size={52} color="#FFFFFF" />
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.waveform}>
+        {decorativeWaveHeights.map((fallbackHeight, index) => {
+          const liveHeight = waveformBars[index] || fallbackHeight;
+          const height = isRecording ? Math.max(12, Math.min(58, liveHeight)) : fallbackHeight;
+          return (
+            <View
+              key={index}
+              style={[
+                styles.waveformBar,
+                index % 3 === 1 && styles.waveformBarActive,
+                { height },
+              ]}
+            />
+          );
+        })}
+      </View>
+
+      <TouchableOpacity
+        style={[styles.stopButton, !isRecording && styles.startButton]}
+        onPress={isRecording ? handleStop : handleStart}
+        activeOpacity={0.85}
+        disabled={isLoading}
+      >
+        <MaterialIcons
+          name={isRecording ? 'stop-circle' : 'play-circle-filled'}
+          size={22}
+          color={isRecording ? '#BA1A1A' : '#FFFFFF'}
+        />
+        <Text style={[styles.stopButtonText, !isRecording && styles.startButtonText]}>
+          {isRecording ? 'Stop Session' : 'Start Session'}
+        </Text>
+      </TouchableOpacity>
+
+      {isLoading ? (
+        <View style={styles.processingStatus}>
+          <ActivityIndicator color="#6366F1" size="small" />
+          <Text style={styles.processingText}>Processing your session...</Text>
         </View>
       ) : null}
 
       {isLoading ? (
-        <View style={styles.processingStatus}>
-          <Text style={styles.processingText}>Processing your session...</Text>
+        <View style={styles.processingSteps}>
+          {[
+            { id: 'done', label: 'Recording complete' },
+            { id: 'transcribing', label: 'Transcribing audio' },
+            { id: 'insights', label: 'Generating insights' },
+          ].map((step, index) => {
+            const done =
+              step.id === 'done' ||
+              (step.id === 'transcribing' && processingStep === 'insights');
+            const active =
+              (step.id === 'transcribing' && processingStep === 'transcribing') ||
+              (step.id === 'insights' && processingStep === 'insights');
+            return (
+              <View key={step.id} style={styles.processingStepRow}>
+                <View style={[styles.processingStepIcon, done && styles.processingStepDone]}>
+                  {done ? (
+                    <MaterialIcons name="check" size={16} color="#FFFFFF" />
+                  ) : active ? (
+                    <ActivityIndicator color="#6366F1" size="small" />
+                  ) : (
+                    <Text style={styles.processingStepNumber}>{index + 1}</Text>
+                  )}
+                </View>
+                <Text style={[styles.processingStepText, active && styles.processingStepTextActive]}>
+                  {step.label}
+                </Text>
+              </View>
+            );
+          })}
         </View>
       ) : null}
 
@@ -443,183 +572,426 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
         </View>
       ) : null}
 
-      <View style={styles.controls}>
-        {!isRecording ? (
-          <Button
-            title={isLoading ? t('coaching_analyzing') : t('coaching_start')}
-            onPress={handleStart}
-            variant="primary"
-            size="large"
-            fullWidth
-            disabled={isLoading}
-            loading={isLoading}
-          />
-        ) : (
-          <Button
-            title={t('coaching_stop')}
-            onPress={handleStop}
-            variant="outline"
-            size="large"
-            fullWidth
-          />
-        )}
-      </View>
-
       {isLoading && (
         <View style={styles.loadingBox}>
-          <ActivityIndicator color={theme.colors.primary} size="large" />
+          <ActivityIndicator color="#6366F1" size="large" />
           <Text style={styles.loadingText}>
             Analyzing your session... This may take up to 30 seconds on first use.
           </Text>
         </View>
       )}
 
-      {!isLoading && currentAnalysis && <AnalysisDisplay analysis={currentAnalysis} />}
-
-    </Card>
+      {!isLoading && currentAnalysis && (
+        <View style={styles.analysisWrap}>
+          <AnalysisDisplay analysis={currentAnalysis} />
+        </View>
+      )}
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  selectorTitle: {
-    color: COLORS.primary,
-    fontSize: 13,
-    fontWeight: '800',
-    marginBottom: 8,
-    marginTop: 4,
-    textTransform: 'uppercase',
+  container: {
+    flex: 1,
+    backgroundColor: '#FCF8FF',
   },
-  selectorScroll: {
-    marginBottom: theme.spacing.md,
+  content: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    maxWidth: 800,
+    paddingHorizontal: 20,
+    paddingTop: 28,
+    paddingBottom: 48,
+    width: '100%',
   },
-  selectorPill: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderColor: COLORS.border,
-    borderRadius: 999,
+  header: {
+    width: '100%',
+    maxWidth: 720,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+    gap: 12,
+  },
+  closeButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    marginRight: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    borderColor: '#E5E7EB',
   },
-  selectorPillActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+  title: {
+    flex: 1,
+    color: '#4F46E5',
+    fontSize: 32,
+    lineHeight: 35,
+    fontWeight: '900',
+    letterSpacing: -0.6,
+    textAlign: 'center',
   },
-  selectorPillText: {
-    color: COLORS.primary,
+  childSelectorPill: {
+    maxWidth: 150,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 999,
+    paddingVertical: 7,
+    paddingLeft: 7,
+    paddingRight: 10,
+  },
+  childAvatar: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#6366F1',
+  },
+  childAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  childSelectorText: {
+    flexShrink: 1,
+    color: '#1B1B23',
     fontSize: 13,
     fontWeight: '700',
   },
-  selectorPillTextActive: {
-    color: COLORS.onPrimary,
+  childScroll: {
+    width: '100%',
+    maxWidth: 720,
+    marginBottom: 12,
+  },
+  childScrollContent: {
+    gap: 10,
+    paddingRight: 20,
+  },
+  childChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  childChipActive: {
+    backgroundColor: '#6366F1',
+    borderColor: '#6366F1',
+  },
+  childChipText: {
+    color: '#1B1B23',
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
+  },
+  childChipTextActive: {
+    color: '#FFFFFF',
+  },
+  tagScroll: {
+    width: '100%',
+    maxWidth: 720,
+    marginBottom: 22,
+  },
+  tagScrollContent: {
+    alignItems: 'center',
+    gap: 10,
+    paddingRight: 20,
   },
   tagPill: {
+    alignItems: 'center',
     borderRadius: 999,
-    marginRight: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    minHeight: 42,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  tagPillActive: {
+    backgroundColor: '#6366F1',
+    borderColor: '#6366F1',
   },
   tagText: {
-    color: COLORS.primary,
-    fontSize: 13,
+    color: '#1B1B23',
+    fontSize: 14,
     fontWeight: '700',
   },
   tagTextActive: {
-    color: COLORS.onPrimary,
+    color: '#FFFFFF',
+  },
+  contextText: {
+    maxWidth: 430,
+    color: '#464554',
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: 'center',
+    marginBottom: 26,
+  },
+  timerSection: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  timerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  recordingDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#BA1A1A',
+  },
+  timerText: {
+    color: '#1B1B23',
+    fontSize: 46,
+    lineHeight: 52,
+    fontWeight: '800',
+    letterSpacing: -0.8,
+  },
+  timerSubtitle: {
+    marginTop: 4,
+    color: '#767586',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1.6,
+  },
+  recordingInterface: {
+    width: 250,
+    height: 250,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  pulseRing: {
+    position: 'absolute',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(186, 26, 26, 0.12)',
+    backgroundColor: 'rgba(186, 26, 26, 0.10)',
+  },
+  pulseRingOuter: {
+    width: 240,
+    height: 240,
+    opacity: 0.42,
+  },
+  pulseRingMiddle: {
+    width: 190,
+    height: 190,
+    opacity: 0.68,
+  },
+  pulseRingInner: {
+    width: 142,
+    height: 142,
+    opacity: 0.92,
+  },
+  micButton: {
+    width: 118,
+    height: 118,
+    borderRadius: 59,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#BA1A1A',
+    shadowColor: '#BA1A1A',
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 18px 34px rgba(186, 26, 26, 0.28)',
+      } as any,
+    }),
+  },
+  micButtonDisabled: {
+    opacity: 0.72,
   },
   waveform: {
-    alignItems: 'center',
+    width: '100%',
+    maxWidth: 360,
+    minHeight: 70,
     flexDirection: 'row',
-    gap: 3,
-    height: 72,
+    alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: theme.spacing.md,
+    gap: 7,
+    marginBottom: 22,
   },
   waveformBar: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 2,
-    width: 4,
+    width: 8,
+    borderRadius: 999,
+    backgroundColor: '#D1D5DB',
   },
-  recordingStatus: {
+  waveformBarActive: {
+    backgroundColor: '#BA1A1A',
+  },
+  stopButton: {
+    width: '100%',
+    maxWidth: 400,
+    minHeight: 56,
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
-    borderColor: COLORS.border,
-    borderRadius: 12,
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    marginBottom: theme.spacing.md,
-    padding: 12,
+    borderColor: '#E5E7EB',
+    borderRadius: 999,
+    marginBottom: 18,
+    shadowColor: '#000000',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 10px 22px rgba(17, 24, 39, 0.08)',
+      } as any,
+    }),
   },
-  recordingStatusText: {
-    color: COLORS.primary,
-    fontSize: 15,
+  startButton: {
+    backgroundColor: '#7C3AED',
+    borderColor: '#7C3AED',
+    shadowColor: '#7C3AED',
+    shadowOpacity: 0.26,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 6,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 16px 32px rgba(124, 58, 237, 0.26)',
+      } as any,
+    }),
+  },
+  stopButtonText: {
+    color: '#BA1A1A',
+    fontSize: 16,
     fontWeight: '800',
   },
-  recordingTimer: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    fontWeight: '700',
-    marginTop: 4,
+  startButtonText: {
+    color: '#FFFFFF',
   },
   processingStatus: {
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: 12,
-    marginBottom: theme.spacing.md,
-    padding: 12,
+    width: '100%',
+    maxWidth: 420,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
   },
   processingText: {
-    color: COLORS.primary,
+    color: '#464554',
     fontSize: 14,
-    fontWeight: '800',
-    textAlign: 'center',
+    fontWeight: '700',
   },
-  controls: {
-    marginTop: theme.spacing.md,
+  processingSteps: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E4E1ED',
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 12,
+    padding: 16,
+  },
+  processingStepRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  processingStepIcon: {
+    alignItems: 'center',
+    backgroundColor: '#E4E1ED',
+    borderRadius: 14,
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
+  },
+  processingStepDone: {
+    backgroundColor: '#16A34A',
+  },
+  processingStepNumber: {
+    color: '#767586',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  processingStepText: {
+    color: '#767586',
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  processingStepTextActive: {
+    color: '#1B1B23',
+    fontWeight: '900',
   },
   errorBox: {
-    backgroundColor: COLORS.errorBg,
-    borderColor: COLORS.error,
-    borderRadius: theme.borderRadius.md,
+    width: '100%',
+    maxWidth: 520,
+    backgroundColor: '#FDECEC',
+    borderColor: '#BA1A1A',
+    borderRadius: 14,
     borderWidth: 1,
-    marginBottom: theme.spacing.md,
-    padding: theme.spacing.md,
+    marginBottom: 16,
+    padding: 14,
   },
   errorText: {
-    color: COLORS.error,
-    fontSize: theme.typography.bodySmall.fontSize,
-    fontWeight: '600',
+    color: '#BA1A1A',
+    fontSize: 14,
+    fontWeight: '700',
     lineHeight: 20,
   },
   transcriptCard: {
-    backgroundColor: COLORS.background,
-    borderColor: COLORS.border,
-    borderRadius: 12,
+    width: '100%',
+    maxWidth: 520,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    borderRadius: 18,
     borderWidth: 1,
-    marginBottom: theme.spacing.md,
-    padding: 16,
+    marginBottom: 16,
+    padding: 18,
   },
   transcriptLabel: {
-    color: COLORS.textSecondary,
+    color: '#767586',
     fontSize: 12,
     fontWeight: '800',
-    marginBottom: 6,
+    letterSpacing: 1.2,
+    marginBottom: 8,
     textTransform: 'uppercase',
   },
   transcriptText: {
-    color: COLORS.primary,
+    color: '#1B1B23',
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 23,
   },
   loadingBox: {
+    width: '100%',
+    maxWidth: 420,
     alignItems: 'center',
-    gap: theme.spacing.md,
-    marginTop: theme.spacing.lg,
+    gap: 12,
+    marginTop: 4,
   },
   loadingText: {
-    color: theme.colors.textSecondary,
-    fontSize: theme.typography.bodySmall.fontSize,
+    color: '#464554',
+    fontSize: 13,
     fontWeight: '600',
+    lineHeight: 20,
     textAlign: 'center',
+  },
+  analysisWrap: {
+    width: '100%',
+    maxWidth: 560,
+    marginTop: 12,
   },
 });

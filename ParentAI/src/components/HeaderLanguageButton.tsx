@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { getStorageItem, setStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 import { COLORS } from '../theme/colors';
@@ -69,7 +70,7 @@ export function HeaderLanguageButton() {
         onPress={() => setModalVisible(true)}
         style={styles.globeButton}
       >
-        <Text style={styles.globeText}>{'\u{1F310}'}</Text>
+        <MaterialIcons name="translate" size={24} color="#464554" />
       </TouchableOpacity>
 
       <Modal
@@ -112,13 +113,13 @@ export function HeaderLanguageButton() {
 const styles = StyleSheet.create({
   globeButton: {
     alignItems: 'center',
+    backgroundColor: '#EFECF8',
+    borderRadius: 9999,
     height: 40,
     justifyContent: 'center',
-    marginRight: 14,
+    marginRight: 16,
+    padding: 8,
     width: 40,
-  },
-  globeText: {
-    fontSize: 22,
   },
   backdrop: {
     alignItems: 'center',

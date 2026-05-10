@@ -1,17 +1,20 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { signOut, updateProfile as updateFirebaseProfile } from 'firebase/auth';
-import { addDoc, collection, getDocs, orderBy, query, serverTimestamp } from 'firebase/firestore';
+import { deleteUser, signOut, updateProfile as updateFirebaseProfile } from 'firebase/auth';
+import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, setDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Alert,
+    I18nManager,
     Image,
     Linking,
     Modal,
     Platform,
+    SafeAreaView,
+    ScrollView,
     StyleSheet,
     Switch,
     Text,
@@ -19,6 +22,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Button } from '../components/Button';
 import { Card, Container } from '../components/Layout';
@@ -62,7 +66,7 @@ function ChildIcon({ size = 24 }: { size?: number }) {
 }
 
 export const ProfileScreen: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { profile, user, updateProfile } = useAuthStore();
   const { isDarkMode, setDarkMode, colors } = useAppTheme();
@@ -85,6 +89,9 @@ export const ProfileScreen: React.FC = () => {
   const [schoolName, setSchoolName] = useState('');
   const [safeZoneRadius, setSafeZoneRadius] = useState('500');
   const [showMicPicker, setShowMicPicker] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(Boolean((profile as any)?.notificationsEnabled));
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState('en');
 
   const displayName =
     profile?.displayName || user?.displayName || user?.email?.split('@')[0] || 'TalkWise User';
@@ -102,6 +109,12 @@ export const ProfileScreen: React.FC = () => {
   useEffect(() => {
     setNameInput(displayName);
   }, [displayName]);
+
+  useEffect(() => {
+    getStorageItem(STORAGE_KEYS.speechLanguage).then((language) => {
+      setCurrentLanguage(language || i18n.language || 'en');
+    });
+  }, [i18n.language]);
 
   useEffect(() => {
     async function loadMics() {
@@ -274,6 +287,30 @@ export const ProfileScreen: React.FC = () => {
     }
   }
 
+  async function pickAvatarPhoto() {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+    try {
+      const response = await fetch(result.assets[0].uri);
+      const blob = await response.blob();
+      const avatarRef = ref(storage, `users/${currentUser.uid}/profile/avatar.jpg`);
+      await uploadBytes(avatarRef, blob);
+      const photoURL = await getDownloadURL(avatarRef);
+      await updateFirebaseProfile(currentUser, { photoURL });
+      updateProfile({ photoURL });
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      Alert.alert('Error', 'Failed to update avatar. Please try again.');
+    }
+  }
+
   async function selectMic(deviceId: string) {
     setSelectedMicId(deviceId);
     await AsyncStorage.setItem('selectedMicId', deviceId);
@@ -284,17 +321,49 @@ export const ProfileScreen: React.FC = () => {
     updateProfile({ isAnonymous: value });
   };
 
+  const handleNotificationsToggle = async (value: boolean) => {
+    setNotificationsEnabled(value);
+    updateProfile({ notificationsEnabled: value } as any);
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      await setDoc(doc(db, 'users', currentUser.uid), { notificationsEnabled: value }, { merge: true });
+    }
+  };
+
+  const changeLanguage = async (language: string) => {
+    await setStorageItem(STORAGE_KEYS.speechLanguage, language);
+    await setStorageItem(STORAGE_KEYS.languageChosen, 'true');
+    await AsyncStorage.setItem('app-language', language);
+    await i18n.changeLanguage(language);
+    I18nManager.forceRTL(language === 'ar');
+    setCurrentLanguage(language);
+    setShowLanguageModal(false);
+  };
+
   const handleDeleteData = () => {
     Alert.alert(
-      'Delete My Data',
+      'Are you sure?',
       'This will permanently delete all your sessions, insights, and account data. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete Everything',
           style: 'destructive',
-          onPress: () => {
-            Alert.alert('Coming Soon', 'Contact support@talkwise.app to delete your data.');
+          onPress: async () => {
+            const currentUser = auth.currentUser;
+            if (!currentUser) return;
+            try {
+              for (const name of ['reports', 'children', 'badges']) {
+                const snapshot = await getDocs(collection(db, 'users', currentUser.uid, name));
+                await Promise.all(snapshot.docs.map((item) => deleteDoc(item.ref)));
+              }
+              await deleteDoc(doc(db, 'users', currentUser.uid));
+              await deleteUser(currentUser);
+              useAuthStore.getState().clearUser();
+              router.replace('/login');
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to delete data. Please sign in again and retry.');
+            }
           },
         },
       ]
@@ -302,377 +371,197 @@ export const ProfileScreen: React.FC = () => {
   };
 
   return (
-    <Container scroll>
-      <View style={styles.avatarSectionNew}>
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.avatarImageNew} />
-        ) : (
-          <View style={styles.avatarNew}>
-            <Text style={styles.avatarText}>{avatarInitial}</Text>
-          </View>
-        )}
-        <Text style={styles.profileNameNew}>{displayName}</Text>
-        <Text style={styles.profileEmailNew}>{email}</Text>
-        <TouchableOpacity style={styles.editProfileButton} onPress={() => setShowNameModal(true)}>
-          <Text style={styles.editProfileText}>Edit Profile</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.sectionHeaderNew}>Account & Profile</Text>
-      <View style={styles.cardNew}>
-        <View style={styles.cardTitleRow}>
-          <ChildIcon />
-          <Text style={styles.cardTitle}>Child Profiles</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.headerRow}>
+          <Text style={styles.pageTitle}>Profile</Text>
+          <TouchableOpacity style={styles.editButton} onPress={() => setShowNameModal(true)} activeOpacity={0.8}>
+            <Text style={styles.editButtonText}>Edit</Text>
+          </TouchableOpacity>
         </View>
-        {(profile?.children?.length ?? 0) > 0 ? (
-          profile?.children?.map((child) => (
-            <View key={child.id} style={styles.childRowNew}>
-              <Text style={styles.childNameNew}>{child.name}</Text>
-              <Text style={styles.childAgeNew}>Age {child.age}</Text>
-            </View>
-          ))
-        ) : (
-          <View style={styles.childEmptyStateNew}>
-            <Text style={styles.childEmptyTitleNew}>No children added yet</Text>
-            <Text style={styles.childEmptyTextNew}>
-              Add your child's profile to get personalized coaching insights.
-            </Text>
-          </View>
-        )}
-        <TouchableOpacity style={styles.outlinePillButton} onPress={() => setShowChildModal(true)}>
-          <Text style={styles.outlinePillText}>+ Add Child</Text>
-        </TouchableOpacity>
-      </View>
 
-      <Text style={styles.sectionHeaderNew}>App Preferences</Text>
-      <View style={styles.cardNew}>
-        <View style={[styles.preferenceRow, styles.preferenceDivider]}>
-          <View style={styles.preferenceText}>
-            <View style={styles.preferenceLabelRow}>
-              <Text style={styles.preferenceIcon}>☾</Text>
-              <Text style={styles.preferenceLabel}>Dark Mode</Text>
+        <View style={styles.profileCard}>
+          <View style={styles.coverBanner} />
+          <View style={styles.profileInfo}>
+            <TouchableOpacity style={styles.avatarEditWrap} onPress={pickAvatarPhoto} activeOpacity={0.82}>
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.profileAvatarImage} />
+              ) : (
+                <View style={styles.profileAvatarFallback}>
+                  <Text style={styles.profileAvatarInitial}>{avatarInitial}</Text>
+                </View>
+              )}
+              <View style={styles.avatarCameraBadge}>
+                <MaterialIcons name="photo-camera" size={16} color="#FFFFFF" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.profileName}>{displayName}</Text>
+            <Text style={styles.profileEmail}>{email || 'sarah.miller@example.com'}</Text>
+            <View style={styles.badgeRow}>
+              <View style={styles.profileBadge}>
+                <MaterialIcons name="verified-user" size={16} color="#4648D4" />
+                <Text style={styles.verifiedBadgeText}>Verified Parent</Text>
+              </View>
+              <View style={styles.profileBadge}>
+                <MaterialIcons name="star" size={16} color="#6B38D4" />
+                <Text style={styles.premiumBadgeText}>Premium Member</Text>
+              </View>
             </View>
           </View>
-          <Switch
-            value={isDarkMode}
-            onValueChange={setDarkMode}
-            trackColor={{ false: COLORS.surfaceContainerHigh, true: COLORS.primary }}
-            thumbColor={COLORS.onPrimary}
-          />
         </View>
-        <View style={styles.preferenceRow}>
-          <View style={styles.preferenceText}>
-            <View style={styles.preferenceLabelRow}>
-              <Text style={styles.preferenceIcon}>◇</Text>
-              <Text style={styles.preferenceLabel}>Stay Anonymous</Text>
+
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <View style={[styles.statIcon, styles.historyIcon]}>
+              <MaterialIcons name="history" size={23} color="#4648D4" />
             </View>
-            <Text style={styles.preferenceSubLabel}>Hide your identity in Community Benchmarks</Text>
+            <Text style={styles.statValue}>{profileStats.totalSessions}</Text>
+            <Text style={styles.statLabel}>Sessions</Text>
           </View>
-          <Switch
-            value={Boolean(profile?.isAnonymous)}
-            onValueChange={handleAnonymousToggle}
-            trackColor={{ false: COLORS.surfaceContainerHigh, true: COLORS.primary }}
-            thumbColor={COLORS.onPrimary}
-          />
+          <View style={styles.statCard}>
+            <View style={[styles.statIcon, styles.analyticsIcon]}>
+              <MaterialIcons name="analytics" size={23} color="#6B38D4" />
+            </View>
+            <Text style={styles.statValue}>{profileStats.averageScore}</Text>
+            <Text style={styles.statLabel}>Avg Score</Text>
+          </View>
+          <View style={styles.statCard}>
+            <View style={[styles.statIcon, styles.streakIcon]}>
+              <MaterialIcons name="local-fire-department" size={23} color="#904900" />
+            </View>
+            <Text style={styles.statValue}>{profileStats.streak}</Text>
+            <Text style={styles.statLabel}>Streak</Text>
+          </View>
         </View>
-      </View>
 
-      <Text style={styles.sectionHeaderNew}>Device Setup</Text>
-      <View style={styles.cardNew}>
-        <Text style={styles.preferenceLabel}>Microphone</Text>
-        <Text style={styles.preferenceSubLabel}>Select input device</Text>
-        <TouchableOpacity
-          style={{
-            borderWidth: 1,
-            borderColor: COLORS.border,
-            borderRadius: 10,
-            padding: 14,
-            marginTop: 8,
-            backgroundColor: COLORS.cardBg,
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-          onPress={() => setShowMicPicker(true)}
-        >
-          <Text style={{ 
-            color: COLORS.textPrimary, 
-            fontSize: 16 
-          }}>
-            {selectedMicId 
-              ? micOptions.find(m => m.id === selectedMicId)?.name 
-                ?? 'Select microphone'
-              : 'Select microphone'}
-          </Text>
-          <Text style={{ color: COLORS.textSecondary }}>
-            ▾
-          </Text>
+        <Text style={styles.sectionTitle}>My Children</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.childrenRow}>
+          {(profile?.children?.length ?? 0) > 0 ? (
+                profile?.children?.map((child, childIndex) => (
+                  <View key={child.id} style={styles.childCard}>
+                    <View style={[styles.childAvatar, childIndex % 2 === 0 ? styles.childAvatarPurple : styles.childAvatarOrange]}>
+                      <Text style={styles.childAvatarText}>{child.name.trim()[0]?.toUpperCase() || 'C'}</Text>
+                    </View>
+                    <Text style={styles.childCardName}>{child.name}</Text>
+                    <Text style={styles.childCardAge}>Age {child.age}</Text>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.childCard}>
+                  <View style={[styles.childAvatar, styles.childAvatarPurple]}>
+                    <Text style={styles.childAvatarText}>L</Text>
+                  </View>
+                  <Text style={styles.childCardName}>Leo</Text>
+                  <Text style={styles.childCardAge}>Add a child</Text>
+                </View>
+              )}
+          <TouchableOpacity style={styles.addChildCard} onPress={() => setShowChildModal(true)} activeOpacity={0.82}>
+            <View style={styles.addChildIconCircle}>
+              <MaterialIcons name="add" size={26} color="#4648D4" />
+            </View>
+            <Text style={styles.addChildText}>Add Child</Text>
+          </TouchableOpacity>
+        </ScrollView>
+
+        <View style={styles.settingsCard}>
+          <TouchableOpacity style={[styles.settingItem, styles.settingDivider]} onPress={() => setShowMicPicker(true)} activeOpacity={0.82}>
+            <View style={styles.settingLeft}>
+              <View style={styles.settingIconBox}>
+                <MaterialIcons name="mic" size={22} color="#464554" />
+              </View>
+              <View style={styles.settingCopy}>
+                <Text style={styles.settingTitle}>Audio Settings</Text>
+                <Text style={styles.settingSubtitle}>Manage microphone input</Text>
+              </View>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color="#C7C4D7" />
+          </TouchableOpacity>
+
+          <View style={[styles.settingItem, styles.settingDivider]}>
+            <View style={styles.settingLeft}>
+              <View style={styles.settingIconBox}>
+                <MaterialIcons name="dark-mode" size={22} color="#464554" />
+              </View>
+              <View style={styles.settingCopy}>
+                <Text style={styles.settingTitle}>Dark Mode</Text>
+                <Text style={styles.settingSubtitle}>Toggle visual theme</Text>
+              </View>
+            </View>
+            <Switch value={isDarkMode} onValueChange={setDarkMode} trackColor={{ false: '#E4E1ED', true: '#4648D4' }} thumbColor="#FFFFFF" />
+          </View>
+
+          <View style={[styles.settingItem, styles.settingDivider]}>
+            <View style={styles.settingLeft}>
+              <View style={styles.settingIconBox}>
+                <MaterialIcons name="notifications" size={22} color="#464554" />
+              </View>
+              <View style={styles.settingCopy}>
+                <Text style={styles.settingTitle}>Notifications</Text>
+                <Text style={styles.settingSubtitle}>Session reminders and safety alerts</Text>
+              </View>
+            </View>
+            <Switch value={notificationsEnabled} onValueChange={handleNotificationsToggle} trackColor={{ false: '#E4E1ED', true: '#4648D4' }} thumbColor="#FFFFFF" />
+          </View>
+
+          <TouchableOpacity style={[styles.settingItem, styles.settingDivider]} onPress={() => setShowLanguageModal(true)} activeOpacity={0.82}>
+            <View style={styles.settingLeft}>
+              <View style={styles.settingIconBox}>
+                <MaterialIcons name="translate" size={22} color="#464554" />
+              </View>
+              <View style={styles.settingCopy}>
+                <Text style={styles.settingTitle}>Language</Text>
+                <Text style={styles.settingSubtitle}>{currentLanguage.toUpperCase()}</Text>
+              </View>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color="#C7C4D7" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingItem} onPress={handleLogout} activeOpacity={0.82}>
+            <View style={styles.settingLeft}>
+              <View style={styles.logoutIconBox}>
+                <MaterialIcons name="logout" size={22} color="#BA1A1A" />
+              </View>
+              <View style={styles.settingCopy}>
+                <Text style={styles.logoutTitle}>Logout</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={styles.deleteDataButton} onPress={handleDeleteData} activeOpacity={0.82}>
+          <MaterialIcons name="delete-forever" size={22} color="#BA1A1A" />
+          <Text style={styles.deleteDataText}>Delete My Data</Text>
         </TouchableOpacity>
-        {microphones.length === 0 ? <Text style={styles.emptyTextNew}>{t('profile_no_mics')}</Text> : null}
-      </View>
 
-      {/* Microphone Picker Modal */}
-      <Modal
-        visible={showMicPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowMicPicker(false)}
-      >
-        <TouchableOpacity
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.4)',
-            justifyContent: 'flex-end',
-          }}
-          activeOpacity={1}
-          onPress={() => setShowMicPicker(false)}
-        >
-          <View style={{
-            backgroundColor: COLORS.cardBg,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            paddingTop: 16,
-            paddingBottom: 40,
-          }}>
-            {/* Handle bar */}
-            <View style={{
-              width: 40,
-              height: 4,
-              backgroundColor: COLORS.border,
-              borderRadius: 2,
-              alignSelf: 'center',
-              marginBottom: 16,
-            }} />
-      
-            <Text style={{
-              fontSize: 16,
-              fontWeight: '700',
-              color: COLORS.textPrimary,
-              paddingHorizontal: 24,
-              marginBottom: 12,
-            }}>
-              Select Microphone
-            </Text>
-      
-            {micOptions.map(mic => (
+        <Text style={styles.footerText}>TalkWise v1.0.0</Text>
+      </ScrollView>
+
+      <Modal visible={showLanguageModal} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Language</Text>
+            {[
+              { code: 'en', label: 'English' },
+              { code: 'ar', label: 'Arabic' },
+              { code: 'tr', label: 'Turkish' },
+            ].map((language) => (
               <TouchableOpacity
-                key={mic.id}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingHorizontal: 24,
-                  paddingVertical: 14,
-                  borderBottomWidth: 1,
-                  borderBottomColor: COLORS.border,
-                }}
-                onPress={() => {
-                  selectMic(mic.id);
-                  setShowMicPicker(false);
-                }}
+                key={language.code}
+                style={styles.languageOption}
+                onPress={() => changeLanguage(language.code)}
               >
-                <Text style={{
-                  fontSize: 16,
-                  color: COLORS.textPrimary,
-                }}>
-                  {mic.name}
-                </Text>
-                {selectedMicId === mic.id && (
-                  <Text style={{ 
-                    color: COLORS.primary, 
-                    fontSize: 18 
-                  }}>
-                    ✓
-                  </Text>
-                )}
+                <Text style={styles.settingTitle}>{language.label}</Text>
+                {currentLanguage === language.code ? (
+                  <MaterialIcons name="check" size={20} color="#4648D4" />
+                ) : null}
               </TouchableOpacity>
             ))}
+            <TouchableOpacity style={styles.modalSecondaryButton} onPress={() => setShowLanguageModal(false)}>
+              <Text style={styles.modalSecondaryText}>{t('common_cancel')}</Text>
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
-
-      <Text style={styles.sectionHeaderNew}>About & Actions</Text>
-      <View style={styles.cardNew}>
-        <View style={[styles.aboutRowNew, styles.preferenceDivider]}>
-          <Text style={styles.preferenceLabel}>App Version</Text>
-          <Text style={styles.aboutValue}>1.0.0</Text>
-        </View>
-        <TouchableOpacity
-          style={[styles.aboutRowNew, styles.preferenceDivider]}
-          onPress={() => Linking.openURL('your-privacy-url')}
-        >
-          <View style={styles.preferenceLabelRow}>
-            <Text style={styles.preferenceIcon}>◇</Text>
-            <Text style={styles.preferenceLabel}>Privacy Policy</Text>
-          </View>
-          <Text style={styles.chevron}>›</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.aboutRowNew, styles.preferenceDivider]}
-          onPress={() => Linking.openURL('your-privacy-url')}
-        >
-          <View style={styles.preferenceLabelRow}>
-            <Text style={styles.preferenceIcon}>□</Text>
-            <Text style={styles.preferenceLabel}>Terms of Service</Text>
-          </View>
-          <Text style={styles.chevron}>›</Text>
-        </TouchableOpacity>
-        <View style={styles.safetyNotice}>
-          <Text style={styles.safetyText}>
-            ⚠️ Audio is processed locally and never uploaded. Only text insights are stored in the cloud.
-          </Text>
-        </View>
-      </View>
-
-      <TouchableOpacity style={styles.signOutButton} onPress={handleLogout}>
-        <Text style={styles.signOutText}>{t('profile_sign_out')}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteData}>
-        <Text style={styles.deleteText}>Delete My Data</Text>
-      </TouchableOpacity>
-
-      {false && (
-        <>
-      <View style={[styles.avatarSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-        ) : (
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{avatarInitial}</Text>
-          </View>
-        )}
-        <Text style={[styles.profileName, { color: colors.text }]}>{displayName}</Text>
-        <Text style={[styles.profileEmail, { color: colors.muted }]}>{email}</Text>
-        <TouchableOpacity style={styles.editNameButton} onPress={() => setShowNameModal(true)}>
-          <Text style={styles.editNameText}>✏️ Edit Name</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.statsRow}>
-        <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.statValue, { color: colors.text }]}>{profileStats.totalSessions}</Text>
-          <Text style={[styles.statLabel, { color: colors.muted }]}>Total Sessions</Text>
-        </View>
-        <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.statValue, { color: colors.text }]}>{profileStats.averageScore}%</Text>
-          <Text style={[styles.statLabel, { color: colors.muted }]}>Average Score</Text>
-        </View>
-        <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.statValue, { color: colors.text }]}>{profileStats.streak}</Text>
-          <Text style={[styles.statLabel, { color: colors.muted }]}>Day Streak</Text>
-        </View>
-      </View>
-
-      <Card title={t('profile_child_profile')}>
-        {(profile?.children?.length ?? 0) > 0 ? (
-          profile?.children?.map((child) => (
-            <View key={child.id} style={styles.childItem}>
-              <Text style={styles.childName}>{child.name}</Text>
-              <Text style={styles.childAge}>{child.age}</Text>
-            </View>
-          ))
-        ) : (
-          <View style={styles.childEmptyState}>
-            <Text style={styles.childEmptyIcon}>👶</Text>
-            <Text style={styles.childEmptyTitle}>No children added yet</Text>
-            <Text style={styles.childEmptyText}>
-              Add your child's profile to get personalized coaching insights
-            </Text>
-          </View>
-        )}
-        <Button
-          title={t('profile_add_child')}
-          onPress={() => setShowChildModal(true)}
-          variant="outline"
-          fullWidth
-        />
-      </Card>
-
-      <Card title={t('profile_parenting_score')}>
-        <View style={styles.scoreContainer}>
-          <View style={styles.scoreCircle}>
-            <Text style={styles.scoreText}>{profileStats.averageScore || profile?.parentingScore || 0}</Text>
-          </View>
-          <Text style={styles.scoreDescription}>{t('profile_score_subtitle')}</Text>
-        </View>
-      </Card>
-
-      <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <View style={styles.settingRow}>
-          <View style={styles.settingText}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Dark Mode</Text>
-            <Text style={[styles.sectionSubtitle, { color: colors.muted }]}>
-              Switch TalkWise to a darker interface.
-            </Text>
-          </View>
-          <Switch
-            value={isDarkMode}
-            onValueChange={setDarkMode}
-            trackColor={{ false: COLORS.surfaceContainerHigh, true: COLORS.primary }}
-            thumbColor={COLORS.onPrimary}
-          />
-        </View>
-      </View>
-
-      <Card title="Community Benchmarks">
-        <Button
-          title={profile?.isAnonymous ? 'Community Benchmarks' : t('profile_stay_anonymous')}
-          onPress={() => router.push('/(drawer)/leaderboard' as any)}
-          variant="outline"
-          fullWidth
-        />
-      </Card>
-
-      <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Audio Settings</Text>
-        <Text style={[styles.sectionSubtitle, { color: colors.muted }]}>🎙️ Audio Input Device</Text>
-
-        <TouchableOpacity
-          style={[styles.micRow, selectedMicId === 'default' && styles.selectedStyle]}
-          onPress={() => selectMic('default')}
-          activeOpacity={0.75}
-        >
-          <Text style={[styles.micLabel, selectedMicId === 'default' && styles.micLabelSelected]}>
-            This device
-          </Text>
-          {selectedMicId === 'default' && <Text style={styles.checkmark}>✓</Text>}
-        </TouchableOpacity>
-
-        {microphones.length === 0 ? (
-          <Text style={styles.emptyText}>{t('profile_no_mics')}</Text>
-        ) : (
-          microphones.map((mic, index) => {
-            const isSelected = selectedMicId === mic.deviceId;
-            return (
-              <TouchableOpacity
-                key={mic.deviceId}
-                style={[styles.micRow, isSelected && styles.selectedStyle]}
-                onPress={() => selectMic(mic.deviceId)}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.micLabel, isSelected && styles.micLabelSelected]}>
-                  {mic.label || `${t('profile_microphone')} ${index + 1}`}
-                </Text>
-                {isSelected && <Text style={styles.checkmark}>✓</Text>}
-              </TouchableOpacity>
-            );
-          })
-        )}
-      </View>
-
-      <View style={[styles.aboutCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.aboutTitle, { color: colors.text }]}>TalkWise</Text>
-        <Text style={[styles.aboutMeta, { color: colors.muted }]}>Version 1.0.0</Text>
-        <Text style={[styles.aboutTagline, { color: colors.text }]}>AI-powered parenting coach</Text>
-        <Text style={[styles.disclaimer, { color: colors.muted }]}>
-          ⚠️ AI safety detection is a helpful guide and should not replace professional judgment.
-        </Text>
-      </View>
-
-      <Button title={t('profile_sign_out')} onPress={handleLogout} variant="outline" fullWidth />
-        </>
-      )}
 
       <Modal visible={showNameModal} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
@@ -776,534 +665,78 @@ export const ProfileScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
-    </Container>
+
+    </SafeAreaView>
   );
 };
 
+
 const styles = StyleSheet.create({
-  avatarSectionNew: {
-    alignItems: 'center',
-    paddingBottom: 8,
-    paddingTop: 16,
-  },
-  avatarNew: {
-    alignItems: 'center',
-    backgroundColor: COLORS.primary,
-    borderRadius: 40,
-    height: 80,
-    justifyContent: 'center',
-    width: 80,
-  },
-  avatarImageNew: {
-    borderRadius: 40,
-    height: 80,
-    width: 80,
-  },
-  profileNameNew: {
-    color: COLORS.textPrimary,
-    fontSize: 24,
-    fontWeight: '700',
-    marginTop: 14,
-    textAlign: 'center',
-  },
-  profileEmailNew: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  editProfileButton: {
-    borderColor: COLORS.borderStrong,
-    borderRadius: 9999,
-    borderWidth: 1,
-    marginTop: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-  },
-  editProfileText: {
-    color: COLORS.primary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  sectionHeaderNew: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    marginBottom: 8,
-    marginTop: 24,
-    paddingHorizontal: 4,
-    textTransform: 'uppercase',
-  },
-  cardNew: {
-    backgroundColor: COLORS.cardBg,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-  },
-  cardTitleRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 12,
-  },
-  cardTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  childRowNew: {
-    borderBottomColor: COLORS.border,
-    borderBottomWidth: 1,
-    paddingVertical: 12,
-  },
-  childNameNew: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  childAgeNew: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    marginTop: 3,
-  },
-  childEmptyStateNew: {
-    paddingVertical: 12,
-  },
-  childEmptyTitleNew: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  childEmptyTextNew: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 5,
-    textAlign: 'center',
-  },
-  outlinePillButton: {
-    alignItems: 'center',
-    borderColor: COLORS.borderStrong,
-    borderRadius: 9999,
-    borderWidth: 1,
-    marginTop: 12,
-    paddingVertical: 11,
-  },
-  outlinePillText: {
-    color: COLORS.primary,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  preferenceRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 16,
-    paddingVertical: 14,
-  },
-  preferenceDivider: {
-    borderBottomColor: COLORS.border,
-    borderBottomWidth: 1,
-  },
-  preferenceText: {
-    flex: 1,
-  },
-  preferenceLabelRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 10,
-  },
-  preferenceIcon: {
-    color: COLORS.primary,
-    fontSize: 18,
-    fontWeight: '700',
-    width: 22,
-  },
-  preferenceLabel: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  preferenceSubLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 4,
-  },
-  pickerWrap: {
-    backgroundColor: COLORS.cardBg,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginTop: 8,
-    overflow: 'hidden',
-  },
-  picker: {
-    color: COLORS.textPrimary,
-  },
-  webPickerRow: {
-    paddingHorizontal: 12,
-    paddingVertical: 13,
-  },
-  webPickerRowSelected: {
-    backgroundColor: COLORS.surfaceContainer,
-  },
-  webPickerText: {
-    color: COLORS.textPrimary,
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  webPickerTextSelected: {
-    color: COLORS.primary,
-    fontWeight: '800',
-  },
-  emptyTextNew: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    marginTop: 10,
-  },
-  aboutRowNew: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    minHeight: 52,
-    paddingVertical: 12,
-  },
-  aboutValue: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  chevron: {
-    color: COLORS.textSecondary,
-    fontSize: 26,
-    lineHeight: 28,
-  },
-  safetyNotice: {
-    backgroundColor: COLORS.warningBg,
-    borderRadius: 10,
-    marginTop: 14,
-    padding: 12,
-  },
-  safetyText: {
-    color: COLORS.warning,
-    fontSize: 12,
-    fontWeight: '600',
-    lineHeight: 18,
-  },
-  signOutButton: {
-    alignItems: 'center',
-    backgroundColor: COLORS.cardBg,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 20,
-    padding: 16,
-  },
-  signOutText: {
-    color: COLORS.error,
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  deleteButton: {
-    alignItems: 'center',
-    backgroundColor: COLORS.errorBg,
-    borderRadius: 12,
-    marginBottom: 48,
-    marginTop: 12,
-    padding: 16,
-  },
-  deleteText: {
-    color: COLORS.error,
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  avatarSection: {
-    alignItems: 'center',
-    borderRadius: theme.borderRadius.xl,
-    borderWidth: 1,
-    marginVertical: theme.spacing.md,
-    padding: theme.spacing.xl,
-  },
-  avatar: {
-    alignItems: 'center',
-    backgroundColor: theme.colors.primary,
-    borderRadius: 45,
-    height: 90,
-    justifyContent: 'center',
-    width: 90,
-  },
-  avatarImage: {
-    borderRadius: 45,
-    height: 90,
-    width: 90,
-  },
-  avatarText: {
-    color: COLORS.onPrimary,
-    fontSize: 36,
-    fontWeight: '900',
-  },
-  profileName: {
-    fontSize: 24,
-    fontWeight: '900',
-    marginTop: 14,
-  },
-  profileEmail: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  editNameButton: {
-    backgroundColor: theme.colors.primaryLight,
-    borderRadius: 999,
-    marginTop: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-  },
-  editNameText: {
-    color: theme.colors.primary,
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 8,
-  },
-  statCard: {
-    alignItems: 'center',
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: 1,
-    flex: 1,
-    padding: 12,
-  },
-  statValue: {
-    fontSize: 22,
-    fontWeight: '900',
-  },
-  statLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  childItem: {
-    borderBottomColor: theme.colors.border,
-    borderBottomWidth: 1,
-    paddingVertical: theme.spacing.md,
-  },
-  childName: {
-    color: theme.colors.text,
-    fontSize: theme.typography.body.fontSize,
-    fontWeight: '600',
-  },
-  childAge: {
-    color: theme.colors.textSecondary,
-    fontSize: theme.typography.bodySmall.fontSize,
-    marginTop: theme.spacing.sm,
-  },
-  childEmptyState: {
-    alignItems: 'center',
-    marginBottom: 14,
-    paddingVertical: 8,
-  },
-  childEmptyIcon: {
-    fontSize: 42,
-    marginBottom: 8,
-  },
-  childEmptyTitle: {
-    color: theme.colors.text,
-    fontSize: 17,
-    fontWeight: '900',
-  },
-  childEmptyText: {
-    color: theme.colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '600',
-    lineHeight: 19,
-    marginTop: 6,
-    textAlign: 'center',
-  },
-  emptyText: {
-    color: theme.colors.textSecondary,
-    fontSize: theme.typography.body.fontSize,
-    marginVertical: theme.spacing.md,
-    textAlign: 'center',
-  },
-  scoreContainer: {
-    alignItems: 'center',
-    marginVertical: theme.spacing.md,
-  },
-  scoreCircle: {
-    alignItems: 'center',
-    backgroundColor: theme.colors.primaryLight,
-    borderRadius: 60,
-    height: 120,
-    justifyContent: 'center',
-    marginBottom: theme.spacing.md,
-    width: 120,
-  },
-  scoreText: {
-    color: theme.colors.primary,
-    fontSize: 48,
-    fontWeight: '700',
-  },
-  scoreDescription: {
-    color: theme.colors.textSecondary,
-    fontSize: theme.typography.bodySmall.fontSize,
-    textAlign: 'center',
-  },
-  sectionCard: {
-    borderRadius: theme.borderRadius.lg,
-    borderWidth: 1,
-    marginBottom: 16,
-    padding: 16,
-  },
-  sectionTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    color: COLORS.textFaint,
-    fontSize: 13,
-    marginBottom: 12,
-  },
-  settingRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 16,
-  },
-  settingText: {
-    flex: 1,
-  },
-  micRow: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-    padding: 12,
-  },
-  selectedStyle: {
-    backgroundColor: theme.colors.primary,
-  },
-  micLabel: {
-    color: theme.colors.text,
-    flex: 1,
-    fontSize: 14,
-  },
-  micLabelSelected: {
-    color: COLORS.onPrimary,
-  },
-  checkmark: {
-    color: COLORS.onPrimary,
-    fontSize: 16,
-  },
-  aboutCard: {
-    borderRadius: theme.borderRadius.xl,
-    borderWidth: 1,
-    marginBottom: 16,
-    padding: 18,
-  },
-  aboutTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  aboutMeta: {
-    fontSize: 13,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-  aboutTagline: {
-    fontSize: 15,
-    fontWeight: '800',
-    marginTop: 12,
-  },
-  disclaimer: {
-    fontSize: 12,
-    fontWeight: '600',
-    lineHeight: 18,
-    marginTop: 12,
-  },
-  modalBackdrop: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.xl,
-    maxWidth: 360,
-    padding: 20,
-    width: '100%',
-  },
-  modalTitle: {
-    color: theme.colors.text,
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 16,
-  },
-  modalInput: {
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    color: theme.colors.text,
-    fontSize: 15,
-    marginBottom: 12,
-    padding: 12,
-  },
-  multilineInput: {
-    minHeight: 74,
-    textAlignVertical: 'top',
-  },
-  photoButton: {
-    alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginBottom: 12,
-    padding: 12,
-  },
-  photoButtonText: {
-    color: theme.colors.text,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'flex-end',
-    marginTop: 4,
-  },
-  modalSecondaryButton: {
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  modalSecondaryText: {
-    color: theme.colors.text,
-    fontWeight: '700',
-  },
-  modalPrimaryButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  modalPrimaryText: {
-    color: COLORS.onPrimary,
-    fontWeight: '800',
-  },
+  safeArea: { flex: 1, backgroundColor: '#FCF8FF' },
+  container: { flex: 1, backgroundColor: '#FCF8FF' },
+  content: { paddingHorizontal: 24, paddingTop: 22, paddingBottom: 48, gap: 18 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  pageTitle: { color: '#1B1B23', fontSize: 28, lineHeight: 34, fontWeight: '900' },
+  editButton: { backgroundColor: '#EFECF8', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 9 },
+  editButtonText: { color: '#4648D4', fontSize: 14, fontWeight: '900' },
+  profileCard: { backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', shadowColor: '#312E81', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.12, shadowRadius: 30, elevation: 8, ...Platform.select({ web: { boxShadow: '0px 22px 54px rgba(49, 46, 129, 0.14)' } as any }) },
+  coverBanner: { height: 80, backgroundColor: '#E1E0FF' },
+  profileInfo: { alignItems: 'center', paddingHorizontal: 18, paddingBottom: 24, marginTop: -40 },
+  avatarEditWrap: { position: 'relative', marginBottom: 10 },
+  profileAvatarImage: { width: 80, height: 80, borderRadius: 40, borderWidth: 4, borderColor: '#FFFFFF', backgroundColor: '#E4E1ED' },
+  profileAvatarFallback: { width: 80, height: 80, borderRadius: 40, borderWidth: 4, borderColor: '#FFFFFF', backgroundColor: '#4648D4', alignItems: 'center', justifyContent: 'center', shadowColor: '#312E81', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.18, shadowRadius: 16, elevation: 5 },
+  avatarCameraBadge: { position: 'absolute', right: -2, bottom: 2, width: 28, height: 28, borderRadius: 14, backgroundColor: '#6366F1', borderWidth: 2, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  profileAvatarInitial: { color: '#FFFFFF', fontSize: 30, fontWeight: '900' },
+  profileName: { color: '#1B1B23', fontSize: 20, fontWeight: '900', marginTop: 12, textAlign: 'center' },
+  profileEmail: { color: '#464554', fontSize: 14, fontWeight: '600', marginTop: 4, marginBottom: 14, textAlign: 'center' },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
+  profileBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#EFECF8', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
+  verifiedBadgeText: { color: '#4648D4', fontSize: 12, fontWeight: '900' },
+  premiumBadgeText: { color: '#6B38D4', fontSize: 12, fontWeight: '900' },
+  statsGrid: { flexDirection: 'row', gap: 10 },
+  statCard: { flex: 1, alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E4E1ED', paddingVertical: 16, paddingHorizontal: 8, shadowColor: '#312E81', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.07, shadowRadius: 18, elevation: 3, ...Platform.select({ web: { boxShadow: '0px 12px 24px rgba(49, 46, 129, 0.08)' } as any }) },
+  statIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  historyIcon: { backgroundColor: '#E1E0FF' },
+  analyticsIcon: { backgroundColor: '#E9DDFF' },
+  streakIcon: { backgroundColor: '#FFDCC5' },
+  statValue: { color: '#1B1B23', fontSize: 22, fontWeight: '900' },
+  statLabel: { color: '#767586', fontSize: 12, fontWeight: '800', marginTop: 3, textAlign: 'center' },
+  sectionTitle: { color: '#1B1B23', fontSize: 20, fontWeight: '900', marginTop: 2 },
+  childrenRow: { gap: 16, paddingRight: 24 },
+  childCard: { width: 120, minHeight: 136, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4E1ED', borderRadius: 12, padding: 14 },
+  childAvatar: { width: 56, height: 56, borderRadius: 28, borderWidth: 3, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', marginBottom: 10 },
+  childAvatarPurple: { borderColor: '#8B5CF6' },
+  childAvatarOrange: { borderColor: '#F97316' },
+  childAvatarText: { color: '#1B1B23', fontSize: 20, fontWeight: '900' },
+  childCardName: { color: '#1B1B23', fontSize: 15, fontWeight: '900', textAlign: 'center' },
+  childCardAge: { color: '#767586', fontSize: 12, fontWeight: '700', marginTop: 4, textAlign: 'center' },
+  addChildCard: { width: 120, minHeight: 136, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F2FE', borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#C7C4D7', borderRadius: 12, padding: 14 },
+  addChildIconCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  addChildText: { color: '#4648D4', fontSize: 14, fontWeight: '900', textAlign: 'center' },
+  settingsCard: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E4E1ED', overflow: 'hidden', shadowColor: '#312E81', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.08, shadowRadius: 22, elevation: 4, ...Platform.select({ web: { boxShadow: '0px 16px 32px rgba(49, 46, 129, 0.10)' } as any }) },
+  settingItem: { minHeight: 72, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
+  settingDivider: { borderBottomWidth: 1, borderBottomColor: '#E4E1ED' },
+  settingLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  settingIconBox: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EFECF8' },
+  logoutIconBox: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFDAD6' },
+  settingCopy: { flex: 1 },
+  settingTitle: { color: '#1B1B23', fontSize: 16, fontWeight: '900' },
+  settingSubtitle: { color: '#767586', fontSize: 13, fontWeight: '600', marginTop: 3 },
+  logoutTitle: { color: '#BA1A1A', fontSize: 16, fontWeight: '900' },
+  footerText: { color: '#767586', fontSize: 12, fontWeight: '700', textAlign: 'center', marginVertical: 24 },
+  deleteDataButton: { alignItems: 'center', backgroundColor: '#FFDAD6', borderRadius: 16, flexDirection: 'row', gap: 10, justifyContent: 'center', padding: 16 },
+  deleteDataText: { color: '#BA1A1A', fontSize: 16, fontWeight: '900' },
+  modalBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.42)', padding: 24 },
+  modalCard: { width: '100%', maxWidth: 420, maxHeight: '86%', backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20 },
+  modalTitle: { color: '#1B1B23', fontSize: 20, fontWeight: '900', marginBottom: 14 },
+  modalInput: { borderWidth: 1, borderColor: '#E4E1ED', borderRadius: 12, color: '#1B1B23', fontSize: 15, marginBottom: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  multilineInput: { minHeight: 82, textAlignVertical: 'top' },
+  modalActions: { flexDirection: 'row', gap: 12, justifyContent: 'flex-end', marginTop: 4 },
+  modalSecondaryButton: { borderRadius: 999, borderWidth: 1, borderColor: '#C7C4D7', paddingHorizontal: 18, paddingVertical: 11 },
+  modalSecondaryText: { color: '#464554', fontSize: 14, fontWeight: '900' },
+  modalPrimaryButton: { borderRadius: 999, backgroundColor: '#6366F1', paddingHorizontal: 18, paddingVertical: 11 },
+  modalPrimaryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
+  languageOption: { alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E4E1ED', flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 14 },
+  photoButton: { alignItems: 'center', borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: '#C7C4D7', backgroundColor: '#F5F2FE', padding: 14, marginBottom: 12 },
+  photoButtonText: { color: '#4648D4', fontSize: 14, fontWeight: '900' },
 });
