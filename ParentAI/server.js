@@ -109,7 +109,7 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
     }
 
     return res.status(200).json({
-      transcript: analysis.transcript ?? '',
+      transcript,
       score: analysis.score ?? 70,
       summary: analysis.summary ?? 'Session analyzed.',
       strengths: analysis.strengths ?? [],

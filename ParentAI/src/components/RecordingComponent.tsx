@@ -89,6 +89,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
   const audioContextRef = useRef<AudioContext | null>(null);
   const sessionStartRef = useRef(0);
   const pendingAudioRef = useRef<Blob | string | null>(null);
+  const didNavigateToResultsRef = useRef(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -226,7 +227,6 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       setProcessingStep('insights');
       console.log('STEP 4: analysis started');
       console.log('STEP 5: analysis response raw:', result);
-      console.log('STEP 6: navigating to results');
 
       if (!result) {
         throw new Error('No result returned from analysis');
@@ -236,7 +236,9 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       const transcriptText = String(result.transcript || '');
 
       if (transcriptText.trim().length < 2) {
-        setError(t('error_no_speech'));
+        if (!didNavigateToResultsRef.current) {
+          setError(t('error_no_speech'));
+        }
         return;
       }
 
@@ -297,6 +299,9 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     setProcessingStep('idle');
 
     try {
+      setError(null);
+      didNavigateToResultsRef.current = true;
+      console.log('STEP 6: navigating to results');
       router.push({
         pathname: '/(drawer)/session-results' as any,
         params: {
@@ -350,6 +355,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
 
   async function handleStop() {
     console.log('STEP 1: recording stopped');
+    didNavigateToResultsRef.current = false;
     setIsRecording(false);
     setMode('idle');
     stopWaveform();
