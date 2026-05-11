@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Alert,
-    InteractionManager,
     Platform,
     ScrollView,
     StyleSheet,
@@ -281,29 +280,26 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       console.log('STEP 5B: report saved');
       setError(null);
       didNavigateToResultsRef.current = true;
+      console.log('STEP 6: navigating to results');
+      router.replace({
+        pathname: '/(drawer)/session-results' as any,
+        params: {
+          transcript: transcriptText,
+          score: String(score),
+          summary,
+          strengths: JSON.stringify(strengths),
+          improvements: JSON.stringify(improvements),
+          tips: JSON.stringify(tips ?? []),
+          safetyFlag: String(result.safetyFlag ?? false),
+          reportId,
+          childName: selectedChild?.name || '',
+          sessionTag: selectedTag || '',
+          durationSeconds: String(report.durationSeconds || 0),
+        },
+      });
       setIsLoading(false);
       setIsAnalyzing(false);
       setProcessingStep('idle');
-      await new Promise((resolve) => setTimeout(resolve, 150));
-      InteractionManager.runAfterInteractions(() => {
-        console.log('STEP 6: navigating to results');
-        router.replace({
-          pathname: '/(drawer)/session-results' as any,
-          params: {
-            transcript: transcriptText,
-            score: String(score),
-            summary,
-            strengths: JSON.stringify(strengths),
-            improvements: JSON.stringify(improvements),
-            tips: JSON.stringify(tips ?? []),
-            safetyFlag: String(result.safetyFlag ?? false),
-            reportId,
-            childName: selectedChild?.name || '',
-            sessionTag: selectedTag || '',
-            durationSeconds: String(report.durationSeconds || 0),
-          },
-        });
-      });
     } catch (error) {
       console.error('STEP 6 FAILED - navigation error:', error);
       Alert.alert('Navigation Error', 'Could not navigate to results. Please try again.');
@@ -604,7 +600,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
         </View>
       )}
 
-      {!isLoading && currentAnalysis && (
+      {!isLoading && currentAnalysis && !didNavigateToResultsRef.current && (
         <View style={styles.analysisWrap}>
           <AnalysisDisplay analysis={currentAnalysis} />
         </View>
