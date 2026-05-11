@@ -13,6 +13,12 @@ const OPENAI_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini';
 console.log('OPENAI KEY loaded:', process.env.OPENAI_API_KEY ? 'YES (length: ' + process.env.OPENAI_API_KEY.length + ')' : 'MISSING');
 const upload = multer({ storage: multer.memoryStorage() });
 
+const withTimeout = (promise, ms, message) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
+  ]);
+
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
@@ -26,37 +32,31 @@ async function transcribeAudioBuffer(buffer, filename = 'audio.webm') {
   await fs.promises.writeFile(filePath, buffer);
 
   try {
-    const transcription = await openai.audio.transcriptions.create({
-      file: fs.createReadStream(filePath),
-      model: 'whisper-1',
-    });
+    const transcription = await withTimeout(
+      openai.audio.transcriptions.create({
+        file: fs.createReadStream(filePath),
+        model: 'whisper-1',
+      }),
+      15000,
+      'Whisper transcription timed out'
+    );
     return String(transcription.text || '');
   } finally {
     fs.promises.unlink(filePath).catch(() => {});
   }
 }
 
-async function analyzeTranscriptWithOpenAI(transcript, language = 'English') {
-  const prompt = `You are an expert parenting coach. Analyze parent-child conversations in ${language}. Return ONLY valid JSON.
-
-Analyze this transcript and return exactly these fields:
-{
-  "score": number between 0 and 100,
-  "summary": "brief summary of the interaction",
-  "strengths": ["strength 1", "strength 2"],
-  "improvements": ["improvement 1", "improvement 2"],
-  "tips": ["tip 1", "tip 2"],
-  "safetyFlag": true or false
-}
-
-Transcript:
-"""
-${String(transcript || '').slice(0, 8000)}
-"""`;
+async function analyzeTranscriptWithOpenAI(transcript) {
+  const prompt = `You are a parenting coach. Analyze this parent-child conversation transcript and respond ONLY with valid JSON, no extra text:
+Transcript: "${String(transcript || '').slice(0, 8000).replace(/"/g, '\\"')}"
+JSON format:
+{"score": <0-100>, "summary": "<2 sentences>", "strengths": ["<point1>", "<point2>"], "improvements": ["<point1>", "<point2>"], "tips": ["<tip1>", "<tip2>"], "safetyFlag": <true/false>}`;
   const response = await openai.chat.completions.create({
-    model: OPENAI_CHAT_MODEL,
+    model: 'gpt-4o-mini',
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.7,
+    max_tokens: 400,
+    response_format: { type: 'json_object' },
   });
   return response.choices?.[0]?.message?.content || '';
 }
