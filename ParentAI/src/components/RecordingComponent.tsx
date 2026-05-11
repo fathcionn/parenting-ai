@@ -38,6 +38,7 @@ interface RecordingComponentProps {
   childId?: string | null;
   title?: string;
   onReport?: (report: CoachingReport) => void;
+  onReportSaved?: (reportId: string) => void;
   speechLanguage?: string;
 }
 
@@ -80,6 +81,7 @@ const decorativeWaveHeights = [18, 32, 24, 46, 30, 58, 36, 48, 26, 40, 22, 34, 1
 export const RecordingComponent: React.FC<RecordingComponentProps> = ({
   childId,
   onReport,
+  onReportSaved,
 }) => {
   const { t } = useTranslation();
   const router = useRouter();
@@ -187,6 +189,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
   }
 
   async function handleStart() {
+    didNavigateToResultsRef.current = false;
     setError(null);
     setCurrentAnalysis(null);
     setTranscript('');
@@ -276,30 +279,45 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     onReport?.(report);
 
     try {
+      console.log('[STEP A] About to save to Firestore');
       await saveToHistory(report);
+      const savedId = report.id;
       console.log('STEP 5B: report saved');
+      console.log('[STEP B] Firestore save done, id:', savedId);
+      onReportSaved?.(savedId);
       setError(null);
       didNavigateToResultsRef.current = true;
-      console.log('STEP 6: navigating to results');
-      router.replace({
-        pathname: '/(drawer)/session-results' as any,
-        params: {
-          transcript: transcriptText,
-          score: String(score),
-          summary,
-          strengths: JSON.stringify(strengths),
-          improvements: JSON.stringify(improvements),
-          tips: JSON.stringify(tips ?? []),
-          safetyFlag: String(result.safetyFlag ?? false),
-          reportId,
-          childName: selectedChild?.name || '',
-          sessionTag: selectedTag || '',
-          durationSeconds: String(report.durationSeconds || 0),
-        },
-      });
-      setIsLoading(false);
-      setIsAnalyzing(false);
-      setProcessingStep('idle');
+      setTimeout(() => {
+        try {
+          console.log('[STEP C] Calling router.replace now');
+          console.log('STEP 6: navigating to results');
+          router.replace({
+            pathname: '/(drawer)/session-results' as any,
+            params: {
+              transcript: transcriptText,
+              score: String(score),
+              summary,
+              strengths: JSON.stringify(strengths),
+              improvements: JSON.stringify(improvements),
+              tips: JSON.stringify(tips ?? []),
+              safetyFlag: String(result.safetyFlag ?? false),
+              reportId: savedId,
+              childName: selectedChild?.name || '',
+              sessionTag: selectedTag || '',
+              durationSeconds: String(report.durationSeconds || 0),
+            },
+          });
+          console.log('[STEP D] router.replace called');
+          setIsLoading(false);
+          setIsAnalyzing(false);
+          setProcessingStep('idle');
+        } catch (navError) {
+          console.error('STEP 6 FAILED - navigation error:', navError);
+          setIsLoading(false);
+          setIsAnalyzing(false);
+          setProcessingStep('idle');
+        }
+      }, 100);
     } catch (error) {
       console.error('STEP 6 FAILED - navigation error:', error);
       Alert.alert('Navigation Error', 'Could not navigate to results. Please try again.');
