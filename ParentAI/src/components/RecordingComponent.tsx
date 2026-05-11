@@ -391,9 +391,11 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
         setError(`${t('error_analysis_failed')} ${err.message}`);
       }
     } finally {
-      console.log('STEP 7: loading false');
-      setIsLoading(false);
-      setIsAnalyzing(false);
+      console.log('STEP 7: finally block');
+      if (!didNavigateToResultsRef.current) {
+        setIsLoading(false);
+        setIsAnalyzing(false);
+      }
     }
   }
 
