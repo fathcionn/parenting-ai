@@ -37,7 +37,7 @@ async function transcribeAudioBuffer(buffer, filename = 'audio.webm') {
         file: fs.createReadStream(filePath),
         model: 'whisper-1',
       }),
-      15000,
+      20000,
       'Whisper transcription timed out'
     );
     return String(transcription.text || '');
