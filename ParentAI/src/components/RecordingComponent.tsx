@@ -274,10 +274,10 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     setTranscript(transcriptText);
     setCurrentAnalysis(report);
     onReport?.(report);
-    await saveToHistory(report);
-    console.log('STEP 5B: report saved');
 
     try {
+      await saveToHistory(report);
+      console.log('STEP 5B: report saved');
       setError(null);
       didNavigateToResultsRef.current = true;
       console.log('STEP 6: navigating to results');
@@ -297,8 +297,8 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
           durationSeconds: String(report.durationSeconds || 0),
         },
       });
-    } catch (navError) {
-      console.error('STEP 6 navigation error:', navError);
+    } catch (error) {
+      console.error('STEP 6 FAILED - navigation error:', error);
       Alert.alert('Navigation Error', 'Could not navigate to results. Please try again.');
     } finally {
       setIsLoading(false);
