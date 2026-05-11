@@ -275,28 +275,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     setCurrentAnalysis(report);
     onReport?.(report);
     await saveToHistory(report);
-
-    let safetyFlag: any = { safe: true, severity: 'none', detected: [], recommendation: '' };
-    try {
-      const safety = await checkSessionSafety(transcriptText);
-      safetyFlag = safety;
-      if (!safety.safe) {
-        await saveSafetyFlag(report.id, safety);
-        await notifySafetyFlag(report.id, safety, () =>
-          router.push({
-            pathname: '/(drawer)/report-detail' as any,
-            params: { id: report.id },
-          })
-        );
-      }
-    } catch (safetyError) {
-      console.warn('Safety check failed:', safetyError);
-    }
-
-    // Clear loading before navigation
-    setIsLoading(false);
-    setIsAnalyzing(false);
-    setProcessingStep('idle');
+    console.log('STEP 5B: report saved');
 
     try {
       setError(null);
@@ -305,12 +284,13 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       router.push({
         pathname: '/(drawer)/session-results' as any,
         params: {
+          transcript: transcriptText,
           score: String(score),
           summary,
           strengths: JSON.stringify(strengths),
           improvements: JSON.stringify(improvements),
           tips: JSON.stringify(tips),
-          safetyFlag: JSON.stringify(safetyFlag),
+          safetyFlag: String(result.safetyFlag ?? false),
           reportId,
           childName: selectedChild?.name || '',
           sessionTag: selectedTag || '',
@@ -318,9 +298,29 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
         },
       });
     } catch (navError) {
-      console.error('Navigation failed:', navError);
+      console.error('STEP 6 navigation error:', navError);
       Alert.alert('Navigation Error', 'Could not navigate to results. Please try again.');
+    } finally {
+      setIsLoading(false);
+      setIsAnalyzing(false);
+      setProcessingStep('idle');
     }
+
+    checkSessionSafety(transcriptText)
+      .then(async (safety) => {
+        if (!safety.safe) {
+          await saveSafetyFlag(report.id, safety);
+          await notifySafetyFlag(report.id, safety, () =>
+            router.push({
+              pathname: '/(drawer)/report-detail' as any,
+              params: { id: report.id },
+            })
+          );
+        }
+      })
+      .catch((safetyError) => {
+        console.warn('Safety check failed:', safetyError);
+      });
     } catch (error) {
       console.error('Transcription error details:', error);
       Alert.alert(
