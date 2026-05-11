@@ -35,12 +35,12 @@ export async function startRecording(micDeviceId?: string, language = 'en'): Pro
             deviceId: { exact: savedMicId },
             echoCancellation: true,
             noiseSuppression: true,
-            autoGainControl: true,
+            sampleRate: 44100,
           }
         : {
             echoCancellation: true,
             noiseSuppression: true,
-            autoGainControl: true,
+            sampleRate: 44100,
           },
     });
   } catch (err) {
@@ -50,11 +50,8 @@ export async function startRecording(micDeviceId?: string, language = 'en'): Pro
 
   const getMimeType = () => {
     const types = [
-      'audio/wav',
-      'audio/mp4',
       'audio/webm;codecs=opus',
-      'audio/webm',
-      'audio/ogg',
+      'audio/mp4',
     ];
     for (const type of types) {
       if (MediaRecorder.isTypeSupported(type)) {
@@ -67,7 +64,10 @@ export async function startRecording(micDeviceId?: string, language = 'en'): Pro
 
   const mimeType = getMimeType();
 
-  mediaRecorder = new MediaRecorder(micStream, { mimeType });
+  mediaRecorder = new MediaRecorder(micStream, {
+    mimeType,
+    audioBitsPerSecond: 128000,
+  });
   mediaRecorder.ondataavailable = (event) => {
     if (event.data.size > 0) audioChunks.push(event.data);
   };

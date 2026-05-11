@@ -2,16 +2,15 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { default: Groq, toFile } = require('groq-sdk');
+const OpenAI = require('openai');
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 
 const app = express();
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-const GROQ_CHAT_MODEL = process.env.GROQ_CHAT_MODEL || 'openai/gpt-oss-20b';
-const GROQ_TRANSCRIPTION_MODEL = process.env.GROQ_TRANSCRIPTION_MODEL || 'whisper-large-v3-turbo';
-console.log('GROQ KEY loaded:', process.env.GROQ_API_KEY ? 'YES (length: ' + process.env.GROQ_API_KEY.length + ')' : 'MISSING');
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const OPENAI_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini';
+console.log('OPENAI KEY loaded:', process.env.OPENAI_API_KEY ? 'YES (length: ' + process.env.OPENAI_API_KEY.length + ')' : 'MISSING');
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(cors());
@@ -22,25 +21,25 @@ app.get('/health', (_req, res) => {
 });
 
 async function transcribeAudioBuffer(buffer, filename = 'audio.webm') {
-  const transcription = await groq.audio.transcriptions.create({
-    file: await toFile(buffer, filename),
-    model: GROQ_TRANSCRIPTION_MODEL,
-  });
-  return String(transcription.text || '');
+  const extension = path.extname(filename) || '.webm';
+  const filePath = path.join(os.tmpdir(), `talkwise-${Date.now()}-${Math.random().toString(16).slice(2)}${extension}`);
+  await fs.promises.writeFile(filePath, buffer);
+
+  try {
+    const transcription = await openai.audio.transcriptions.create({
+      file: fs.createReadStream(filePath),
+      model: 'whisper-1',
+    });
+    return String(transcription.text || '');
+  } finally {
+    fs.promises.unlink(filePath).catch(() => {});
+  }
 }
 
-async function analyzeTranscriptWithGroq(transcript, language = 'English') {
-  const completion = await groq.chat.completions.create({
-    model: GROQ_CHAT_MODEL,
-    temperature: 0.2,
-    messages: [
-      {
-        role: 'system',
-        content: `You are an expert parenting coach. Analyze parent-child conversations in ${language}. Return ONLY valid JSON.`,
-      },
-      {
-        role: 'user',
-        content: `Analyze this transcript and return exactly these fields:
+async function analyzeTranscriptWithOpenAI(transcript, language = 'English') {
+  const prompt = `You are an expert parenting coach. Analyze parent-child conversations in ${language}. Return ONLY valid JSON.
+
+Analyze this transcript and return exactly these fields:
 {
   "score": number between 0 and 100,
   "summary": "brief summary of the interaction",
@@ -53,17 +52,19 @@ async function analyzeTranscriptWithGroq(transcript, language = 'English') {
 Transcript:
 """
 ${String(transcript || '').slice(0, 8000)}
-"""`,
-      },
-    ],
+"""`;
+  const response = await openai.chat.completions.create({
+    model: OPENAI_CHAT_MODEL,
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.7,
   });
-  return completion.choices?.[0]?.message?.content || '';
+  return response.choices?.[0]?.message?.content || '';
 }
 
-app.get('/api/test-groq', async (_req, res) => {
+app.get('/api/test-openai', async (_req, res) => {
   try {
-    const result = await groq.chat.completions.create({
-      model: GROQ_CHAT_MODEL,
+    const result = await openai.chat.completions.create({
+      model: OPENAI_CHAT_MODEL,
       messages: [{ role: 'user', content: 'Say hello in one word' }],
     });
     res.json({
@@ -93,10 +94,10 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
     });
 
     const transcript = await transcribeAudioBuffer(audioFile.buffer, audioFile.originalname || 'audio.webm');
-    const raw = await analyzeTranscriptWithGroq(transcript);
-    console.log('Groq raw response:', raw);
+    const raw = await analyzeTranscriptWithOpenAI(transcript);
+    console.log('OpenAI raw response:', raw);
 
-    // Parse the JSON from Groq response
+    // Parse the JSON from OpenAI response
     let analysis = {};
     try {
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
@@ -117,7 +118,7 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
       safetyFlag: analysis.safetyFlag ?? false,
     });
   } catch (error) {
-    console.error('Groq error:', error);
+    console.error('OpenAI error:', error);
     return res.status(500).json({
       error: 'Transcription failed',
       details: error.message,
@@ -140,7 +141,7 @@ const fallbackSafety = {
   recommendation: 'No concerning content was detected.',
 };
 
-const callGroqWithTimeout = async (input, language = 'English', isSafetyCheck = false) => {
+const callOpenAIWithTimeout = async (input, language = 'English', isSafetyCheck = false) => {
   const timeoutPromise = new Promise((resolve) => {
     setTimeout(() => {
       resolve(isSafetyCheck ? JSON.stringify(fallbackSafety) : JSON.stringify(fallbackAnalysis));
@@ -158,22 +159,20 @@ const callGroqWithTimeout = async (input, language = 'English', isSafetyCheck = 
   "tips": ["string"]
 }`;
 
-  const groqPromise = (async () => {
-    const result = await groq.chat.completions.create({
-      model: GROQ_CHAT_MODEL,
-      temperature: 0.2,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: String(input || '').slice(0, 8000) },
-      ],
+  const openaiPromise = (async () => {
+    const prompt = `${systemPrompt}\n\n${String(input || '').slice(0, 8000)}`;
+    const result = await openai.chat.completions.create({
+      model: OPENAI_CHAT_MODEL,
+      temperature: 0.7,
+      messages: [{ role: 'user', content: prompt }],
     });
     return result.choices?.[0]?.message?.content || '';
   })();
 
-  return Promise.race([groqPromise, timeoutPromise]);
+  return Promise.race([openaiPromise, timeoutPromise]);
 };
 
-const parseGroqResponse = (rawText) => {
+const parseOpenAIResponse = (rawText) => {
   try {
     return JSON.parse(rawText);
   } catch {
@@ -195,10 +194,10 @@ const parseGroqResponse = (rawText) => {
 
 function extractSafeJson(rawText, transcript = '') {
   rawText = String(rawText || '').trim();
-  console.log('RAW GROQ RESPONSE:', rawText.substring(0, 600));
-  console.log('Groq raw response:', rawText.substring(0, 300));
+  console.log('RAW OPENAI RESPONSE:', rawText.substring(0, 600));
+  console.log('OpenAI raw response:', rawText.substring(0, 300));
 
-  const parsed = parseGroqResponse(rawText);
+  const parsed = parseOpenAIResponse(rawText);
   const score = typeof parsed.score === 'number' ? Math.max(0, Math.min(100, Math.round(parsed.score))) : 50;
   const strengths = Array.isArray(parsed.strengths) ? parsed.strengths : [];
   const improvements = Array.isArray(parsed.improvements) ? parsed.improvements : [];
@@ -229,10 +228,10 @@ app.post('/api/analyze', async (req, res) => {
     const languageNames = { en: 'English', ar: 'Arabic', tr: 'Turkish' };
     const langName = languageNames[language] || 'English';
 
-    const responseText = await callGroqWithTimeout(transcript, langName, false);
+    const responseText = await callOpenAIWithTimeout(transcript, langName, false);
     res.json(extractSafeJson(responseText, transcript));
   } catch (err) {
-    console.error('Groq error:', err);
+    console.error('OpenAI error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -245,7 +244,7 @@ app.post('/api/analyze-audio', async (req, res) => {
 
     const audioBuffer = Buffer.from(audioPayload, 'base64');
     const transcript = await transcribeAudioBuffer(audioBuffer, `audio.${String(mimeType || 'audio/webm').split('/')[1] || 'webm'}`);
-    const raw = await analyzeTranscriptWithGroq(transcript, promptLanguage);
+    const raw = await analyzeTranscriptWithOpenAI(transcript, promptLanguage);
 
     if (!transcript) {
       return res.json(extractSafeJson(JSON.stringify(fallbackAnalysis)));
@@ -253,7 +252,7 @@ app.post('/api/analyze-audio', async (req, res) => {
 
     res.json(extractSafeJson(raw, transcript));
   } catch (err) {
-    console.error('Groq audio error:', err);
+    console.error('OpenAI audio error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -283,8 +282,8 @@ Return ONLY this JSON, no extra text:
 
 If concerning content is found, set safe to false and severity to mild, moderate, or severe.`;
 
-    const responseText = await callGroqWithTimeout(safetyPrompt, 'English', true);
-    const parsed = parseGroqResponse(responseText);
+    const responseText = await callOpenAIWithTimeout(safetyPrompt, 'English', true);
+    const parsed = parseOpenAIResponse(responseText);
     const severityValues = ['none', 'mild', 'moderate', 'severe'];
 
     res.json({

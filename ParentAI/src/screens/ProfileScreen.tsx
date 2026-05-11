@@ -330,6 +330,10 @@ export const ProfileScreen: React.FC = () => {
     }
   };
 
+  const handleDarkModeToggle = async (value = !isDarkMode) => {
+    await setDarkMode(value);
+  };
+
   const changeLanguage = async (language: string) => {
     await setStorageItem(STORAGE_KEYS.speechLanguage, language);
     await setStorageItem(STORAGE_KEYS.languageChosen, 'true');
@@ -477,7 +481,11 @@ export const ProfileScreen: React.FC = () => {
             <MaterialIcons name="chevron-right" size={24} color="#C7C4D7" />
           </TouchableOpacity>
 
-          <View style={[styles.settingItem, styles.settingDivider]}>
+          <TouchableOpacity
+            style={[styles.settingItem, styles.settingDivider]}
+            onPress={() => handleDarkModeToggle()}
+            activeOpacity={0.82}
+          >
             <View style={styles.settingLeft}>
               <View style={styles.settingIconBox}>
                 <MaterialIcons name="dark-mode" size={22} color="#464554" />
@@ -487,8 +495,13 @@ export const ProfileScreen: React.FC = () => {
                 <Text style={styles.settingSubtitle}>Toggle visual theme</Text>
               </View>
             </View>
-            <Switch value={isDarkMode} onValueChange={setDarkMode} trackColor={{ false: '#E4E1ED', true: '#4648D4' }} thumbColor="#FFFFFF" />
-          </View>
+            <Switch
+              value={isDarkMode}
+              onValueChange={handleDarkModeToggle}
+              trackColor={{ false: '#E4E1ED', true: '#4648D4' }}
+              thumbColor="#FFFFFF"
+            />
+          </TouchableOpacity>
 
           <View style={[styles.settingItem, styles.settingDivider]}>
             <View style={styles.settingLeft}>
@@ -535,6 +548,36 @@ export const ProfileScreen: React.FC = () => {
 
         <Text style={styles.footerText}>TalkWise v1.0.0</Text>
       </ScrollView>
+
+      <Modal visible={showMicPicker} transparent animationType="slide" onRequestClose={() => setShowMicPicker(false)}>
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowMicPicker(false)}
+        >
+          <TouchableOpacity style={styles.modalCard} activeOpacity={1}>
+            <Text style={styles.modalTitle}>Select Microphone</Text>
+            {micOptions.map((mic) => (
+              <TouchableOpacity
+                key={mic.id}
+                style={styles.languageOption}
+                onPress={async () => {
+                  await selectMic(mic.id);
+                  setShowMicPicker(false);
+                }}
+              >
+                <Text style={styles.settingTitle}>{mic.name}</Text>
+                {selectedMicId === mic.id ? (
+                  <MaterialIcons name="check" size={20} color="#4648D4" />
+                ) : null}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={styles.modalSecondaryButton} onPress={() => setShowMicPicker(false)}>
+              <Text style={styles.modalSecondaryText}>{t('common_cancel')}</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
       <Modal visible={showLanguageModal} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
