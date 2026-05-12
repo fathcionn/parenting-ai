@@ -8,7 +8,6 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Alert,
-    I18nManager,
     Image,
     Linking,
     Modal,
@@ -26,6 +25,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Button } from '../components/Button';
 import { Card, Container } from '../components/Layout';
+import { setLanguage } from '../config/i18n';
 import { auth, db, storage } from '../config/firebase-config';
 import { useAppTheme } from '../context/ThemeContext';
 import { getStorageItem, setStorageItem, STORAGE_KEYS } from '../services/storageKeys';
@@ -335,11 +335,7 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const changeLanguage = async (language: string) => {
-    await setStorageItem(STORAGE_KEYS.speechLanguage, language);
-    await setStorageItem(STORAGE_KEYS.languageChosen, 'true');
-    await AsyncStorage.setItem('app-language', language);
-    await i18n.changeLanguage(language);
-    I18nManager.forceRTL(language === 'ar');
+    await setLanguage(language);
     setCurrentLanguage(language);
     setShowLanguageModal(false);
   };
@@ -582,11 +578,11 @@ export const ProfileScreen: React.FC = () => {
       <Modal visible={showLanguageModal} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Language</Text>
+            <Text style={styles.modalTitle}>{t('lang_select')}</Text>
             {[
-              { code: 'en', label: 'English' },
-              { code: 'ar', label: 'Arabic' },
-              { code: 'tr', label: 'Turkish' },
+              { code: 'en', label: t('lang_english') },
+              { code: 'ar', label: t('lang_arabic') },
+              { code: 'tr', label: t('lang_turkish') },
             ].map((language) => (
               <TouchableOpacity
                 key={language.code}
@@ -636,16 +632,11 @@ export const ProfileScreen: React.FC = () => {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{t('profile_add_child')}</Text>
-            <TouchableOpacity style={styles.photoButton} onPress={pickChildPhoto}>
-              <Text style={styles.photoButtonText}>
-                {childPhotoUri ? 'Photo selected ✓' : 'Upload child photo'}
-              </Text>
-            </TouchableOpacity>
             <TextInput
               value={childName}
               onChangeText={setChildName}
               placeholder="Child name"
-            placeholderTextColor={COLORS.textFaint}
+              placeholderTextColor={COLORS.textFaint}
               style={styles.modalInput}
             />
             <TextInput
@@ -653,44 +644,6 @@ export const ProfileScreen: React.FC = () => {
               onChangeText={setChildAge}
               placeholder="Age"
               placeholderTextColor={COLORS.textFaint}
-              keyboardType="numeric"
-              style={styles.modalInput}
-            />
-            <TextInput
-              value={physicalDescription}
-              onChangeText={setPhysicalDescription}
-              placeholder="Physical description"
-              placeholderTextColor={COLORS.textFaint}
-              style={styles.modalInput}
-            />
-            <TextInput
-              value={emergencyContact}
-              onChangeText={setEmergencyContact}
-              placeholder="Emergency contact number"
-              placeholderTextColor={COLORS.textFaint}
-              keyboardType="phone-pad"
-              style={styles.modalInput}
-            />
-            <TextInput
-              value={medicalNotes}
-              onChangeText={setMedicalNotes}
-              placeholder="Medical notes / allergies"
-              placeholderTextColor={COLORS.textFaint}
-              multiline
-              style={[styles.modalInput, styles.multilineInput]}
-            />
-            <TextInput
-              value={schoolName}
-              onChangeText={setSchoolName}
-              placeholder="School name"
-            placeholderTextColor={COLORS.textFaint}
-              style={styles.modalInput}
-            />
-            <TextInput
-              value={safeZoneRadius}
-              onChangeText={setSafeZoneRadius}
-              placeholder="Safe zone radius in meters"
-            placeholderTextColor={COLORS.textFaint}
               keyboardType="numeric"
               style={styles.modalInput}
             />

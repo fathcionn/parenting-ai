@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  I18nManager,
   Image,
   Modal,
   Pressable,
@@ -9,10 +8,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { getStorageItem, setStorageItem, STORAGE_KEYS } from '../services/storageKeys';
+import { setLanguage } from '../config/i18n';
+import { getStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 import { COLORS } from '../theme/colors';
 
 type SpeechLanguage = 'en' | 'ar' | 'tr';
@@ -53,12 +52,8 @@ export function HeaderLanguageButton() {
 
   const selectLanguage = async (langCode: SpeechLanguage) => {
     setSelectedLanguage(langCode);
-    await setStorageItem(STORAGE_KEYS.speechLanguage, langCode);
-    await setStorageItem(STORAGE_KEYS.languageChosen, 'true');
-    await AsyncStorage.setItem('app-language', langCode);
-    await i18n.changeLanguage(langCode);
+    await setLanguage(langCode);
     setDocumentLanguage(langCode);
-    I18nManager.forceRTL(langCode === 'ar');
     setModalVisible(false);
   };
 

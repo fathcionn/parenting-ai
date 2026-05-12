@@ -17,6 +17,10 @@ interface AppState {
   // Coaching
   coachingEnabled: boolean;
 
+  // Preferences
+  isDarkMode: boolean;
+  language: 'en' | 'ar' | 'tr';
+
   // Actions
   login: () => void;
   logout: () => void;
@@ -25,6 +29,8 @@ interface AppState {
   removeChild: (id: string) => void;
   selectChild: (id: string | null) => void;
   toggleCoaching: () => void;
+  setDarkMode: (value: boolean) => void;
+  setLanguage: (language: 'en' | 'ar' | 'tr') => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -37,6 +43,8 @@ export const useAppStore = create<AppState>((set) => ({
   reports: [],
 
   coachingEnabled: false,
+  isDarkMode: false,
+  language: 'en',
 
   login: () => set({ isAuthenticated: true }),
   logout: () => set({ isAuthenticated: false }),
@@ -53,4 +61,6 @@ export const useAppStore = create<AppState>((set) => ({
 
   selectChild: (id) => set({ selectedChildId: id }),
   toggleCoaching: () => set((state) => ({ coachingEnabled: !state.coachingEnabled })),
+  setDarkMode: (value) => set({ isDarkMode: value }),
+  setLanguage: (language) => set({ language }),
 }));

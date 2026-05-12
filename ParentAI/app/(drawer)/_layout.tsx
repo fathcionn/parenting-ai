@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/theme';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { HeaderLanguageButton } from '../../src/components/HeaderLanguageButton';
+import { useAppTheme } from '../../src/context/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -196,12 +197,13 @@ const drawerItems: Array<{
   { label: 'Sessions', route: 'history', icon: 'time-outline' },
   { label: 'Insights', route: 'insights', icon: 'analytics-outline' },
   { label: 'Achievements', route: 'achievements', icon: 'trophy-outline' },
-  { label: 'Children', route: 'child-location', icon: 'happy-outline' },
+  { label: 'Child Location', route: 'child-location', icon: 'location-outline' },
   { label: 'Settings', route: 'profile', icon: 'settings-outline' },
 ];
 
 function CustomDrawerContent({ navigation, state }: DrawerContentComponentProps) {
   const router = useRouter();
+  const appTheme = useAppTheme();
   const user = auth.currentUser;
   const profile = useAuthStore((store) => store.profile);
   const displayName = profile?.displayName || user?.displayName || 'Parent Account';
@@ -220,9 +222,14 @@ function CustomDrawerContent({ navigation, state }: DrawerContentComponentProps)
   };
 
   return (
-    <SafeAreaView style={styles.drawerSafeArea}>
-      <View style={styles.drawerContainer}>
-        <View style={styles.drawerHeader}>
+    <SafeAreaView style={[styles.drawerSafeArea, { backgroundColor: appTheme.colors.background }]}>
+      <View
+        style={[
+          styles.drawerContainer,
+          { backgroundColor: appTheme.colors.background, borderRightColor: appTheme.colors.border },
+        ]}
+      >
+        <View style={[styles.drawerHeader, { borderBottomColor: appTheme.colors.border }]}>
           {photoURL ? (
             <Image source={{ uri: photoURL }} style={styles.avatarImage} resizeMode="cover" />
           ) : (
@@ -232,7 +239,7 @@ function CustomDrawerContent({ navigation, state }: DrawerContentComponentProps)
           )}
           <View style={styles.headerInfo}>
             <Text style={styles.accountName}>Parent Account</Text>
-            <Text style={styles.accountPlan}>TalkWise Premium</Text>
+            <Text style={[styles.accountPlan, { color: appTheme.colors.muted }]}>TalkWise Premium</Text>
             <View style={styles.statusPill}>
               <Text style={styles.statusText}>Active Member</Text>
             </View>
@@ -257,18 +264,24 @@ function CustomDrawerContent({ navigation, state }: DrawerContentComponentProps)
                   <MaterialIcons
                     name={item.materialIcon}
                     size={28}
-                    color={isActive ? '#FFFFFF' : DRAWER_COLORS.text}
+                  color={isActive ? '#FFFFFF' : appTheme.colors.text}
                     style={styles.drawerItemIcon}
                   />
                 ) : (
                   <Ionicons
                     name={item.icon}
                     size={28}
-                    color={isActive ? '#FFFFFF' : DRAWER_COLORS.text}
+                    color={isActive ? '#FFFFFF' : appTheme.colors.text}
                     style={styles.drawerItemIcon}
                   />
                 )}
-                <Text style={[styles.drawerItemText, isActive && styles.drawerItemTextActive]}>
+                <Text
+                  style={[
+                    styles.drawerItemText,
+                    { color: appTheme.colors.text },
+                    isActive && styles.drawerItemTextActive,
+                  ]}
+                >
                   {item.label}
                 </Text>
               </TouchableOpacity>
@@ -276,7 +289,7 @@ function CustomDrawerContent({ navigation, state }: DrawerContentComponentProps)
           })}
         </ScrollView>
 
-        <View style={styles.drawerFooter}>
+        <View style={[styles.drawerFooter, { borderTopColor: appTheme.colors.border }]}>
           <TouchableOpacity style={styles.logoutItem} onPress={handleLogout} activeOpacity={0.82}>
             <Ionicons name="log-out-outline" size={30} color={DRAWER_COLORS.danger} />
             <Text style={styles.logoutText}>Logout</Text>
@@ -289,6 +302,7 @@ function CustomDrawerContent({ navigation, state }: DrawerContentComponentProps)
 
 export default function DrawerLayout() {
   const { t } = useTranslation();
+  const appTheme = useAppTheme();
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -307,7 +321,7 @@ export default function DrawerLayout() {
           headerTitle: '',
           headerShadowVisible: false,
           headerStyle: {
-            backgroundColor: '#FCF8FF',
+            backgroundColor: appTheme.colors.background,
             borderBottomWidth: 0,
             shadowColor: 'transparent',
             shadowOpacity: 0,
@@ -326,10 +340,10 @@ export default function DrawerLayout() {
           ),
           headerTintColor: Colors.text,
           drawerStyle: {
-            backgroundColor: Colors.backgroundCard,
+            backgroundColor: appTheme.colors.background,
             borderBottomRightRadius: 16,
             borderTopRightRadius: 16,
-            borderRightColor: '#E4E1ED',
+            borderRightColor: appTheme.colors.border,
             borderRightWidth: 1,
             width: 300,
           },

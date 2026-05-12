@@ -1,22 +1,31 @@
 ﻿import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Animated,
   Platform,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TouchableOpacity,
   View,
   useWindowDimensions,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth, db } from '../config/firebase-config';
+import { startRecording, stopRecording, transcribeAndAnalyze } from '../services/geminiAudio';
+import { saveToHistory } from '../services/history-service';
 import { setMode } from '../services/recordingState';
-import { STORAGE_KEYS } from '../services/storageKeys';
+import { checkSessionSafety, notifySafetyFlag, saveSafetyFlag } from '../services/safety-service';
+import { getStorageItem, STORAGE_KEYS } from '../services/storageKeys';
+import { useCoachingStore } from '../stores/coaching-store';
+import {
+  calculateParentingScore,
+  type CoachingReport,
+  type ParentingAnalysis,
+} from '../types/analysis';
 import { getSessionTag, reportScoreFromData, toReportDate } from '../utils/reportUtils';
 
 const COLORS = {
@@ -36,6 +45,8 @@ const COLORS = {
   streak: '#904900',
   leo: '#6366F1',
   mia: '#8B5CF6',
+  danger: '#BA1A1A',
+  dangerSoft: '#FEE2E2',
 };
 
 const shadowSm = Platform.select({
@@ -77,6 +88,23 @@ type RecentSession = {
   dateLabel: string;
   score: number;
 };
+
+function normalizeAnalysis(result: any): ParentingAnalysis {
+  return {
+    tone: result.tone || 'calm',
+    confidence: Number(result.confidence || 0),
+    emotional_intensity: Number(result.emotional_intensity || 0),
+    parenting_style: result.parenting_style || 'authoritative',
+    detected_issues: Array.isArray(result.detected_issues) ? result.detected_issues : [],
+    suggestions: Array.isArray(result.suggestions) ? result.suggestions : [],
+    impact_analysis: String(result.impact_analysis || result.summary || ''),
+    positive_notes: Array.isArray(result.positive_notes)
+      ? result.positive_notes
+      : Array.isArray(result.strengths)
+      ? result.strengths
+      : [],
+  };
+}
 
 function StatCard({
   icon,
@@ -143,11 +171,39 @@ function SessionCard({
 export const HomeScreen: React.FC = () => {
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const { setCurrentAnalysis } = useCoachingStore();
   const isWide = width >= 768;
   const isDesktop = width > 1024;
   const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
   const [recentLoading, setRecentLoading] = useState(true);
-  const [backgroundAssistantEnabled, setBackgroundAssistantEnabled] = useState(false);
+  const [isBackgroundRecording, setIsBackgroundRecording] = useState(false);
+  const [isBackgroundProcessing, setIsBackgroundProcessing] = useState(false);
+  const backgroundStartRef = useRef(0);
+  const pulseValue = useRef(new Animated.Value(0.45)).current;
+
+  useEffect(() => {
+    if (!isBackgroundRecording) {
+      pulseValue.setValue(0.45);
+      return;
+    }
+
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseValue, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseValue, {
+          toValue: 0.45,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [isBackgroundRecording, pulseValue]);
 
   useEffect(() => {
     let mounted = true;
@@ -197,10 +253,127 @@ export const HomeScreen: React.FC = () => {
     };
   }, []);
 
-  const toggleBackgroundAssistant = async (value: boolean) => {
-    setBackgroundAssistantEnabled(value);
-    setMode(value ? 'background' : 'idle');
-    await AsyncStorage.setItem(STORAGE_KEYS.autoMonitor, value ? 'true' : 'false');
+  const runBackgroundSafetyCheck = (report: CoachingReport) => {
+    checkSessionSafety(report.transcript)
+      .then(async (safety) => {
+        if (!safety.safe) {
+          await saveSafetyFlag(report.id, safety);
+          await notifySafetyFlag(report.id, safety, () =>
+            router.push({
+              pathname: '/(drawer)/report-detail' as any,
+              params: { id: report.id },
+            })
+          );
+        }
+      })
+      .catch((error) => {
+        console.warn('Background safety check failed:', error);
+      });
+  };
+
+  const handleBackgroundCoachPress = async () => {
+    if (isBackgroundProcessing) return;
+
+    if (!isBackgroundRecording) {
+      try {
+        const lang = (await getStorageItem(STORAGE_KEYS.speechLanguage)) || 'en';
+        await startRecording(undefined, lang);
+        backgroundStartRef.current = Date.now();
+        setMode('background');
+        setIsBackgroundRecording(true);
+      } catch (error: any) {
+        Alert.alert(
+          'Microphone Unavailable',
+          error?.message || 'Please allow microphone access and try again.'
+        );
+      }
+      return;
+    }
+
+    setIsBackgroundProcessing(true);
+    try {
+      const audioData = await stopRecording();
+      setIsBackgroundRecording(false);
+      setMode('idle');
+
+      if (typeof audioData !== 'string' && audioData.size < 1000) {
+        Alert.alert('Recording Too Short', 'Please record while speaking clearly, then try again.');
+        return;
+      }
+
+      const lang = (await getStorageItem(STORAGE_KEYS.speechLanguage)) || 'en';
+      const result = await transcribeAndAnalyze(audioData, lang);
+      const normalizedAnalysis = normalizeAnalysis(result);
+      const transcriptText = String(result?.transcript || '');
+
+      if (transcriptText.trim().length < 2) {
+        Alert.alert('No Speech Detected', 'Speak clearly and try again.');
+        return;
+      }
+
+      const reportId = `background_${Date.now()}`;
+      const summary = String(result.summary || normalizedAnalysis.impact_analysis || '');
+      const strengths = Array.isArray(result.strengths)
+        ? result.strengths
+        : normalizedAnalysis.positive_notes;
+      const improvements = Array.isArray(result.improvements)
+        ? result.improvements
+        : normalizedAnalysis.detected_issues;
+      const tips = Array.isArray(result.tips) ? result.tips : normalizedAnalysis.suggestions;
+      const report: CoachingReport = {
+        id: reportId,
+        createdAt: new Date().toISOString(),
+        durationSeconds: Math.max(1, Math.round((Date.now() - backgroundStartRef.current) / 1000)),
+        audioUri: typeof audioData === 'string' ? audioData : null,
+        transcript: transcriptText,
+        language: lang,
+        mode: 'background',
+        analysis: normalizedAnalysis,
+        parentingScore: calculateParentingScore(normalizedAnalysis),
+        childId: null,
+        childName: null,
+        tag: 'background',
+        summary,
+        strengths,
+        improvements,
+        tips,
+        safetyFlag: result.safetyFlag
+          ? {
+              severity: 'mild',
+              detected: [],
+              recommendation: 'Review the coaching tips for this background session.',
+            }
+          : null,
+      };
+
+      setCurrentAnalysis(report);
+      saveToHistory(report)
+        .then(() => runBackgroundSafetyCheck(report))
+        .catch((error) => {
+          console.warn('Background report save failed:', error);
+          runBackgroundSafetyCheck(report);
+        });
+
+      router.replace({
+        pathname: '/(drawer)/session-results' as any,
+        params: {
+          reportId,
+          safetyFlag: String(result.safetyFlag ?? false),
+          childName: '',
+          sessionTag: 'Background',
+          durationSeconds: String(report.durationSeconds),
+        },
+      });
+    } catch (error: any) {
+      Alert.alert(
+        'Background Coach Failed',
+        error?.message || 'Could not analyze your background recording. Please try again.'
+      );
+      setIsBackgroundRecording(false);
+      setMode('idle');
+    } finally {
+      setIsBackgroundProcessing(false);
+    }
   };
 
   return (
@@ -264,18 +437,35 @@ export const HomeScreen: React.FC = () => {
         </TouchableOpacity>
 
         <View style={[styles.backgroundCoachGroup, isDesktop && styles.actionButtonDesktop]}>
-          <View style={[styles.backgroundToggleCard, styles.secondaryActionButton]}>
-            <View style={styles.backgroundToggleCopy}>
+          <TouchableOpacity
+            style={[
+              styles.backgroundCoachButton,
+              isBackgroundRecording && styles.backgroundCoachButtonActive,
+            ]}
+            activeOpacity={0.88}
+            onPress={handleBackgroundCoachPress}
+            disabled={isBackgroundProcessing}
+          >
+            {isBackgroundProcessing ? (
+              <ActivityIndicator color={COLORS.purple} />
+            ) : isBackgroundRecording ? (
+              <Animated.View style={[styles.recordingPulse, { opacity: pulseValue }]} />
+            ) : (
               <MaterialIcons name="settings-voice" size={24} color={COLORS.purple} />
-              <Text style={styles.secondaryActionButtonText}>Enable Background Coach</Text>
-            </View>
-            <Switch
-              value={backgroundAssistantEnabled}
-              onValueChange={toggleBackgroundAssistant}
-              trackColor={{ false: '#D8D4E5', true: '#C4B5FD' }}
-              thumbColor={backgroundAssistantEnabled ? COLORS.purple : '#FFFFFF'}
-            />
-          </View>
+            )}
+            <Text
+              style={[
+                styles.secondaryActionButtonText,
+                isBackgroundRecording && styles.backgroundCoachButtonTextActive,
+              ]}
+            >
+              {isBackgroundProcessing
+                ? 'Analyzing Background Coach'
+                : isBackgroundRecording
+                ? 'Stop Background Coach'
+                : 'Enable Background Coach'}
+            </Text>
+          </TouchableOpacity>
 
           <View style={styles.privacyNote}>
             <MaterialIcons name="lock-outline" size={14} color="#767586" />
@@ -504,6 +694,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFECF8',
     borderColor: '#D8B4FE',
     borderWidth: 1,
+  },
+  backgroundCoachButton: {
+    width: '100%',
+    minHeight: 60,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 22,
+    paddingVertical: 16,
+    backgroundColor: '#EFECF8',
+    borderColor: '#D8B4FE',
+    borderWidth: 1,
+  },
+  backgroundCoachButtonActive: {
+    backgroundColor: COLORS.danger,
+    borderColor: COLORS.danger,
+    ...shadowSm,
+  },
+  backgroundCoachButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  recordingPulse: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 3,
+    borderColor: COLORS.dangerSoft,
   },
   backgroundToggleCard: {
     width: '100%',

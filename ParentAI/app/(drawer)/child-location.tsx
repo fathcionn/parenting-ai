@@ -122,6 +122,7 @@ export default function ChildLocationScreen() {
   const [children, setChildren] = useState<ChildRecord[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
+  const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
 
   const loadChildren = useCallback(async () => {
     const user = auth.currentUser;
@@ -160,6 +161,25 @@ export default function ChildLocationScreen() {
     return () => clearInterval(interval);
   }, [loadChildren]);
 
+  useEffect(() => {
+    let mounted = true;
+    Location.requestForegroundPermissionsAsync()
+      .then(({ status }) => {
+        if (!mounted) return;
+        setLocationPermission(status);
+        if (status !== 'granted') {
+          setStatusMessage('Location permission is needed to share or refresh location.');
+        }
+      })
+      .catch((error) => {
+        console.warn('Location permission request failed:', error);
+        if (mounted) setStatusMessage('Could not request location permission.');
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const selectedChild = useMemo(
     () => children.find((child) => child.id === selectedChildId) || children[0] || null,
     [children, selectedChildId]
@@ -181,29 +201,41 @@ export default function ChildLocationScreen() {
 
   const shareLocation = async () => {
     const user = auth.currentUser;
-    if (!user || !selectedChild) return;
-
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      setStatusMessage('Location permission was denied.');
+    if (!user || !selectedChild) {
+      setStatusMessage('Select a child before sharing location.');
       return;
     }
 
-    const location = await Location.getCurrentPositionAsync({});
-    await setDoc(
-      doc(db, 'users', user.uid, 'children', selectedChild.id),
-      {
-        lastLocation: {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          timestamp: serverTimestamp(),
-          accuracy: location.coords.accuracy,
+    try {
+      const { status } =
+        locationPermission === 'granted'
+          ? { status: locationPermission }
+          : await Location.requestForegroundPermissionsAsync();
+      setLocationPermission(status);
+      if (status !== 'granted') {
+        setStatusMessage('Location permission was denied.');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      await setDoc(
+        doc(db, 'users', user.uid, 'children', selectedChild.id),
+        {
+          lastLocation: {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            timestamp: serverTimestamp(),
+            accuracy: location.coords.accuracy,
+          },
         },
-      },
-      { merge: true }
-    );
-    setStatusMessage('Location shared successfully.');
-    await loadChildren();
+        { merge: true }
+      );
+      setStatusMessage('Location shared successfully.');
+      await loadChildren();
+    } catch (error) {
+      console.error('Share location failed:', error);
+      setStatusMessage('Could not share location. Please try again.');
+    }
   };
 
   const callParent = () => {
@@ -212,11 +244,25 @@ export default function ChildLocationScreen() {
       setStatusMessage('No emergency contact saved for this child.');
       return;
     }
-    Linking.openURL(`tel:${number}`);
+    Linking.openURL(`tel:${number}`).catch((error) => {
+      console.warn('Phone dialer failed:', error);
+      setStatusMessage('Could not open the phone dialer.');
+    });
   };
 
   const focusChild = (child: ChildRecord) => {
     setSelectedChildId(child.id);
+  };
+
+  const refreshLocations = async () => {
+    try {
+      setStatusMessage('Refreshing locations...');
+      await loadChildren();
+      setStatusMessage('Locations refreshed.');
+    } catch (error) {
+      console.error('Refresh locations failed:', error);
+      setStatusMessage('Could not refresh locations.');
+    }
   };
 
   const showSafeZoneInfo = () => {
@@ -243,7 +289,7 @@ export default function ChildLocationScreen() {
             home, school, or any safe zone you set.
           </Text>
 
-          <TouchableOpacity style={styles.addButton} onPress={() => router.push('/profile' as any)}>
+        <TouchableOpacity style={styles.addButton} onPress={() => router.push('/(drawer)/profile' as any)}>
             <Text style={styles.addButtonText}>Go to Settings to Add a Child</Text>
           </TouchableOpacity>
 
@@ -265,7 +311,7 @@ export default function ChildLocationScreen() {
           <MaterialIcons name="menu" size={24} color={UI.text} />
         </TouchableOpacity>
         <Text style={styles.screenTitle}>Child Location {'\u{1F4CD}'}{'\n'}Beta</Text>
-        <TouchableOpacity style={styles.profileButton} activeOpacity={0.8} onPress={() => router.push('/profile' as any)}>
+        <TouchableOpacity style={styles.profileButton} activeOpacity={0.8} onPress={() => router.push('/(drawer)/profile' as any)}>
           <MaterialIcons name="person-outline" size={23} color={UI.subtext} />
         </TouchableOpacity>
       </View>
@@ -296,7 +342,7 @@ export default function ChildLocationScreen() {
             </TouchableOpacity>
           );
         })}
-        <TouchableOpacity style={styles.addPill} activeOpacity={0.82} onPress={() => router.push('/profile' as any)}>
+        <TouchableOpacity style={styles.addPill} activeOpacity={0.82} onPress={() => router.push('/(drawer)/profile' as any)}>
           <Text style={styles.addPillText}>Add</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -325,7 +371,7 @@ export default function ChildLocationScreen() {
         />
 
         <View style={styles.mapControls}>
-          <TouchableOpacity style={styles.mapControlButton} activeOpacity={0.8} onPress={() => selectedChild && focusChild(selectedChild)}>
+          <TouchableOpacity style={styles.mapControlButton} activeOpacity={0.8} onPress={refreshLocations}>
             <MaterialIcons name="my-location" size={21} color={UI.text} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.mapControlButton} activeOpacity={0.8} onPress={showSafeZoneInfo}>
@@ -372,6 +418,10 @@ export default function ChildLocationScreen() {
           <TouchableOpacity style={styles.callButton} onPress={callParent} activeOpacity={0.82}>
             <MaterialIcons name="phone" size={18} color="#FFFFFF" />
             <Text style={styles.callButtonText}>Call Parent Now</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.shareButton} onPress={showSafeZoneInfo} activeOpacity={0.82}>
+            <MaterialIcons name="add-location-alt" size={18} color={UI.text} />
+            <Text style={styles.shareButtonText}>Set Safe Zone</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -2,12 +2,12 @@ import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { I18nManager, Platform } from 'react-native';
-import * as Updates from 'expo-updates';
 
 import enTranslations from '../locales/en.json';
 import arTranslations from '../locales/ar.json';
 import trTranslations from '../locales/tr.json';
 import { getStorageItem, setStorageItem, STORAGE_KEYS } from '../services/storageKeys';
+import { useAppStore } from '../stores/app-store';
 
 const resources = {
   en: { translation: enTranslations },
@@ -22,7 +22,18 @@ function setDocumentLanguage(lang: string) {
   }
 }
 
-// Initialize without waiting for async storage, we update it right after
+function normalizeLanguage(lang: string | null | undefined) {
+  if (lang?.startsWith('ar')) return 'ar';
+  if (lang?.startsWith('tr')) return 'tr';
+  return 'en';
+}
+
+function applyRTL(lang: string) {
+  const isRTL = lang === 'ar';
+  I18nManager.allowRTL(isRTL);
+  I18nManager.forceRTL(isRTL);
+}
+
 i18next.use(initReactI18next).init({
   resources,
   fallbackLng: 'en',
@@ -39,17 +50,24 @@ export const initLanguage = async () => {
     }
 
     const userChoseLang = await getStorageItem(STORAGE_KEYS.languageChosen);
+    const appLanguage = await AsyncStorage.getItem('app-language');
+    const savedSpeechLanguage = await getStorageItem(STORAGE_KEYS.speechLanguage);
+    const saved = normalizeLanguage(appLanguage || savedSpeechLanguage || 'en');
 
-    if (!userChoseLang) {
+    if (!userChoseLang && !appLanguage && !savedSpeechLanguage) {
       await setStorageItem(STORAGE_KEYS.speechLanguage, 'en');
+      await AsyncStorage.setItem('app-language', 'en');
       await i18next.changeLanguage('en');
+      useAppStore.getState().setLanguage('en');
       setDocumentLanguage('en');
-      if (typeof I18nManager !== 'undefined') I18nManager.forceRTL(false);
+      applyRTL('en');
     } else {
-      const saved = await getStorageItem(STORAGE_KEYS.speechLanguage) || 'en';
+      await setStorageItem(STORAGE_KEYS.speechLanguage, saved);
+      await AsyncStorage.setItem('app-language', saved);
       await i18next.changeLanguage(saved);
+      useAppStore.getState().setLanguage(saved);
       setDocumentLanguage(saved);
-      if (typeof I18nManager !== 'undefined') I18nManager.forceRTL(saved === 'ar');
+      applyRTL(saved);
     }
   } catch (e) {
     console.error('Error initializing language:', e);
@@ -58,26 +76,20 @@ export const initLanguage = async () => {
 
 export const setLanguage = async (lang: string) => {
   try {
-    await AsyncStorage.setItem('app-language', lang);
-    await setStorageItem(STORAGE_KEYS.speechLanguage, lang);
+    const normalizedLang = normalizeLanguage(lang);
+    await AsyncStorage.setItem('app-language', normalizedLang);
+    await setStorageItem(STORAGE_KEYS.speechLanguage, normalizedLang);
     await setStorageItem(STORAGE_KEYS.languageChosen, 'true');
-    setDocumentLanguage(lang);
-    const isRTL = lang === 'ar';
-    
-    if (I18nManager.isRTL !== isRTL) {
-      I18nManager.allowRTL(isRTL);
-      I18nManager.forceRTL(isRTL);
-      Updates.reloadAsync();
-    } else {
-      await i18next.changeLanguage(lang);
-    }
+    await i18next.changeLanguage(normalizedLang);
+    useAppStore.getState().setLanguage(normalizedLang);
+    setDocumentLanguage(normalizedLang);
+    applyRTL(normalizedLang);
   } catch (e) {
     console.error('Error setting language:', e);
   }
 };
 
-// Start initialization
-initLanguage();
+export const languageReady = initLanguage();
 
 export default i18next;
 

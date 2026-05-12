@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
-  I18nManager,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -13,7 +12,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -25,8 +23,9 @@ import {
   signInWithPopup,
 } from 'firebase/auth';
 import { auth } from '../config/firebase-config';
+import { setLanguage } from '../config/i18n';
 import { useAuthStore } from '../stores/auth-store';
-import { getStorageItem, setStorageItem, STORAGE_KEYS } from '../services/storageKeys';
+import { getStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 
 const languages = [
   { code: 'en', label: 'English', flagUrl: 'https://flagcdn.com/w40/us.png' },
@@ -56,7 +55,7 @@ function setDocumentLanguage(langCode: string) {
 }
 
 export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'login' }) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -78,12 +77,8 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
   }, []);
 
   async function changeLanguage(langCode: string) {
-    await setStorageItem(STORAGE_KEYS.speechLanguage, langCode);
-    await setStorageItem(STORAGE_KEYS.languageChosen, 'true');
-    await AsyncStorage.setItem('app-language', langCode);
-    await i18n.changeLanguage(langCode);
+    await setLanguage(langCode);
     setDocumentLanguage(langCode);
-    if (typeof I18nManager !== 'undefined') I18nManager.forceRTL(langCode === 'ar');
     setCurrentLang(langCode);
     setShowLangModal(false);
   }

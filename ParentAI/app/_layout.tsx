@@ -11,11 +11,10 @@ import { I18nextProvider } from 'react-i18next';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import 'react-native-reanimated';
-import i18n from '../src/config/i18n';
+import i18n, { languageReady } from '../src/config/i18n';
 import { auth, db } from '../src/config/firebase-config';
 import { useAuthStore } from '../src/stores/auth-store';
-import { theme } from '../src/styles/theme';
-import { ThemeProvider } from '../src/context/ThemeContext';
+import { ThemeProvider, useAppTheme } from '../src/context/ThemeContext';
 
 export {
   ErrorBoundary,
@@ -58,6 +57,36 @@ async function registerForPushNotifications(userId: string) {
   }
 }
 
+function RootStack() {
+  const appTheme = useAppTheme();
+
+  return (
+    <View style={{ flex: 1, backgroundColor: appTheme.colors.background }}>
+      <StatusBar style={appTheme.isDarkMode ? 'light' : 'dark'} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: appTheme.colors.background },
+          animation: 'fade',
+        }}
+      >
+        <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
+        <Stack.Screen name="history/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ presentation: 'fullScreenModal' }} />
+        <Stack.Screen name="signup" options={{ presentation: 'fullScreenModal' }} />
+        <Stack.Screen
+          name="modal"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+      </Stack>
+    </View>
+  );
+}
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
@@ -65,6 +94,7 @@ export default function RootLayout() {
   });
 
   const [isInitialized, setIsInitialized] = useState(false);
+  const [languageInitialized, setLanguageInitialized] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const { user, setUser } = useAuthStore();
   const router = useRouter();
@@ -87,23 +117,33 @@ export default function RootLayout() {
   }, [setUser]);
 
   useEffect(() => {
-    if (loaded && isInitialized) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded, isInitialized]);
+    let mounted = true;
+    languageReady.finally(() => {
+      if (mounted) setLanguageInitialized(true);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
-    if (!loaded || !isInitialized || onboardingChecked) return;
+    if (loaded && isInitialized && languageInitialized) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded, isInitialized, languageInitialized]);
+
+  useEffect(() => {
+    if (!loaded || !isInitialized || !languageInitialized || onboardingChecked) return;
     AsyncStorage.getItem('onboardingComplete').then((value) => {
       setOnboardingChecked(true);
       if (!value && String(segments[0]) !== 'onboarding') {
         router.replace('/onboarding' as any);
       }
     });
-  }, [isInitialized, loaded, onboardingChecked, router, segments]);
+  }, [isInitialized, languageInitialized, loaded, onboardingChecked, router, segments]);
 
   useEffect(() => {
-    if (!loaded || !isInitialized || !onboardingChecked) return;
+    if (!loaded || !isInitialized || !languageInitialized || !onboardingChecked) return;
 
     const firstSegment = String(segments[0] || '');
     const isAuthRoute = firstSegment === 'login' || firstSegment === 'signup';
@@ -118,38 +158,16 @@ export default function RootLayout() {
     if (user && isAuthRoute) {
       router.replace('/(drawer)' as any);
     }
-  }, [isInitialized, loaded, onboardingChecked, router, segments, user]);
+  }, [isInitialized, languageInitialized, loaded, onboardingChecked, router, segments, user]);
 
-  if (!loaded || !isInitialized) {
+  if (!loaded || !isInitialized || !languageInitialized) {
     return null;
   }
 
   return (
     <I18nextProvider i18n={i18n}>
       <ThemeProvider>
-        <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-          <StatusBar style="dark" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: theme.colors.background },
-              animation: 'fade',
-            }}
-          >
-            <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal' }} />
-            <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
-            <Stack.Screen name="history/[id]" options={{ headerShown: false }} />
-            <Stack.Screen name="login" options={{ presentation: 'fullScreenModal' }} />
-            <Stack.Screen name="signup" options={{ presentation: 'fullScreenModal' }} />
-            <Stack.Screen
-              name="modal"
-              options={{
-                presentation: 'modal',
-                animation: 'slide_from_bottom',
-              }}
-            />
-          </Stack>
-        </View>
+        <RootStack />
       </ThemeProvider>
     </I18nextProvider>
   );

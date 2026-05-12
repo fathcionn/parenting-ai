@@ -1,11 +1,120 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 import { getAuth } from 'firebase/auth';
-import { collection, doc, serverTimestamp, deleteDoc, setDoc } from 'firebase/firestore';
+import { Alert, Platform } from 'react-native';
+import { collection, doc, serverTimestamp, deleteDoc, getDocs, setDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase-config';
 import type { CoachingReport } from '../types/analysis';
 import { migrateStorageKey, STORAGE_KEYS } from './storageKeys';
 
 const HISTORY_KEY = STORAGE_KEYS.history;
+
+type BadgeDefinition = {
+  id: string;
+  title: string;
+  description: string;
+  earned: (reports: CoachingReport[]) => boolean;
+};
+
+function uniqueSessionDays(reports: CoachingReport[]) {
+  return new Set(
+    reports.map((report) => new Date(report.createdAt || Date.now()).toISOString().slice(0, 10))
+  );
+}
+
+const BADGE_DEFINITIONS: BadgeDefinition[] = [
+  {
+    id: 'first-step',
+    title: 'First Step',
+    description: 'Completed your very first coaching session.',
+    earned: (reports) => reports.length >= 1,
+  },
+  {
+    id: 'three-day-streak',
+    title: '3-Day Streak',
+    description: 'Completed coaching sessions on 3 different days.',
+    earned: (reports) => uniqueSessionDays(reports).size >= 3,
+  },
+  {
+    id: 'calm-voice',
+    title: 'Calm Voice',
+    description: 'Scored 80 or higher in a coaching session.',
+    earned: (reports) => reports.some((report) => Number(report.parentingScore || 0) >= 80),
+  },
+  {
+    id: 'role-model',
+    title: 'Role Model',
+    description: 'Achieved a 90+ positive communication score.',
+    earned: (reports) => reports.some((report) => Number(report.parentingScore || 0) >= 90),
+  },
+  {
+    id: 'active-listener',
+    title: 'Active Listener',
+    description: 'Completed 10 coaching sessions.',
+    earned: (reports) => reports.length >= 10,
+  },
+];
+
+async function notifyBadgeUnlocked(badge: BadgeDefinition) {
+  const title = 'Achievement Unlocked';
+  const body = `${badge.title}: ${badge.description}`;
+
+  Alert.alert(title, body, [{ text: 'Nice' }]);
+
+  if (Platform.OS === 'web') return;
+
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        data: { badgeId: badge.id },
+      },
+      trigger: null,
+    });
+  } catch (error) {
+    console.warn('Failed to show badge notification:', error);
+  }
+}
+
+async function evaluateAndSaveAchievements(reports: CoachingReport[]) {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  try {
+    const badgesRef = collection(db, 'users', user.uid, 'badges');
+    const existingSnapshot = await getDocs(badgesRef);
+    const existingEarned = new Set(existingSnapshot.docs.map((item) => item.id));
+    const newlyUnlocked: BadgeDefinition[] = [];
+
+    await Promise.all(
+      BADGE_DEFINITIONS.filter((badge) => badge.earned(reports)).map(async (badge) => {
+        const isNew = !existingEarned.has(badge.id);
+        if (isNew) {
+          newlyUnlocked.push(badge);
+        }
+
+        await setDoc(
+          doc(db, 'users', user.uid, 'badges', badge.id),
+          {
+            id: badge.id,
+            title: badge.title,
+            description: badge.description,
+            updatedAt: serverTimestamp(),
+            ...(isNew ? { earnedAt: serverTimestamp() } : {}),
+          },
+          { merge: true }
+        );
+      })
+    );
+
+    newlyUnlocked.forEach((badge) => {
+      notifyBadgeUnlocked(badge);
+    });
+  } catch (error) {
+    console.warn('Failed to evaluate achievements:', error);
+  }
+}
 
 export const saveReportToFirestore = async (reportData: {
   id: string;
@@ -91,6 +200,10 @@ class HistoryService {
       analysis: report.analysis,
       durationSeconds: report.durationSeconds,
       language: report.language,
+    });
+
+    evaluateAndSaveAchievements(nextHistory).catch((error) => {
+      console.warn('Achievement evaluation failed:', error);
     });
   }
 
