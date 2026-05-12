@@ -1,8 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { getAuth } from 'firebase/auth';
-import { collection, doc, getDocs, orderBy, query, setDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, onSnapshot, orderBy, query, setDoc } from 'firebase/firestore';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Animated,
@@ -326,68 +325,80 @@ export default function ReportsScreen() {
     );
   }, []);
 
-  const loadReports = useCallback(async () => {
-    setLoading(true);
-    try {
-      const user = getAuth().currentUser;
-      if (!user) {
-        console.log('Fetched reports:', 0);
+  useEffect(() => {
+    const user = getAuth().currentUser;
+    if (!user) {
+      console.log('Fetched reports:', 0);
+      setReports([]);
+      setChildren([]);
+      setBadges(badgeDefinitions([]));
+      setLoading(false);
+      return;
+    }
+
+    const reportsQuery = query(collection(db, 'users', user.uid, 'reports'), orderBy('createdAt', 'desc'));
+    const childrenQuery = query(collection(db, 'users', user.uid, 'children'), orderBy('createdAt', 'desc'));
+
+    const unsubscribeReports = onSnapshot(
+      reportsQuery,
+      (reportSnapshot) => {
+        const nextReports = reportSnapshot.docs.map((item) => {
+          const data = item.data();
+          return {
+            id: item.id,
+            score: reportScoreFromData(data),
+            date: toReportDate(data.date ?? data.createdAt),
+            strengths: Array.isArray(data.strengths)
+              ? data.strengths
+              : Array.isArray(data.analysis?.positive_notes)
+              ? data.analysis.positive_notes
+              : [],
+            improvements: Array.isArray(data.improvements)
+              ? data.improvements
+              : Array.isArray(data.analysis?.detected_issues)
+              ? data.analysis.detected_issues
+              : [],
+            transcript: String(data.transcript || ''),
+            childId: data.childId || null,
+            childName: data.childName || null,
+          };
+        });
+
+        console.log('Fetched reports:', nextReports.length);
+        setReports(nextReports);
+        setLoading(false);
+        updateBadges(user.uid, nextReports).catch((error) => {
+          console.warn('Failed to update badges in background:', error);
+        });
+      },
+      (error) => {
+        console.error('Failed to load insights:', error);
         setReports([]);
         setBadges(badgeDefinitions([]));
-        return;
+        setLoading(false);
       }
+    );
 
-      const reportSnapshot = await getDocs(
-        query(collection(db, 'users', user.uid, 'reports'), orderBy('date', 'desc'))
-      );
-      const childSnapshot = await getDocs(
-        query(collection(db, 'users', user.uid, 'children'), orderBy('createdAt', 'desc'))
-      );
-
-      const nextReports = reportSnapshot.docs.map((item) => {
-        const data = item.data();
-        return {
+    const unsubscribeChildren = onSnapshot(
+      childrenQuery,
+      (childSnapshot) => {
+        const nextChildren = childSnapshot.docs.map((item) => ({
           id: item.id,
-          score: reportScoreFromData(data),
-          date: toReportDate(data.date ?? data.createdAt),
-          strengths: Array.isArray(data.strengths)
-            ? data.strengths
-            : Array.isArray(data.analysis?.positive_notes)
-            ? data.analysis.positive_notes
-            : [],
-          improvements: Array.isArray(data.improvements)
-            ? data.improvements
-            : Array.isArray(data.analysis?.detected_issues)
-            ? data.analysis.detected_issues
-            : [],
-          transcript: String(data.transcript || ''),
-          childId: data.childId || null,
-          childName: data.childName || null,
-        };
-      });
-      const nextChildren = childSnapshot.docs.map((item) => ({
-        id: item.id,
-        name: String(item.data().name || 'Child'),
-      }));
+          name: String(item.data().name || 'Child'),
+        }));
+        setChildren(nextChildren);
+      },
+      (error) => {
+        console.error('Failed to load insight children:', error);
+        setChildren([]);
+      }
+    );
 
-      console.log('Fetched reports:', nextReports.length);
-      setReports(nextReports);
-      setChildren(nextChildren);
-      await updateBadges(user.uid, nextReports);
-    } catch (error) {
-      console.error('Failed to load insights:', error);
-      setReports([]);
-      setBadges(badgeDefinitions([]));
-    } finally {
-      setLoading(false);
-    }
+    return () => {
+      unsubscribeReports();
+      unsubscribeChildren();
+    };
   }, [updateBadges]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadReports();
-    }, [loadReports])
-  );
 
   const visibleReports = useMemo(() => {
     const now = Date.now();

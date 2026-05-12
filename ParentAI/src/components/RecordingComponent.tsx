@@ -278,53 +278,45 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     setCurrentAnalysis(report);
     onReport?.(report);
 
-    try {
-      console.log('[STEP A] About to save to Firestore');
-      await saveToHistory(report);
-      const savedId = report.id;
-      console.log('STEP 5B: report saved');
-      console.log('[STEP B] Firestore save done, id:', savedId);
-      onReportSaved?.(savedId);
-      setError(null);
-      didNavigateToResultsRef.current = true;
-      setTimeout(() => {
-        try {
-          console.log('[STEP C] Calling router.replace now');
-          console.log('STEP 6: navigating to results');
-          router.replace({
-            pathname: '/(drawer)/session-results' as any,
-            params: {
-              transcript: transcriptText,
-              score: String(score),
-              summary,
-              strengths: JSON.stringify(strengths),
-              improvements: JSON.stringify(improvements),
-              tips: JSON.stringify(tips ?? []),
-              safetyFlag: String(result.safetyFlag ?? false),
-              reportId: savedId,
-              childName: selectedChild?.name || '',
-              sessionTag: selectedTag || '',
-              durationSeconds: String(report.durationSeconds || 0),
-            },
-          });
-          console.log('[STEP D] router.replace called');
-          setIsLoading(false);
-          setIsAnalyzing(false);
-          setProcessingStep('idle');
-        } catch (navError) {
-          console.error('STEP 6 FAILED - navigation error:', navError);
-          setIsLoading(false);
-          setIsAnalyzing(false);
-          setProcessingStep('idle');
-        }
-      }, 100);
-    } catch (error) {
-      console.error('STEP 6 FAILED - navigation error:', error);
-      Alert.alert('Navigation Error', 'Could not navigate to results. Please try again.');
-      setIsLoading(false);
-      setIsAnalyzing(false);
-      setProcessingStep('idle');
-    }
+    const savedId = report.id;
+    console.log('[STEP A] About to save to Firestore');
+    saveToHistory(report)
+      .then(() => {
+        console.log('STEP 5B: report saved');
+        console.log('[STEP B] Firestore save done, id:', savedId);
+      })
+      .catch((saveError) => {
+        console.warn('Background report save failed:', saveError);
+      });
+
+    onReportSaved?.(savedId);
+    setError(null);
+    didNavigateToResultsRef.current = true;
+    setTimeout(() => {
+      try {
+        console.log('[STEP C] Calling router.replace now');
+        console.log('STEP 6: navigating to results');
+        router.replace({
+          pathname: '/(drawer)/session-results' as any,
+          params: {
+            safetyFlag: String(result.safetyFlag ?? false),
+            reportId: savedId,
+            childName: selectedChild?.name || '',
+            sessionTag: selectedTag || '',
+            durationSeconds: String(report.durationSeconds || 0),
+          },
+        });
+        console.log('[STEP D] router.replace called');
+        setIsLoading(false);
+        setIsAnalyzing(false);
+        setProcessingStep('idle');
+      } catch (navError) {
+        console.error('STEP 6 FAILED - navigation error:', navError);
+        setIsLoading(false);
+        setIsAnalyzing(false);
+        setProcessingStep('idle');
+      }
+    }, 100);
 
     checkSessionSafety(transcriptText)
       .then(async (safety) => {
@@ -418,6 +410,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
   }
 
   const selectedChild = children.find((item) => item.id === selectedChildId);
+  const selectedSessionTag = SESSION_TAGS.find((tag) => tag.id === selectedTag) || SESSION_TAGS[0];
 
   return (
     <ScrollView
@@ -426,11 +419,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <TouchableOpacity style={styles.closeButton} onPress={() => router.back()} activeOpacity={0.75}>
-          <MaterialIcons name="close" size={24} color="#1B1B23" />
-        </TouchableOpacity>
-
-        <Text style={styles.title}>Live{'\n'}Coaching</Text>
+        <Text style={styles.title}>Live Coaching</Text>
 
         <View style={styles.childSelectorPill}>
           <View style={styles.childAvatar}>
@@ -444,6 +433,22 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
           <MaterialIcons name="keyboard-arrow-down" size={18} color="#767586" />
         </View>
       </View>
+
+      <TouchableOpacity
+        style={styles.categorySelectorPill}
+        onPress={() => {
+          const currentIndex = SESSION_TAGS.findIndex((tag) => tag.id === selectedTag);
+          const nextTag = SESSION_TAGS[(currentIndex + 1) % SESSION_TAGS.length] || SESSION_TAGS[0];
+          setSelectedTag(nextTag.id);
+        }}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.categorySelectorLabel}>Category</Text>
+        <Text style={styles.categorySelectorText} numberOfLines={1}>
+          {selectedSessionTag.icon} {selectedSessionTag.label}
+        </Text>
+        <MaterialIcons name="keyboard-arrow-down" size={20} color="#767586" />
+      </TouchableOpacity>
 
       {children.length > 1 ? (
         <ScrollView
@@ -469,29 +474,6 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
           })}
         </ScrollView>
       ) : null}
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.tagScroll}
-        contentContainerStyle={styles.tagScrollContent}
-      >
-        {SESSION_TAGS.map((tag) => {
-          const isSelected = selectedTag === tag.id;
-          return (
-            <TouchableOpacity
-              key={tag.id}
-              style={[styles.tagPill, isSelected && styles.tagPillActive]}
-              onPress={() => setSelectedTag(tag.id)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.tagText, isSelected && styles.tagTextActive]}>
-                {tag.icon} {tag.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
 
       <Text style={styles.contextText}>
         Place your device nearby. TalkWise will listen and provide guidance based on the interaction.
@@ -649,7 +631,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 18,
+    marginBottom: 12,
     gap: 12,
   },
   closeButton: {
@@ -665,18 +647,20 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     color: '#4F46E5',
-    fontSize: 32,
-    lineHeight: 35,
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: '900',
     letterSpacing: -0.6,
-    textAlign: 'center',
+    textAlign: 'left',
   },
   childSelectorPill: {
-    maxWidth: 150,
+    maxWidth: 190,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 7,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 999,
@@ -702,6 +686,34 @@ const styles = StyleSheet.create({
     color: '#1B1B23',
     fontSize: 13,
     fontWeight: '700',
+  },
+  categorySelectorPill: {
+    width: '100%',
+    maxWidth: 720,
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginBottom: 16,
+  },
+  categorySelectorLabel: {
+    color: '#767586',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  categorySelectorText: {
+    color: '#1B1B23',
+    fontSize: 15,
+    fontWeight: '800',
   },
   childScroll: {
     width: '100%',

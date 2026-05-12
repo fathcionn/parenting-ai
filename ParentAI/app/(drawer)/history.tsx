@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { collection, deleteDoc, doc, getDocs, orderBy, query } from 'firebase/firestore';
+import { collection, deleteDoc, doc, onSnapshot, orderBy, query } from 'firebase/firestore';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -129,47 +129,60 @@ export default function HistoryScreen() {
   const [queryText, setQueryText] = useState('');
   const [selectedTag, setSelectedTag] = useState('all');
   const [loading, setLoading] = useState(true);
+  const historyRef = useRef<HistoryReport[]>([]);
 
-  const loadHistory = useCallback(async () => {
+  const subscribeToHistory = useCallback(() => {
     const user = auth.currentUser;
     if (!user) {
+      historyRef.current = [];
       setHistory([]);
       setLoading(false);
       return;
     }
 
-    setLoading(true);
-    try {
-      const snapshot = await getDocs(
-        query(collection(db, 'users', user.uid, 'reports'), orderBy('date', 'desc'))
-      );
-      const nextHistory = snapshot.docs.map((item) => {
-        const data = item.data();
-        return {
-          id: item.id,
-          date: toReportDate(data.date || data.createdAt),
-          score: reportScoreFromData(data),
-          summary: String(data.summary || data.analysis?.impact_analysis || ''),
-          tone: String(data.analysis?.tone || data.tone || 'calm'),
-          childName: data.childName || null,
-          tag: data.tag || 'general',
-          transcript: String(data.transcript || ''),
-          safetyFlag: data.safetyFlag || null,
-        };
-      });
-      setHistory(nextHistory);
-    } catch (error) {
-      console.error('Failed to load history:', error);
-      setHistory([]);
-    } finally {
-      setLoading(false);
+    if (historyRef.current.length === 0) {
+      setLoading(true);
     }
+
+    const reportsQuery = query(collection(db, 'users', user.uid, 'reports'), orderBy('date', 'desc'));
+    return onSnapshot(
+      reportsQuery,
+      (snapshot) => {
+        const nextHistory = snapshot.docs.map((item) => {
+          const data = item.data();
+          return {
+            id: item.id,
+            date: toReportDate(data.date || data.createdAt),
+            score: reportScoreFromData(data),
+            summary: String(data.summary || data.analysis?.impact_analysis || ''),
+            tone: String(data.analysis?.tone || data.tone || 'calm'),
+            childName: data.childName || null,
+            tag: data.tag || 'general',
+            transcript: String(data.transcript || ''),
+            safetyFlag: data.safetyFlag || null,
+          };
+        });
+        historyRef.current = nextHistory;
+        setHistory(nextHistory);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Failed to load history:', error);
+        if (historyRef.current.length === 0) {
+          setHistory([]);
+        }
+        setLoading(false);
+      }
+    );
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadHistory();
-    }, [loadHistory])
+      const unsubscribe = subscribeToHistory();
+      return () => {
+        unsubscribe?.();
+      };
+    }, [subscribeToHistory])
   );
 
   const filteredHistory = useMemo(() => {
@@ -198,7 +211,6 @@ export default function HistoryScreen() {
         onPress: async () => {
           try {
             await deleteDoc(doc(db, 'users', user.uid, 'reports', record.id));
-            await loadHistory();
           } catch (error) {
             console.error('Delete error:', error);
             Alert.alert('Error', 'Failed to delete report.');

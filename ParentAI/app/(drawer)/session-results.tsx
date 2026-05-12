@@ -1,20 +1,11 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Platform, SafeAreaView, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getSessionTag } from '../../src/utils/reportUtils';
 import { type ReportSafetyFlag } from '../../src/components/ReportPresentation';
 import Svg, { Circle } from 'react-native-svg';
-
-function parseArray(value?: string | string[]) {
-  try {
-    const raw = Array.isArray(value) ? value[0] : value;
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed.map(String) : [];
-  } catch {
-    return [];
-  }
-}
+import { useCoachingStore } from '../../src/stores/coaching-store';
 
 function parseSafety(value?: string | string[]): ReportSafetyFlag {
   try {
@@ -68,12 +59,9 @@ function ResultsScoreRing({ score }: { score: number }) {
 
 export default function SessionResultsScreen() {
   const router = useRouter();
+  const { currentAnalysis } = useCoachingStore();
   const params = useLocalSearchParams<{
     score?: string;
-    summary?: string;
-    strengths?: string;
-    improvements?: string;
-    tips?: string;
     safetyFlag?: string;
     reportId?: string;
     childName?: string;
@@ -81,17 +69,21 @@ export default function SessionResultsScreen() {
     durationSeconds?: string;
   }>();
 
-  const score = Math.max(0, Math.min(100, Math.round(Number(params.score || 0))));
-  const summary = String(params.summary || '');
-  const strengths = useMemo(() => parseArray(params.strengths), [params.strengths]);
-  const improvements = useMemo(() => parseArray(params.improvements), [params.improvements]);
-  const tips = useMemo(() => parseArray(params.tips), [params.tips]);
-  const safetyFlag = useMemo(() => parseSafety(params.safetyFlag), [params.safetyFlag]);
+  const score = Math.max(0, Math.min(100, Math.round(Number(currentAnalysis?.parentingScore ?? params.score ?? 0))));
+  const summary = currentAnalysis?.summary || currentAnalysis?.analysis?.impact_analysis || '';
+  const strengths = currentAnalysis?.strengths || currentAnalysis?.analysis?.positive_notes || [];
+  const improvements = currentAnalysis?.improvements || currentAnalysis?.analysis?.detected_issues || [];
+  const tips = currentAnalysis?.tips || currentAnalysis?.analysis?.suggestions || [];
+  const developmentalImpact =
+    currentAnalysis?.analysis?.impact_analysis ||
+    'Consistent communication helps build long-term emotional regulation and trust.';
+  const transcript = currentAnalysis?.transcript || '';
+  const safetyFlag = parseSafety(params.safetyFlag);
   const hasConcern =
     params.safetyFlag === 'true' ||
     (typeof safetyFlag === 'object' && safetyFlag !== null && (safetyFlag as any).safe === false);
   const tag = getSessionTag(params.sessionTag || 'general');
-  const subtitle = [params.childName || 'Sarah', tag.label || 'Bedtime Routine'].filter(Boolean).join(' ? ');
+  const subtitle = [params.childName || 'Sarah', tag.label || 'Bedtime Routine'].filter(Boolean).join(' · ');
 
   const shareReport = async () => {
     await Share.share({
@@ -101,11 +93,11 @@ export default function SessionResultsScreen() {
         '/100\n' +
         summary +
         '\n\nStrengths:\n' +
-        strengths.map((item) => '? ' + item).join('\n') +
+        strengths.map((item) => '• ' + item).join('\n') +
         '\n\nAreas to Grow:\n' +
-        improvements.map((item) => '?? ' + item).join('\n') +
+        improvements.map((item) => '• ' + item).join('\n') +
         '\n\nTips:\n' +
-        tips.map((item) => '?? ' + item).join('\n'),
+        tips.map((item) => '• ' + item).join('\n'),
     });
   };
 
@@ -123,7 +115,7 @@ export default function SessionResultsScreen() {
 
       <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
-          <Text style={styles.title}>Session Complete ??</Text>
+          <Text style={styles.title}>Session Complete 🎉</Text>
           <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
 
@@ -131,23 +123,12 @@ export default function SessionResultsScreen() {
           <ResultsScoreRing score={score} />
         </View>
 
-        <View style={[styles.safetyBanner, hasConcern ? styles.safetyBannerConcern : styles.safetyBannerHealthy]}>
-          <MaterialIcons
-            name={hasConcern ? 'warning-amber' : 'check-circle'}
-            size={22}
-            color={hasConcern ? '#93000A' : '#16A34A'}
-          />
-          <Text style={[styles.safetyText, hasConcern ? styles.safetyTextConcern : styles.safetyTextHealthy]}>
-            {hasConcern ? 'Concern Detected — Review tips below' : '✅ Healthy Communication Detected'}
-          </Text>
-        </View>
-
         <View style={[styles.card, styles.summaryCard]}>
           <View style={styles.cardHeader}>
             <View style={[styles.iconCircle, styles.summaryIcon]}>
               <MaterialIcons name="summarize" size={22} color="#0891B2" />
             </View>
-            <Text style={styles.summaryTitle}>?? Session Summary</Text>
+            <Text style={styles.summaryTitle}>📋 Session Summary</Text>
           </View>
           <Text style={styles.cardBody}>
             {summary || 'You successfully navigated the bedtime resistance with calm, supportive communication.'}
@@ -159,7 +140,7 @@ export default function SessionResultsScreen() {
             <View style={[styles.iconCircle, styles.strengthIcon]}>
               <MaterialIcons name="thumb-up" size={22} color="#15803D" />
             </View>
-            <Text style={styles.strengthTitle}>? What You Did Well</Text>
+            <Text style={styles.strengthTitle}>👍 What You Did Well</Text>
           </View>
           {(strengths.length ? strengths : ['Completed a coaching session']).map((item, index) => (
             <View key={item + '-' + index} style={styles.listRow}>
@@ -174,7 +155,7 @@ export default function SessionResultsScreen() {
             <View style={[styles.iconCircle, styles.growthIcon]}>
               <MaterialIcons name="trending-up" size={22} color="#C2410C" />
             </View>
-            <Text style={styles.growthTitle}>?? Areas to Grow</Text>
+            <Text style={styles.growthTitle}>🔧 Areas to Grow</Text>
           </View>
           {(improvements.length ? improvements : ['Keep practicing calm, clear communication.']).map((item, index) => (
             <View key={item + '-' + index} style={styles.listRow}>
@@ -189,13 +170,46 @@ export default function SessionResultsScreen() {
             <View style={[styles.iconCircle, styles.tipsIcon]}>
               <MaterialIcons name="lightbulb" size={22} color="#1D4ED8" />
             </View>
-            <Text style={styles.tipsTitle}>?? Tips for Next Time</Text>
+            <Text style={styles.tipsTitle}>💡 Tips for Next Time</Text>
           </View>
           {(tips.length ? tips : ['Set a 5-minute visual timer before transitions.', 'Use physical touch and calm proximity when appropriate.']).map((item, index) => (
             <Text key={item + '-' + index} style={styles.tipsText}>
               {index + 1}. {item}
             </Text>
           ))}
+        </View>
+
+        <View style={[styles.card, styles.impactCard]}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.iconCircle, styles.impactIcon]}>
+              <MaterialIcons name="auto-graph" size={22} color="#047857" />
+            </View>
+            <Text style={styles.impactTitle}>🌱 Developmental Impact</Text>
+          </View>
+          <Text style={styles.cardBody}>{developmentalImpact}</Text>
+        </View>
+
+        <View style={[styles.card, styles.transcriptCard]}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.iconCircle, styles.transcriptIcon]}>
+              <MaterialIcons name="mic" size={22} color="#6B38D4" />
+            </View>
+            <Text style={styles.transcriptTitle}>🎙️ Session Transcript</Text>
+          </View>
+          <Text style={styles.transcriptText}>
+            {transcript || 'Transcript will appear here when speech is detected during the session.'}
+          </Text>
+        </View>
+
+        <View style={[styles.safetyBanner, hasConcern ? styles.safetyBannerConcern : styles.safetyBannerHealthy]}>
+          <MaterialIcons
+            name={hasConcern ? 'warning-amber' : 'check-circle'}
+            size={22}
+            color={hasConcern ? '#93000A' : '#16A34A'}
+          />
+          <Text style={[styles.safetyText, hasConcern ? styles.safetyTextConcern : styles.safetyTextHealthy]}>
+            {hasConcern ? 'Concern Detected — Review tips below' : '✅ Healthy Communication Detected'}
+          </Text>
         </View>
 
         <View style={styles.footer}>
@@ -258,21 +272,28 @@ const styles = StyleSheet.create({
   strengthsCard: { backgroundColor: '#F0FDF4', borderColor: '#DCFCE7' },
   growthCard: { backgroundColor: '#FFF7ED', borderColor: '#FFEDD5' },
   tipsCard: { backgroundColor: '#EFF6FF', borderColor: '#DBEAFE' },
+  impactCard: { backgroundColor: '#F0FDFA', borderColor: '#CCFBF1' },
+  transcriptCard: { backgroundColor: '#FFFFFF', borderColor: '#E4E1ED' },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   iconCircle: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
   summaryIcon: { backgroundColor: '#CFFAFE' },
   strengthIcon: { backgroundColor: '#BBF7D0' },
   growthIcon: { backgroundColor: '#FED7AA' },
   tipsIcon: { backgroundColor: '#BFDBFE' },
+  impactIcon: { backgroundColor: '#CCFBF1' },
+  transcriptIcon: { backgroundColor: '#EFECF8' },
   summaryTitle: { color: '#1B1B23', fontSize: 18, fontWeight: '900' },
   strengthTitle: { color: '#14532D', fontSize: 18, fontWeight: '900' },
   growthTitle: { color: '#7C2D12', fontSize: 18, fontWeight: '900' },
   tipsTitle: { color: '#1E3A8A', fontSize: 18, fontWeight: '900' },
+  impactTitle: { color: '#064E3B', fontSize: 18, fontWeight: '900' },
+  transcriptTitle: { color: '#1B1B23', fontSize: 18, fontWeight: '900' },
   cardBody: { color: '#464554', fontSize: 15, lineHeight: 23 },
   listRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 9, marginTop: 8 },
   strengthText: { flex: 1, color: '#166534', fontSize: 15, lineHeight: 22, fontWeight: '600' },
   growthText: { flex: 1, color: '#9A3412', fontSize: 15, lineHeight: 22, fontWeight: '600' },
   tipsText: { color: '#1E40AF', fontSize: 15, lineHeight: 23, fontWeight: '600', marginTop: 8 },
+  transcriptText: { color: '#464554', fontSize: 15, lineHeight: 23 },
   footer: { borderTopWidth: 1, borderTopColor: '#E4E1ED', marginTop: 16, paddingTop: 22, gap: 12 },
   shareReportButton: { minHeight: 54, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 999, borderWidth: 1, borderColor: '#C7C4D7', backgroundColor: 'transparent' },
   shareReportText: { color: '#4648D4', fontSize: 15, fontWeight: '900' },
