@@ -34,13 +34,16 @@ function DrawerIcon({ name, color, size }: {
 }
 
 const DRAWER_COLORS = {
-  background: '#FCF8FF',
-  border: '#E4E1ED',
-  text: '#464554',
-  primary: '#4F46E5',
-  active: '#8B5CF6',
-  activePill: '#E1E0FF',
-  activePillText: '#6366F1',
+  background: '#FAF9FF',
+  border: '#F1ECFB',
+  text: '#1F2937',
+  muted: '#6B7280',
+  primary: '#5B21B6',
+  primaryDark: '#4C1D95',
+  active: '#5B21B6',
+  activePill: '#F3EEFF',
+  activePillText: '#5B21B6',
+  softLilac: '#F5F2FF',
   danger: '#BA1A1A',
 };
 
@@ -52,16 +55,16 @@ const styles = StyleSheet.create({
   drawerContainer: {
     flex: 1,
     backgroundColor: DRAWER_COLORS.background,
-    borderRightWidth: 1,
+    borderRightWidth: 0,
     borderRightColor: DRAWER_COLORS.border,
-    shadowColor: '#312E81',
-    shadowOffset: { width: 8, height: 0 },
+    shadowColor: DRAWER_COLORS.primaryDark,
+    shadowOffset: { width: 12, height: 0 },
     shadowOpacity: 0.08,
-    shadowRadius: 24,
+    shadowRadius: 32,
     elevation: 10,
     ...Platform.select({
       web: {
-        boxShadow: '10px 0px 35px rgba(49, 46, 129, 0.12)',
+        boxShadow: '18px 0px 45px rgba(76, 29, 149, 0.10)',
       } as any,
     }),
   },
@@ -69,17 +72,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 18,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 28,
-    borderBottomWidth: 1,
+    paddingHorizontal: 26,
+    paddingTop: 28,
+    paddingBottom: 30,
+    borderBottomWidth: 0,
     borderBottomColor: DRAWER_COLORS.border,
   },
   avatarImage: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#E1E0FF',
+    backgroundColor: DRAWER_COLORS.activePill,
   },
   avatarPlaceholder: {
     width: 64,
@@ -87,12 +90,12 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E1E0FF',
+    backgroundColor: DRAWER_COLORS.activePill,
   },
   avatarInitial: {
     color: DRAWER_COLORS.primary,
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '900',
   },
   headerInfo: {
     flex: 1,
@@ -102,7 +105,7 @@ const styles = StyleSheet.create({
     color: DRAWER_COLORS.primary,
     fontSize: 20,
     lineHeight: 25,
-    fontWeight: '800',
+    fontWeight: '900',
   },
   accountPlan: {
     color: DRAWER_COLORS.text,
@@ -111,11 +114,11 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   statusPill: {
-    marginTop: 10,
+    marginTop: 12,
     backgroundColor: DRAWER_COLORS.activePill,
     borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 5,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
   },
   statusText: {
     color: DRAWER_COLORS.activePillText,
@@ -127,21 +130,31 @@ const styles = StyleSheet.create({
   },
   drawerList: {
     paddingHorizontal: 16,
-    paddingTop: 22,
+    paddingTop: 18,
     paddingBottom: 22,
-    gap: 14,
+    gap: 10,
   },
   drawerItem: {
-    minHeight: 56,
+    minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
-    paddingHorizontal: 22,
+    gap: 18,
+    paddingHorizontal: 20,
     borderRadius: 999,
     backgroundColor: 'transparent',
   },
   drawerItemActive: {
     backgroundColor: DRAWER_COLORS.active,
+    shadowColor: DRAWER_COLORS.primaryDark,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.14,
+    shadowRadius: 18,
+    elevation: 4,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 16px 28px rgba(76, 29, 149, 0.20)',
+      } as any,
+    }),
   },
   drawerItemIcon: {
     width: 34,
@@ -150,7 +163,7 @@ const styles = StyleSheet.create({
   drawerItemText: {
     color: DRAWER_COLORS.text,
     fontSize: 18,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   drawerItemTextActive: {
     color: '#FFFFFF',
@@ -159,7 +172,7 @@ const styles = StyleSheet.create({
   drawerFooter: {
     borderTopWidth: 1,
     borderTopColor: DRAWER_COLORS.border,
-    paddingHorizontal: 24,
+    paddingHorizontal: 26,
     paddingTop: 24,
     paddingBottom: 28,
   },
@@ -168,7 +181,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 20,
-    paddingHorizontal: 4,
+    paddingHorizontal: 8,
+    borderRadius: 999,
   },
   logoutText: {
     color: DRAWER_COLORS.danger,
@@ -182,31 +196,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 12,
-    backgroundColor: '#EFECF8',
+    backgroundColor: DRAWER_COLORS.softLilac,
   },
 });
 
 const drawerItems: Array<{
-  label: string;
+  labelKey: string;
   route: string;
   icon?: React.ComponentProps<typeof Ionicons>['name'];
   materialIcon?: React.ComponentProps<typeof MaterialIcons>['name'];
 }> = [
-  { label: 'Dashboard', route: 'index', icon: 'grid-outline' },
-  { label: 'Live Coaching', route: 'coaching', materialIcon: 'mic' },
-  { label: 'Sessions', route: 'history', icon: 'time-outline' },
-  { label: 'Insights', route: 'insights', icon: 'analytics-outline' },
-  { label: 'Achievements', route: 'achievements', icon: 'trophy-outline' },
-  { label: 'Child Location', route: 'child-location', icon: 'location-outline' },
-  { label: 'Settings', route: 'profile', icon: 'settings-outline' },
+  { labelKey: 'drawer_dashboard', route: 'index', icon: 'grid-outline' },
+  { labelKey: 'nav_live_coaching', route: 'coaching', materialIcon: 'mic' },
+  { labelKey: 'drawer_sessions', route: 'history', icon: 'time-outline' },
+  { labelKey: 'nav_insights', route: 'insights', icon: 'analytics-outline' },
+  { labelKey: 'drawer_achievements', route: 'achievements', icon: 'trophy-outline' },
+  { labelKey: 'drawer_child_location', route: 'child-location', icon: 'location-outline' },
+  { labelKey: 'common.settings', route: 'profile', icon: 'settings-outline' },
 ];
 
 function CustomDrawerContent({ navigation, state }: DrawerContentComponentProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const appTheme = useAppTheme();
   const user = auth.currentUser;
   const profile = useAuthStore((store) => store.profile);
-  const displayName = profile?.displayName || user?.displayName || 'Parent Account';
+  const displayName = profile?.displayName || user?.displayName || t('drawer_parent_account');
   const photoURL = user?.photoURL || profile?.photoURL;
   const activeRoute = state.routeNames[state.index];
 
@@ -217,7 +232,7 @@ function CustomDrawerContent({ navigation, state }: DrawerContentComponentProps)
       router.replace('/login');
     } catch (error) {
       console.error('Logout error:', error);
-      Alert.alert('Error', 'Failed to logout. Please try again.');
+      Alert.alert(t('common_error'), t('common_failed_logout'));
     }
   };
 
@@ -238,10 +253,10 @@ function CustomDrawerContent({ navigation, state }: DrawerContentComponentProps)
             </View>
           )}
           <View style={styles.headerInfo}>
-            <Text style={styles.accountName}>Parent Account</Text>
-            <Text style={[styles.accountPlan, { color: appTheme.colors.muted }]}>TalkWise Premium</Text>
+            <Text style={styles.accountName}>{t('drawer_parent_account')}</Text>
+            <Text style={[styles.accountPlan, { color: DRAWER_COLORS.muted }]}>{t('drawer_premium')}</Text>
             <View style={styles.statusPill}>
-              <Text style={styles.statusText}>Active Member</Text>
+              <Text style={styles.statusText}>{t('drawer_active_member')}</Text>
             </View>
           </View>
         </View>
@@ -264,25 +279,25 @@ function CustomDrawerContent({ navigation, state }: DrawerContentComponentProps)
                   <MaterialIcons
                     name={item.materialIcon}
                     size={28}
-                  color={isActive ? '#FFFFFF' : appTheme.colors.text}
+                  color={isActive ? '#FFFFFF' : DRAWER_COLORS.text}
                     style={styles.drawerItemIcon}
                   />
                 ) : (
                   <Ionicons
                     name={item.icon}
                     size={28}
-                    color={isActive ? '#FFFFFF' : appTheme.colors.text}
+                    color={isActive ? '#FFFFFF' : DRAWER_COLORS.text}
                     style={styles.drawerItemIcon}
                   />
                 )}
                 <Text
                   style={[
                     styles.drawerItemText,
-                    { color: appTheme.colors.text },
+                    { color: DRAWER_COLORS.text },
                     isActive && styles.drawerItemTextActive,
                   ]}
                 >
-                  {item.label}
+                  {t(item.labelKey)}
                 </Text>
               </TouchableOpacity>
             );
@@ -292,7 +307,7 @@ function CustomDrawerContent({ navigation, state }: DrawerContentComponentProps)
         <View style={[styles.drawerFooter, { borderTopColor: appTheme.colors.border }]}>
           <TouchableOpacity style={styles.logoutItem} onPress={handleLogout} activeOpacity={0.82}>
             <Ionicons name="log-out-outline" size={30} color={DRAWER_COLORS.danger} />
-            <Text style={styles.logoutText}>Logout</Text>
+            <Text style={styles.logoutText}>{t('common_logout')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -312,7 +327,7 @@ export default function DrawerLayout() {
         screenOptions={({ navigation }) => ({
           drawerType: 'front',
           headerShown: true,
-          overlayColor: 'rgba(27, 27, 35, 0.35)',
+          overlayColor: 'rgba(31, 41, 55, 0.30)',
           swipeEnabled: true,
           drawerActiveTintColor: Colors.primary,
           drawerInactiveTintColor: Colors.secondary,
@@ -335,16 +350,16 @@ export default function DrawerLayout() {
               activeOpacity={0.82}
               onPress={() => navigation.openDrawer()}
             >
-              <MaterialIcons name="menu" size={24} color="#464554" />
+              <MaterialIcons name="menu" size={24} color={DRAWER_COLORS.primary} />
             </TouchableOpacity>
           ),
           headerTintColor: Colors.text,
           drawerStyle: {
             backgroundColor: appTheme.colors.background,
-            borderBottomRightRadius: 16,
-            borderTopRightRadius: 16,
+            borderBottomRightRadius: 32,
+            borderTopRightRadius: 32,
             borderRightColor: appTheme.colors.border,
-            borderRightWidth: 1,
+            borderRightWidth: 0,
             width: 300,
           },
           drawerLabelStyle: {
@@ -361,7 +376,7 @@ export default function DrawerLayout() {
           name="index"
           options={{
             drawerLabel: t('nav_home'),
-            title: 'TalkWise',
+            title: t('app_name'),
             drawerIcon: ({ color, size }) => (
               <DrawerIcon name="home-outline" color={color} size={size} />
             ),
@@ -410,8 +425,8 @@ export default function DrawerLayout() {
         <Drawer.Screen
           name="leaderboard"
           options={{
-            drawerLabel: 'Community Benchmarks',
-            title: 'Community Benchmarks',
+            drawerLabel: t('drawer_community_benchmarks'),
+            title: t('drawer_community_benchmarks'),
             drawerIcon: ({ color, size }) => (
               <DrawerIcon name="trophy-outline" color={color} size={size} />
             ),
@@ -420,8 +435,8 @@ export default function DrawerLayout() {
         <Drawer.Screen
           name="achievements"
           options={{
-            drawerLabel: 'Achievements',
-            title: 'Achievements',
+            drawerLabel: t('drawer_achievements'),
+            title: t('drawer_achievements'),
             drawerIcon: ({ color, size }) => (
               <DrawerIcon name="ribbon-outline" color={color} size={size} />
             ),
@@ -430,8 +445,8 @@ export default function DrawerLayout() {
         <Drawer.Screen
           name="child-location"
           options={{
-            drawerLabel: 'Child Location',
-            title: 'Child Location',
+            drawerLabel: t('drawer_child_location'),
+            title: t('drawer_child_location'),
             drawerIcon: ({ color, size }) => (
               <DrawerIcon name="location-outline" color={color} size={size} />
             ),
@@ -462,7 +477,7 @@ export default function DrawerLayout() {
           name="session-results"
           options={{
             drawerItemStyle: { display: 'none' },
-            title: 'Session Complete',
+            title: t('drawer_session_complete'),
           }}
         />
       </Drawer>

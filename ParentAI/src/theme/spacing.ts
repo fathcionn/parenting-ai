@@ -10,27 +10,27 @@ export const spacing = {
 };
 
 export const radius = {
-  sm: 4,
-  md: 8,
-  lg: 12,
-  xl: 16,
-  xxl: 24,
+  sm: 10,
+  md: 16,
+  lg: 20,
+  xl: 24,
+  xxl: 32,
   full: 999,
 };
 
 export const shadows = {
   card: {
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: COLORS.primaryDark,
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowRadius: 20,
+    elevation: 4,
   },
   overlay: {
     shadowColor: COLORS.primaryDark,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.14,
+    shadowRadius: 34,
     elevation: 8,
   },
 };

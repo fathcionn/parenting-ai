@@ -203,7 +203,7 @@ export default function HistoryScreen() {
   const deleteRecord = (record: HistoryReport) => {
     const user = auth.currentUser;
     if (!user) return;
-    Alert.alert('Delete Report', 'Are you sure you want to delete this report?', [
+    Alert.alert(t('history_delete_report_title'), t('history_delete_report_message'), [
       { text: t('common_cancel'), style: 'cancel' },
       {
         text: t('common_delete'),
@@ -213,7 +213,7 @@ export default function HistoryScreen() {
             await deleteDoc(doc(db, 'users', user.uid, 'reports', record.id));
           } catch (error) {
             console.error('Delete error:', error);
-            Alert.alert('Error', 'Failed to delete report.');
+            Alert.alert(t('common_error'), t('history_delete_failed'));
           }
         },
       },
@@ -223,7 +223,7 @@ export default function HistoryScreen() {
   const renderRightActions = (record: HistoryReport) => (
     <TouchableOpacity style={styles.swipeDelete} onPress={() => deleteRecord(record)}>
       <MaterialIcons name="delete-outline" size={26} color="#FFF" />
-      <Text style={styles.swipeDeleteText}>Delete</Text>
+      <Text style={styles.swipeDeleteText}>{t('common_delete')}</Text>
     </TouchableOpacity>
   );
 
@@ -234,8 +234,8 @@ export default function HistoryScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <Text style={styles.title}>Session History</Text>
-        <Text style={styles.subtitle}>Review past insights and track progress over time.</Text>
+        <Text style={styles.title}>{t('history_screen_title')}</Text>
+        <Text style={styles.subtitle}>{t('history_screen_subtitle')}</Text>
       </View>
 
       <View style={styles.searchBar}>
@@ -259,7 +259,7 @@ export default function HistoryScreen() {
           style={[styles.filterPill, selectedTag === 'all' && styles.filterPillActive]}
           onPress={() => setSelectedTag('all')}
         >
-          <Text style={selectedTag === 'all' ? styles.filterTextActive : styles.filterText}>All</Text>
+          <Text style={selectedTag === 'all' ? styles.filterTextActive : styles.filterText}>{t('history_all')}</Text>
         </TouchableOpacity>
         {SESSION_TAGS.map((tag) => (
           <TouchableOpacity
@@ -279,10 +279,10 @@ export default function HistoryScreen() {
       ) : filteredHistory.length === 0 ? (
         <View style={styles.emptyState}>
           <MaterialIcons name="history" size={58} color="#6366F1" />
-          <Text style={styles.emptyTitle}>No sessions yet.</Text>
-          <Text style={styles.emptyText}>Start your first coaching session to see your history here.</Text>
+          <Text style={styles.emptyTitle}>{t('history_empty_title')}</Text>
+          <Text style={styles.emptyText}>{t('history_empty_text')}</Text>
           <TouchableOpacity style={styles.emptyButton} onPress={() => router.push('/(drawer)/coaching' as any)}>
-            <Text style={styles.emptyButtonText}>Start First Session</Text>
+            <Text style={styles.emptyButtonText}>{t('history_start_first')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -303,7 +303,7 @@ export default function HistoryScreen() {
               >
                 <View style={styles.cardMain}>
                   <View style={styles.cardHeaderRow}>
-                    <Text style={styles.childText}>{record.childName || 'Leo'}</Text>
+                    <Text style={styles.childText}>{record.childName || t('history_default_child')}</Text>
                     <View style={[styles.tagBadge, { backgroundColor: palette.bg }]}>
                       <Text style={[styles.tagBadgeText, { color: palette.text }]}>
                         {tag.label}
@@ -314,7 +314,7 @@ export default function HistoryScreen() {
                   <Text style={styles.dateText}>{formatDate(record.date)}</Text>
 
                   <Text style={styles.summaryText} numberOfLines={1}>
-                    {record.summary || record.transcript || 'Successfully navigated this parenting moment.'}
+                    {record.summary || record.transcript || t('history_default_summary')}
                   </Text>
 
                   <View style={styles.badgeRow}>

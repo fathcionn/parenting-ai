@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { getAuth } from 'firebase/auth';
 import { collection, doc, getDocs, onSnapshot, orderBy, query, setDoc } from 'firebase/firestore';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Animated,
     ScrollView,
@@ -14,6 +15,8 @@ import {
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { db } from '../../src/config/firebase-config';
+import { COLORS } from '../../src/theme/colors';
+import { radius, shadows } from '../../src/theme/spacing';
 import { reportScoreFromData, toReportDate } from '../../src/utils/reportUtils';
 
 type FirestoreReport = {
@@ -40,6 +43,13 @@ type BadgeState = {
   earnedAt?: Date | null;
   requirement: string;
 };
+
+type AggregatedPattern = {
+  text: string;
+  count: number;
+};
+
+const PATTERN_REPORT_LIMIT = 10;
 
 const badgeDefinitions = (reports: FirestoreReport[]): BadgeState[] => {
   const uniqueDays = new Set(reports.map((report) => report.date.toISOString().slice(0, 10)));
@@ -99,6 +109,61 @@ const topItem = (items: string[]) => {
   return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'No data yet';
 };
 
+function normalizePatternText(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function areSimilarPatterns(a: string, b: string) {
+  const first = normalizePatternText(a);
+  const second = normalizePatternText(b);
+  if (!first || !second) return false;
+  if (first === second || first.includes(second) || second.includes(first)) return true;
+
+  const firstWords = new Set(first.split(' ').filter((word) => word.length > 3));
+  const secondWords = new Set(second.split(' ').filter((word) => word.length > 3));
+  if (!firstWords.size || !secondWords.size) return false;
+
+  const shared = [...firstWords].filter((word) => secondWords.has(word)).length;
+  return shared / Math.min(firstWords.size, secondWords.size) >= 0.75;
+}
+
+function aggregatePatterns(reports: FirestoreReport[], field: 'strengths' | 'improvements') {
+  const patternMap = new Map<string, AggregatedPattern & { latestIndex: number }>();
+
+  reports.slice(0, PATTERN_REPORT_LIMIT).forEach((report, reportIndex) => {
+    report[field].forEach((rawPattern) => {
+      const text = String(rawPattern || '').trim();
+      if (!text) return;
+
+      const existing = patternMap.get(text);
+      if (existing) {
+        existing.count += 1;
+        existing.latestIndex = Math.min(existing.latestIndex, reportIndex);
+      } else {
+        patternMap.set(text, { text, count: 1, latestIndex: reportIndex });
+      }
+    });
+  });
+
+  const ranked = [...patternMap.values()].sort(
+    (a, b) => b.count - a.count || a.latestIndex - b.latestIndex
+  );
+  const distinct: AggregatedPattern[] = [];
+
+  ranked.forEach((pattern) => {
+    if (distinct.length >= 4) return;
+    if (!distinct.some((existing) => areSimilarPatterns(existing.text, pattern.text))) {
+      distinct.push({ text: pattern.text, count: pattern.count });
+    }
+  });
+
+  return distinct;
+}
+
 const calculateStreak = (reports: FirestoreReport[]) => {
   const days = new Set(reports.map((report) => report.date.toISOString().slice(0, 10)));
   let streak = 0;
@@ -125,7 +190,7 @@ function ScoreRing({ score }: { score: number }) {
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#E4E1ED"
+          stroke={COLORS.ringTrack}
           strokeWidth={strokeWidth}
           fill="transparent"
         />
@@ -133,7 +198,7 @@ function ScoreRing({ score }: { score: number }) {
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#6366F1"
+          stroke={COLORS.ringFill}
           strokeWidth={strokeWidth}
           fill="transparent"
           strokeDasharray={`${circumference} ${circumference}`}
@@ -253,7 +318,7 @@ function InsightCard({
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.iconBubble}>
-          <MaterialIcons name={icon} size={18} color="#6366F1" />
+          <MaterialIcons name={icon} size={18} color={COLORS.primary} />
         </View>
         <Text style={styles.sectionTitle}>{title}</Text>
       </View>
@@ -268,7 +333,7 @@ function AchievementsSection({ badges }: { badges: BadgeState[] }) {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.iconBubble}>
-          <MaterialIcons name="emoji-events" size={18} color="#6366F1" />
+          <MaterialIcons name="emoji-events" size={18} color={COLORS.primary} />
         </View>
         <Text style={styles.sectionTitle}>Achievements</Text>
       </View>
@@ -290,6 +355,7 @@ function AchievementsSection({ badges }: { badges: BadgeState[] }) {
 }
 
 export default function ReportsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [reports, setReports] = useState<FirestoreReport[]>([]);
   const [children, setChildren] = useState<ChildFilter[]>([]);
@@ -430,11 +496,34 @@ export default function ReportsScreen() {
     };
   }, [visibleReports]);
 
+  const communicationPatterns = useMemo(
+    () => ({
+      strengths: aggregatePatterns(visibleReports, 'strengths'),
+      improvements: aggregatePatterns(visibleReports, 'improvements'),
+    }),
+    [visibleReports]
+  );
+  const patternReportCount = Math.min(visibleReports.length, PATTERN_REPORT_LIMIT);
+  const patternSubtitle =
+    patternReportCount === 1
+      ? t('insights_patterns_first_session')
+      : t('insights_patterns_recent_sessions', { count: patternReportCount });
+
+  const qualitativeBanner = useMemo(() => {
+    if (summary.averageScore > 80) {
+      return t('insights_banner_great');
+    }
+    if (summary.averageScore >= 50) {
+      return t('insights_banner_progress');
+    }
+    return t('insights_banner_support');
+  }, [summary.averageScore, t]);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <Text style={styles.pageTitle}>Your Parenting Overview</Text>
-        <Text style={styles.pageSubtitle}>Insights and progress for this week.</Text>
+        <Text style={styles.pageTitle}>{t('insights_overview')}</Text>
+        <Text style={styles.pageSubtitle}>{t('insights_subtitle')}</Text>
       </View>
 
       <ScrollView
@@ -448,7 +537,7 @@ export default function ReportsScreen() {
           onPress={() => setSelectedChildId('all')}
         >
           <Text style={selectedChildId === 'all' ? styles.childFilterTextActive : styles.childFilterText}>
-            All
+            {t('insights_all')}
           </Text>
         </TouchableOpacity>
         {children.map((child) => (
@@ -466,9 +555,9 @@ export default function ReportsScreen() {
 
       <View style={styles.periodTabs}>
         {[
-          { id: 'week', label: 'Week' },
-          { id: 'month', label: 'Month' },
-          { id: '3m', label: '3M' },
+          { id: 'week', label: t('insights_week') },
+          { id: 'month', label: t('insights_month') },
+          { id: '3m', label: t('insights_3m') },
         ].map((period) => (
           <TouchableOpacity
             key={period.id}
@@ -485,68 +574,94 @@ export default function ReportsScreen() {
 
       {loading ? (
         <>
-          <Text style={styles.placeholderText}>Loading your insights...</Text>
+          <Text style={styles.placeholderText}>{t('insights_loading')}</Text>
           <SkeletonInsights />
         </>
       ) : visibleReports.length === 0 ? (
         <>
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>??</Text>
-            <Text style={styles.emptyTitle}>No insights yet</Text>
+            <Text style={styles.emptyTitle}>{t('insights_empty_title')}</Text>
             <Text style={styles.placeholderText}>
-              Complete at least one coaching session to unlock your personalized insights
+              {t('insights_empty_text')}
             </Text>
             <TouchableOpacity style={styles.emptyButton} onPress={() => router.push('/(drawer)/coaching' as any)}>
-              <Text style={styles.emptyButtonText}>Start a Session</Text>
+              <Text style={styles.emptyButtonText}>{t('insights_start_session')}</Text>
             </TouchableOpacity>
           </View>
           <AchievementsSection badges={badges} />
         </>
       ) : (
         <>
+          <View style={styles.qualitativeBanner}>
+            <MaterialIcons name="favorite" size={20} color={COLORS.primary} />
+            <Text style={styles.qualitativeBannerText}>{qualitativeBanner}</Text>
+          </View>
+
           <View style={styles.averageCard}>
-            <Text style={styles.averageTitle}>Average Score</Text>
+            <Text style={styles.averageTitle}>{t('insights_avg_score')}</Text>
             <ScoreRing score={summary.averageScore} />
-            <Text style={styles.averageFooter}>Consistent positive engagement this week.</Text>
+            <Text style={styles.averageFooter}>{t('insights_average_footer')}</Text>
           </View>
 
           <View style={styles.statsGrid}>
             <StatCard
               icon="event-note"
-              iconBg="#F0EEFF"
-              iconColor="#6366F1"
+              iconBg={COLORS.surfaceContainer}
+              iconColor={COLORS.primary}
               value={String(summary.totalSessions)}
-              label="Sessions"
+              label={t('insights_sessions')}
             />
             <StatCard
               icon="speed"
-              iconBg="#EEF2FF"
-              iconColor="#4F46E5"
+              iconBg={COLORS.surfaceContainerHigh}
+              iconColor={COLORS.primaryDark}
               value={String(summary.averageScore)}
-              label="Avg Score"
+              label={t('insights_avg_score')}
             />
             <StatCard
               icon="local-fire-department"
-              iconBg="#FFF3E8"
-              iconColor="#EA580C"
-              value={`${summary.streak}🔥`}
-              label="Streak Days"
+              iconBg={COLORS.warningBg}
+              iconColor={COLORS.warning}
+              value={`${summary.streak}??`}
+              label={t('insights_streak_days')}
             />
           </View>
 
           <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Score Over Last 7 Sessions</Text>
+            <Text style={styles.chartTitle}>{t('insights_chart_last7')}</Text>
             <ProgressLine reports={summary.chronologicalReports} />
           </View>
 
+          <View style={styles.patternSection}>
+            <View>
+              <Text style={styles.patternSectionTitle}>{t('insights_patterns')}</Text>
+              <Text style={styles.patternSectionSubtitle}>{patternSubtitle}</Text>
+            </View>
+            <View style={styles.patternGrid}>
+              <PatternListCard
+                variant="strength"
+                title={t('insights_superpowers')}
+                items={communicationPatterns.strengths}
+                emptyText={t('insights_patterns_empty_strength')}
+              />
+              <PatternListCard
+                variant="growth"
+                title={t('insights_growth_areas')}
+                items={communicationPatterns.improvements}
+                emptyText={t('insights_patterns_empty_growth')}
+              />
+            </View>
+          </View>
+
           <View style={styles.coachSection}>
-            <Text style={styles.sectionHeading}>Coach Insights</Text>
+            <Text style={styles.sectionHeading}>{t('insights_coach_insights')}</Text>
             <View style={[styles.coachCard, styles.strengthCard]}>
               <View style={styles.coachIconWrap}>
-                <MaterialIcons name="check-circle" size={24} color="#6366F1" />
+                <MaterialIcons name="check-circle" size={24} color={COLORS.primary} />
               </View>
               <View style={styles.coachTextWrap}>
-                <Text style={styles.coachCardTitle}>Top Strength</Text>
+                <Text style={styles.coachCardTitle}>{t('insights_top_strength')}</Text>
                 <Text style={styles.coachCardText}>
                   {summary.topStrength === 'No data yet'
                     ? 'Using calm voice tone during transitions.'
@@ -556,10 +671,10 @@ export default function ReportsScreen() {
             </View>
             <View style={[styles.coachCard, styles.improvementCard]}>
               <View style={styles.coachIconWrap}>
-                <MaterialIcons name="build" size={24} color="#D97706" />
+                <MaterialIcons name="build" size={24} color={COLORS.warning} />
               </View>
               <View style={styles.coachTextWrap}>
-                <Text style={styles.coachCardTitle}>Top Improvement</Text>
+                <Text style={styles.coachCardTitle}>{t('insights_top_improvement')}</Text>
                 <Text style={styles.coachCardText}>
                   {summary.topImprovement === 'No data yet'
                     ? 'Reduce repetitive commands and pause for response.'
@@ -571,14 +686,14 @@ export default function ReportsScreen() {
 
           {summary.lastSession && (
             <View style={styles.recentSection}>
-              <Text style={styles.sectionHeading}>Recent</Text>
+              <Text style={styles.sectionHeading}>{t('insights_recent')}</Text>
               <View style={styles.recentCard}>
                 <View style={styles.recentIcon}>
-                  <MaterialIcons name="description" size={24} color="#6366F1" />
+                  <MaterialIcons name="description" size={24} color={COLORS.primary} />
                 </View>
                 <View style={styles.recentCopy}>
                   <Text style={styles.recentTitle}>
-                    Last Session: {summary.lastSession.childName || 'Bedtime Negotiation'}
+                    {t('insights_last_session', { name: summary.lastSession.childName || 'Bedtime Negotiation' })}
                   </Text>
                   <Text style={styles.recentTime}>
                     {summary.lastSession.date.toLocaleDateString(undefined, {
@@ -598,21 +713,67 @@ export default function ReportsScreen() {
                     })
                   }
                 >
-                  <Text style={styles.reportButtonText}>View Report</Text>
+                  <Text style={styles.reportButtonText}>{t('insights_view_report')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
+
+          <AchievementsSection badges={badges} />
         </>
       )}
     </ScrollView>
   );
 }
 
+function PatternListCard({
+  variant,
+  title,
+  items,
+  emptyText,
+}: {
+  variant: 'strength' | 'growth';
+  title: string;
+  items: AggregatedPattern[];
+  emptyText: string;
+}) {
+  const isStrength = variant === 'strength';
+  const displayItems = items.length ? items : [{ text: emptyText, count: 0 }];
+  return (
+    <View style={[styles.patternCard, isStrength ? styles.patternCardStrength : styles.patternCardGrowth]}>
+      <Text style={[styles.patternCardTitle, isStrength ? styles.patternTitleStrength : styles.patternTitleGrowth]}>
+        {title}
+      </Text>
+      <View style={styles.patternList}>
+        {displayItems.map((item, index) => (
+          <View key={`${variant}-${index}-${item.text}`} style={styles.patternRow}>
+            <MaterialIcons
+              name={isStrength ? 'stars' : 'track-changes'}
+              size={18}
+              color={isStrength ? COLORS.success : COLORS.warning}
+              style={styles.patternIcon}
+            />
+            <Text style={[styles.patternText, isStrength ? styles.patternTextStrength : styles.patternTextGrowth]}>
+              {item.text}
+            </Text>
+            {item.count > 0 ? (
+              <View style={[styles.patternCountPill, isStrength ? styles.patternCountStrength : styles.patternCountGrowth]}>
+                <Text style={[styles.patternCountText, isStrength ? styles.patternCountTextStrength : styles.patternCountTextGrowth]}>
+                  {item.count}x
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FCF8FF',
+    backgroundColor: COLORS.background,
   },
   content: {
     paddingHorizontal: 24,
@@ -624,14 +785,14 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   pageTitle: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 32,
     lineHeight: 38,
     fontWeight: '800',
     letterSpacing: -0.6,
   },
   pageSubtitle: {
-    color: '#464554',
+    color: COLORS.textSecondary,
     fontSize: 16,
     lineHeight: 24,
     marginTop: 8,
@@ -643,27 +804,27 @@ const styles = StyleSheet.create({
   childFiltersContent: {
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E4E1ED',
-    borderRadius: 999,
+    borderColor: COLORS.border,
+    borderRadius: radius.full,
     padding: 4,
     gap: 4,
   },
   childFilter: {
-    borderRadius: 999,
+    borderRadius: radius.full,
     paddingHorizontal: 18,
     paddingVertical: 9,
     backgroundColor: 'transparent',
   },
   childFilterActive: {
-    backgroundColor: '#6366F1',
+    backgroundColor: COLORS.primary,
   },
   childFilterText: {
-    color: '#464554',
+    color: COLORS.textSecondary,
     fontSize: 14,
     fontWeight: '700',
   },
   childFilterTextActive: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -673,53 +834,70 @@ const styles = StyleSheet.create({
     marginTop: -8,
   },
   periodTab: {
-    borderColor: '#E4E1ED',
-    borderRadius: 999,
+    borderColor: COLORS.border,
+    borderRadius: radius.full,
     borderWidth: 1,
     paddingHorizontal: 18,
     paddingVertical: 9,
   },
   periodTabActive: {
-    backgroundColor: '#6366F1',
-    borderColor: '#6366F1',
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   periodTabText: {
-    color: '#464554',
+    color: COLORS.textSecondary,
     fontSize: 13,
     fontWeight: '800',
   },
   periodTabTextActive: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
     fontSize: 13,
     fontWeight: '900',
   },
+  qualitativeBanner: {
+    alignItems: 'flex-start',
+    backgroundColor: COLORS.surfaceContainer,
+    borderColor: COLORS.border,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    padding: 16,
+  },
+  qualitativeBannerText: {
+    color: COLORS.textSecondary,
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 21,
+  },
   averageCard: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: radius.xxl,
     paddingHorizontal: 24,
     paddingTop: 24,
     paddingBottom: 26,
-    shadowColor: '#312E81',
-    shadowOffset: { width: 0, height: 18 },
-    shadowOpacity: 0.12,
-    shadowRadius: 34,
-    elevation: 10,
+    shadowColor: COLORS.primaryDark,
+    shadowOffset: shadows.overlay.shadowOffset,
+    shadowOpacity: shadows.overlay.shadowOpacity,
+    shadowRadius: shadows.overlay.shadowRadius,
+    elevation: shadows.overlay.elevation,
     ...Platform.select({
       web: {
-        boxShadow: '0px 24px 60px rgba(49, 46, 129, 0.14)',
+        boxShadow: '0px 24px 60px rgba(76, 29, 149, 0.14)',
       } as any,
     }),
   },
   averageTitle: {
     alignSelf: 'flex-start',
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 20,
     fontWeight: '800',
     marginBottom: 18,
   },
   averageFooter: {
-    color: '#464554',
+    color: COLORS.textSecondary,
     fontSize: 14,
     lineHeight: 20,
     marginTop: 18,
@@ -737,13 +915,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   ringScore: {
-    color: '#6366F1',
+    color: COLORS.primary,
     fontSize: 42,
     lineHeight: 48,
     fontWeight: '900',
   },
   ringLabel: {
-    color: '#767586',
+    color: COLORS.textFaint,
     fontSize: 13,
     fontWeight: '700',
     marginTop: 2,
@@ -757,61 +935,57 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexBasis: 104,
     minWidth: 100,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: radius.xl,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#F0EEF8',
-    shadowColor: '#312E81',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.07,
-    shadowRadius: 18,
-    elevation: 3,
+    shadowColor: COLORS.primaryDark,
+    shadowOffset: shadows.card.shadowOffset,
+    shadowOpacity: shadows.card.shadowOpacity,
+    shadowRadius: shadows.card.shadowRadius,
+    elevation: shadows.card.elevation,
     ...Platform.select({
       web: {
-        boxShadow: '0px 12px 24px rgba(49, 46, 129, 0.08)',
+        boxShadow: '0px 16px 34px rgba(76, 29, 149, 0.09)',
       } as any,
     }),
   },
   statIcon: {
     width: 38,
     height: 38,
-    borderRadius: 19,
+    borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
   },
   statValue: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 25,
     fontWeight: '900',
     lineHeight: 30,
   },
   statLabel: {
-    color: '#767586',
+    color: COLORS.textFaint,
     fontSize: 13,
     fontWeight: '700',
     marginTop: 4,
   },
   chartCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: radius.xl,
     padding: 20,
-    borderWidth: 1,
-    borderColor: '#F0EEF8',
-    shadowColor: '#312E81',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 22,
-    elevation: 4,
+    shadowColor: COLORS.primaryDark,
+    shadowOffset: shadows.card.shadowOffset,
+    shadowOpacity: shadows.card.shadowOpacity,
+    shadowRadius: shadows.card.shadowRadius,
+    elevation: shadows.card.elevation,
     ...Platform.select({
       web: {
-        boxShadow: '0px 16px 32px rgba(49, 46, 129, 0.10)',
+        boxShadow: '0px 18px 42px rgba(76, 29, 149, 0.10)',
       } as any,
     }),
   },
   chartTitle: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 17,
     fontWeight: '800',
     marginBottom: 18,
@@ -833,28 +1007,130 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 28,
     justifyContent: 'flex-end',
-    backgroundColor: '#F5F2FE',
-    borderRadius: 999,
+    backgroundColor: COLORS.surfaceContainer,
+    borderRadius: radius.full,
     overflow: 'hidden',
   },
   barFill: {
     width: '100%',
-    backgroundColor: '#C0C1FF',
-    borderRadius: 999,
+    backgroundColor: COLORS.accent,
+    borderRadius: radius.full,
   },
   barFillLatest: {
-    backgroundColor: '#6366F1',
+    backgroundColor: COLORS.primary,
   },
   chartLabel: {
-    color: '#767586',
+    color: COLORS.textFaint,
     fontSize: 11,
     fontWeight: '800',
+  },
+  patternSection: {
+    gap: 12,
+  },
+  patternSectionTitle: {
+    color: COLORS.textFaint,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+  patternSectionSubtitle: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+    marginTop: 4,
+  },
+  patternGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 14,
+  },
+  patternCard: {
+    borderRadius: radius.xl,
+    flexBasis: 280,
+    flexGrow: 1,
+    padding: 18,
+    shadowColor: COLORS.primaryDark,
+    shadowOffset: shadows.card.shadowOffset,
+    shadowOpacity: shadows.card.shadowOpacity,
+    shadowRadius: shadows.card.shadowRadius,
+    elevation: shadows.card.elevation,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 16px 34px rgba(76, 29, 149, 0.08)',
+      } as any,
+    }),
+  },
+  patternCardStrength: {
+    backgroundColor: COLORS.successBg,
+    
+  },
+  patternCardGrowth: {
+    backgroundColor: COLORS.warningBg,
+    
+  },
+  patternCardTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    lineHeight: 24,
+    marginBottom: 14,
+  },
+  patternTitleStrength: {
+    color: COLORS.successText,
+  },
+  patternTitleGrowth: {
+    color: COLORS.warning,
+  },
+  patternList: {
+    gap: 12,
+  },
+  patternRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  patternIcon: {
+    marginTop: 1,
+  },
+  patternText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 21,
+  },
+  patternCountPill: {
+    borderRadius: radius.full,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  patternCountStrength: {
+    backgroundColor: COLORS.successBorder,
+  },
+  patternCountGrowth: {
+    backgroundColor: COLORS.surfaceContainerHigh,
+  },
+  patternCountText: {
+    fontSize: 11,
+    fontWeight: '900',
+    lineHeight: 13,
+  },
+  patternCountTextStrength: {
+    color: COLORS.successText,
+  },
+  patternCountTextGrowth: {
+    color: COLORS.warning,
+  },
+  patternTextStrength: {
+    color: COLORS.successText,
+  },
+  patternTextGrowth: {
+    color: COLORS.warning,
   },
   coachSection: {
     gap: 12,
   },
   sectionHeading: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 22,
     fontWeight: '900',
     marginBottom: 2,
@@ -863,17 +1139,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    borderRadius: 18,
+    borderRadius: radius.xl,
     padding: 16,
     borderLeftWidth: 5,
   },
   strengthCard: {
-    backgroundColor: '#F5F2FE',
-    borderLeftColor: '#6366F1',
+    backgroundColor: COLORS.surfaceContainer,
+    borderLeftColor: COLORS.primary,
   },
   improvementCard: {
-    backgroundColor: '#FFF7ED',
-    borderLeftColor: '#D97706',
+    backgroundColor: COLORS.warningBg,
+    borderLeftColor: COLORS.warning,
   },
   coachIconWrap: {
     marginTop: 2,
@@ -882,13 +1158,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   coachCardTitle: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 16,
     fontWeight: '900',
     marginBottom: 4,
   },
   coachCardText: {
-    color: '#464554',
+    color: COLORS.textSecondary,
     fontSize: 14,
     lineHeight: 21,
   },
@@ -899,62 +1175,59 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: radius.xl,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#F0EEF8',
-    shadowColor: '#312E81',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 22,
-    elevation: 4,
+    shadowColor: COLORS.primaryDark,
+    shadowOffset: shadows.card.shadowOffset,
+    shadowOpacity: shadows.card.shadowOpacity,
+    shadowRadius: shadows.card.shadowRadius,
+    elevation: shadows.card.elevation,
     ...Platform.select({
       web: {
-        boxShadow: '0px 16px 32px rgba(49, 46, 129, 0.10)',
+        boxShadow: '0px 18px 42px rgba(76, 29, 149, 0.10)',
       } as any,
     }),
   },
   recentIcon: {
     width: 46,
     height: 46,
-    borderRadius: 23,
+    borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F0EEFF',
+    backgroundColor: COLORS.surfaceContainer,
   },
   recentCopy: {
     flex: 1,
   },
   recentTitle: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 15,
     fontWeight: '900',
   },
   recentTime: {
-    color: '#767586',
+    color: COLORS.textFaint,
     fontSize: 12,
     fontWeight: '700',
     marginTop: 5,
   },
   reportButton: {
     borderWidth: 1,
-    borderColor: '#6366F1',
-    borderRadius: 999,
+    borderColor: COLORS.primary,
+    borderRadius: radius.full,
     paddingHorizontal: 13,
     paddingVertical: 9,
   },
   reportButtonText: {
-    color: '#6366F1',
+    color: COLORS.primary,
     fontSize: 12,
     fontWeight: '900',
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#F0EEF8',
-    borderRadius: 18,
-    borderWidth: 1,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: radius.xl,
     padding: 18,
+    ...shadows.card,
   },
   cardHeader: {
     alignItems: 'center',
@@ -964,14 +1237,14 @@ const styles = StyleSheet.create({
   },
   iconBubble: {
     alignItems: 'center',
-    backgroundColor: '#F0EEFF',
-    borderRadius: 18,
+    backgroundColor: COLORS.surfaceContainer,
+    borderRadius: radius.xl,
     height: 36,
     justifyContent: 'center',
     width: 36,
   },
   sectionTitle: {
-    color: '#767586',
+    color: COLORS.textFaint,
     flex: 1,
     fontSize: 13,
     fontWeight: '800',
@@ -979,20 +1252,20 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   cardValue: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 28,
     fontWeight: '900',
     lineHeight: 34,
   },
   cardSubtitle: {
-    color: '#767586',
+    color: COLORS.textFaint,
     fontSize: 13,
     lineHeight: 20,
     marginTop: 6,
   },
   skeletonCard: {
-    backgroundColor: '#EDEAF7',
-    borderRadius: 20,
+    backgroundColor: COLORS.surfaceContainerHigh,
+    borderRadius: radius.xl,
     height: 130,
     marginBottom: 16,
   },
@@ -1000,8 +1273,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   badgeCard: {
-    backgroundColor: '#F7F4FF',
-    borderRadius: 12,
+    backgroundColor: COLORS.surfaceContainer,
+    borderRadius: radius.lg,
     padding: 14,
   },
   badgeCardLocked: {
@@ -1011,13 +1284,13 @@ const styles = StyleSheet.create({
     fontSize: 26,
   },
   badgeName: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 15,
     fontWeight: '900',
     marginTop: 6,
   },
   badgeDate: {
-    color: '#767586',
+    color: COLORS.textFaint,
     fontSize: 12,
     fontWeight: '600',
     marginTop: 3,
@@ -1031,24 +1304,24 @@ const styles = StyleSheet.create({
     fontSize: 48,
   },
   emptyTitle: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 22,
     fontWeight: '900',
   },
   emptyButton: {
-    backgroundColor: '#6366F1',
-    borderRadius: 999,
+    backgroundColor: COLORS.primary,
+    borderRadius: radius.full,
     marginTop: 4,
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
   emptyButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
     fontSize: 14,
     fontWeight: '900',
   },
   placeholderText: {
-    color: '#767586',
+    color: COLORS.textFaint,
     fontSize: 14,
     lineHeight: 20,
     textAlign: 'center',

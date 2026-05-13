@@ -8,7 +8,7 @@ export const Colors = {
   primary: light.primary,
   primaryLight: light.surface,
   primaryDark: COLORS.primaryDark,
-  primaryFaded: 'rgba(92, 122, 107, 0.10)',
+  primaryFaded: 'rgba(91, 33, 182, 0.10)',
 
   secondary: light.secondary,
   secondaryLight: COLORS.surfaceContainerHigh,

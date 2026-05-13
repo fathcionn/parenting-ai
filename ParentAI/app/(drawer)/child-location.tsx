@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 import { collection, doc, getDocs, orderBy, query, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Circle as SvgCircle, Path } from 'react-native-svg';
 import { ChildMap } from '../../src/components/ChildMap';
@@ -102,14 +103,14 @@ function ChildLocationIcon() {
   );
 }
 
-function minutesAgo(value: any) {
-  if (!value) return 'Never updated';
+function minutesAgo(value: any, t: (key: string, options?: Record<string, unknown>) => string) {
+  if (!value) return t('location_never_updated');
   const date = toReportDate(value);
   const minutes = Math.max(0, Math.round((Date.now() - date.getTime()) / 60000));
-  if (minutes < 1) return 'Updated just now';
-  if (minutes < 60) return `Updated ${minutes} min${minutes === 1 ? '' : 's'} ago`;
+  if (minutes < 1) return t('location_updated_now');
+  if (minutes < 60) return t(minutes === 1 ? 'location_updated_minutes' : 'location_updated_minutes_plural', { count: minutes });
   const hours = Math.round(minutes / 60);
-  return `Updated ${hours} hour${hours === 1 ? '' : 's'} ago`;
+  return t(hours === 1 ? 'location_updated_hours' : 'location_updated_hours_plural', { count: hours });
 }
 
 function getInitial(name: string) {
@@ -117,6 +118,7 @@ function getInitial(name: string) {
 }
 
 export default function ChildLocationScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const navigation = useNavigation<any>();
   const [children, setChildren] = useState<ChildRecord[]>([]);
@@ -168,12 +170,12 @@ export default function ChildLocationScreen() {
         if (!mounted) return;
         setLocationPermission(status);
         if (status !== 'granted') {
-          setStatusMessage('Location permission is needed to share or refresh location.');
+          setStatusMessage(t('location_permission_needed'));
         }
       })
       .catch((error) => {
         console.warn('Location permission request failed:', error);
-        if (mounted) setStatusMessage('Could not request location permission.');
+        if (mounted) setStatusMessage(t('location_permission_failed'));
       });
     return () => {
       mounted = false;
@@ -202,7 +204,7 @@ export default function ChildLocationScreen() {
   const shareLocation = async () => {
     const user = auth.currentUser;
     if (!user || !selectedChild) {
-      setStatusMessage('Select a child before sharing location.');
+      setStatusMessage(t('location_select_child'));
       return;
     }
 
@@ -213,7 +215,7 @@ export default function ChildLocationScreen() {
           : await Location.requestForegroundPermissionsAsync();
       setLocationPermission(status);
       if (status !== 'granted') {
-        setStatusMessage('Location permission was denied.');
+        setStatusMessage(t('location_permission_denied'));
         return;
       }
 
@@ -230,23 +232,23 @@ export default function ChildLocationScreen() {
         },
         { merge: true }
       );
-      setStatusMessage('Location shared successfully.');
+      setStatusMessage(t('location_shared'));
       await loadChildren();
     } catch (error) {
       console.error('Share location failed:', error);
-      setStatusMessage('Could not share location. Please try again.');
+      setStatusMessage(t('location_share_failed'));
     }
   };
 
   const callParent = () => {
     const number = selectedChild?.emergencyContact;
     if (!number) {
-      setStatusMessage('No emergency contact saved for this child.');
+      setStatusMessage(t('location_no_contact'));
       return;
     }
     Linking.openURL(`tel:${number}`).catch((error) => {
       console.warn('Phone dialer failed:', error);
-      setStatusMessage('Could not open the phone dialer.');
+      setStatusMessage(t('location_dialer_failed'));
     });
   };
 
@@ -256,20 +258,20 @@ export default function ChildLocationScreen() {
 
   const refreshLocations = async () => {
     try {
-      setStatusMessage('Refreshing locations...');
+      setStatusMessage(t('location_refreshing'));
       await loadChildren();
-      setStatusMessage('Locations refreshed.');
+      setStatusMessage(t('location_refreshed'));
     } catch (error) {
       console.error('Refresh locations failed:', error);
-      setStatusMessage('Could not refresh locations.');
+      setStatusMessage(t('location_refresh_failed'));
     }
   };
 
   const showSafeZoneInfo = () => {
     Alert.alert(
-      'Safe Zones',
-      'Define home, school, or custom zones to get arrival and departure alerts. Coming soon.',
-      [{ text: 'OK' }]
+      t('location_safe_zones'),
+      t('location_safe_zones_message'),
+      [{ text: t('coaching_ok') }]
     );
   };
 
@@ -277,26 +279,25 @@ export default function ChildLocationScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Child Location</Text>
-          <Text style={styles.subtitle}>Track your child's device location and set safe zones.</Text>
+          <Text style={styles.title}>{t('location_title')}</Text>
+          <Text style={styles.subtitle}>{t('location_subtitle')}</Text>
         </View>
 
         <View style={styles.emptyState}>
           <ChildLocationIcon />
-          <Text style={styles.emptyTitle}>No children added yet</Text>
+          <Text style={styles.emptyTitle}>{t('location_no_children')}</Text>
           <Text style={styles.emptySubtitle}>
-            Add your child's device to see their real-time location and receive arrival updates when they reach
-            home, school, or any safe zone you set.
+            {t('location_empty_text')}
           </Text>
 
         <TouchableOpacity style={styles.addButton} onPress={() => router.push('/(drawer)/profile' as any)}>
-            <Text style={styles.addButtonText}>Go to Settings to Add a Child</Text>
+            <Text style={styles.addButtonText}>{t('location_settings_add_child')}</Text>
           </TouchableOpacity>
 
           <View style={styles.privacyNote}>
             <MaterialIcons name="lock-outline" size={14} color={COLORS.success} />
             <Text style={styles.privacyText}>
-              Location data is encrypted and only visible to you. It is never shared or sold.
+              {t('location_privacy')}
             </Text>
           </View>
         </View>
@@ -310,7 +311,7 @@ export default function ChildLocationScreen() {
         <TouchableOpacity style={styles.headerIconButton} activeOpacity={0.8} onPress={() => navigation.openDrawer()}>
           <MaterialIcons name="menu" size={24} color={UI.text} />
         </TouchableOpacity>
-        <Text style={styles.screenTitle}>Child Location {'\u{1F4CD}'}{'\n'}Beta</Text>
+        <Text style={styles.screenTitle}>{t('location_beta_title')}</Text>
         <TouchableOpacity style={styles.profileButton} activeOpacity={0.8} onPress={() => router.push('/(drawer)/profile' as any)}>
           <MaterialIcons name="person-outline" size={23} color={UI.subtext} />
         </TouchableOpacity>
@@ -343,7 +344,7 @@ export default function ChildLocationScreen() {
           );
         })}
         <TouchableOpacity style={styles.addPill} activeOpacity={0.82} onPress={() => router.push('/(drawer)/profile' as any)}>
-          <Text style={styles.addPillText}>Add</Text>
+          <Text style={styles.addPillText}>{t('location_add')}</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -358,7 +359,7 @@ export default function ChildLocationScreen() {
               latitude: child.lastLocation!.latitude,
               longitude: child.lastLocation!.longitude,
               title: child.name,
-              description: child.locationName || 'Last known location',
+              description: child.locationName || t('location_last_known'),
             }))}
           safeZones={children
             .filter((child) => child.safeZone)
@@ -398,13 +399,17 @@ export default function ChildLocationScreen() {
           <View style={styles.locationIconOutline}>
             <MaterialIcons name="location-on" size={22} color={UI.purpleDark} />
           </View>
-          <Text style={styles.locationTitle}>{selectedChild?.locationName || 'Lincoln Elementary School'}</Text>
+          <Text style={styles.locationTitle}>{selectedChild?.locationName || t('location_default_place')}</Text>
         </View>
 
         <View style={styles.updatedRow}>
           <View style={styles.updatedDot} />
           <Text style={styles.updatedText}>
-            Last updated: {selectedChild?.lastLocation?.timestamp ? minutesAgo(selectedChild.lastLocation.timestamp).replace('Updated ', '') : '2 mins ago'}
+            {t('location_last_updated', {
+              time: selectedChild?.lastLocation?.timestamp
+                ? minutesAgo(selectedChild.lastLocation.timestamp, t).replace(/^Updated\\s/, '')
+                : t('location_default_updated'),
+            })}
           </Text>
         </View>
 
@@ -413,24 +418,23 @@ export default function ChildLocationScreen() {
         <View style={styles.locationActions}>
           <TouchableOpacity style={styles.shareButton} onPress={shareLocation} disabled={!selectedChild} activeOpacity={0.82}>
             <MaterialIcons name="ios-share" size={18} color={UI.text} />
-            <Text style={styles.shareButtonText}>Share Location</Text>
+            <Text style={styles.shareButtonText}>{t('location_share')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.callButton} onPress={callParent} activeOpacity={0.82}>
             <MaterialIcons name="phone" size={18} color="#FFFFFF" />
-            <Text style={styles.callButtonText}>Call Parent Now</Text>
+            <Text style={styles.callButtonText}>{t('location_call')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.shareButton} onPress={showSafeZoneInfo} activeOpacity={0.82}>
             <MaterialIcons name="add-location-alt" size={18} color={UI.text} />
-            <Text style={styles.shareButtonText}>Set Safe Zone</Text>
+            <Text style={styles.shareButtonText}>{t('location_set_safe_zone')}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.insightsCard}>
-        <Text style={styles.insightsTitle}>Coach Insights</Text>
+        <Text style={styles.insightsTitle}>{t('location_coach_insights')}</Text>
         <Text style={styles.insightsText}>
-          {selectedChild?.name || 'Sarah'} arrived at school 5 minutes earlier than her usual average. Her route
-          followed the safe paths established in your settings.
+          {t('location_insight_text', { name: selectedChild?.name || 'Sarah' })}
         </Text>
       </View>
     </ScrollView>

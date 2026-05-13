@@ -2,6 +2,7 @@
 import { useRouter } from 'expo-router';
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -21,6 +22,9 @@ import { setMode } from '../services/recordingState';
 import { checkSessionSafety, notifySafetyFlag, saveSafetyFlag } from '../services/safety-service';
 import { getStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 import { useCoachingStore } from '../stores/coaching-store';
+import { useAuthStore } from '../stores/auth-store';
+import { COLORS } from '../theme/colors';
+import { radius, shadows } from '../theme/spacing';
 import {
   calculateParentingScore,
   type CoachingReport,
@@ -28,51 +32,27 @@ import {
 } from '../types/analysis';
 import { getSessionTag, reportScoreFromData, toReportDate } from '../utils/reportUtils';
 
-const COLORS = {
-  background: '#FCF8FF',
-  text: '#1B1B23',
-  subtext: '#464554',
-  muted: '#6B7280',
-  card: '#FFFFFF',
-  tipBg: '#FEFCE8',
-  tipBorder: '#FEF08A',
-  tipIcon: '#CA8A04',
-  tipTitle: '#854D0E',
-  tipText: '#A16207',
-  purple: '#7C3AED',
-  indigo: '#4F46E5',
-  orange: '#EA580C',
-  streak: '#904900',
-  leo: '#6366F1',
-  mia: '#8B5CF6',
-  danger: '#BA1A1A',
-  dangerSoft: '#FEE2E2',
-};
-
 const shadowSm = Platform.select({
   web: {
-    boxShadow: '0 8px 24px rgba(17, 24, 39, 0.08)',
+    boxShadow: '0 18px 42px rgba(76, 29, 149, 0.10)',
   },
   ios: {
-    shadowColor: '#111827',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
+    ...shadows.card,
   },
   android: {
-    elevation: 3,
+    elevation: shadows.card.elevation,
   },
   default: {},
 }) as object;
 
 const shadowButton = Platform.select({
   web: {
-    boxShadow: '0 14px 28px rgba(124, 58, 237, 0.28)',
+    boxShadow: '0 18px 36px rgba(91, 33, 182, 0.24)',
   },
   ios: {
-    shadowColor: COLORS.purple,
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.26,
+    shadowOpacity: 0.22,
     shadowRadius: 18,
   },
   android: {
@@ -88,6 +68,13 @@ type RecentSession = {
   dateLabel: string;
   score: number;
 };
+
+function getTimeOfDayGreetingKey() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'home_good_morning';
+  if (hour >= 12 && hour < 17) return 'home_good_afternoon';
+  return 'home_good_evening';
+}
 
 function normalizeAnalysis(result: any): ParentingAnalysis {
   return {
@@ -170,12 +157,15 @@ function SessionCard({
 
 export const HomeScreen: React.FC = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const { setCurrentAnalysis } = useCoachingStore();
+  const { user: storeUser, profile } = useAuthStore();
   const isWide = width >= 768;
   const isDesktop = width > 1024;
   const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
   const [recentLoading, setRecentLoading] = useState(true);
+  const [tipOfDay, setTipOfDay] = useState('');
   const [isBackgroundRecording, setIsBackgroundRecording] = useState(false);
   const [isBackgroundProcessing, setIsBackgroundProcessing] = useState(false);
   const backgroundStartRef = useRef(0);
@@ -221,6 +211,19 @@ export const HomeScreen: React.FC = () => {
         const snapshot = await getDocs(
           query(collection(db, 'users', user.uid, 'reports'), orderBy('date', 'desc'), limit(2))
         );
+        const nextTip =
+          snapshot.docs
+            .map((item) => {
+              const data = item.data();
+              const tips = Array.isArray(data.tips)
+                ? data.tips
+                : Array.isArray(data.analysis?.suggestions)
+                ? data.analysis.suggestions
+                : [];
+              return tips.find((tip: unknown) => String(tip || '').trim().length > 0);
+            })
+            .find(Boolean) || '';
+
         const nextSessions = snapshot.docs.map((item) => {
           const data = item.data();
           const tagInfo = getSessionTag(String(data.tag || 'general'));
@@ -238,10 +241,16 @@ export const HomeScreen: React.FC = () => {
             score: reportScoreFromData(data),
           };
         });
-        if (mounted) setRecentSessions(nextSessions);
+        if (mounted) {
+          setRecentSessions(nextSessions);
+          setTipOfDay(String(nextTip));
+        }
       } catch (error) {
         console.error('Failed to load recent sessions:', error);
-        if (mounted) setRecentSessions([]);
+        if (mounted) {
+          setRecentSessions([]);
+          setTipOfDay('');
+        }
       } finally {
         if (mounted) setRecentLoading(false);
       }
@@ -376,6 +385,17 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
+  const displayName =
+    profile?.displayName ||
+    storeUser?.displayName ||
+    auth.currentUser?.displayName ||
+    auth.currentUser?.email?.split('@')[0] ||
+    t('home_parent_fallback');
+  const greeting = t('home_greeting_name', {
+    greeting: t(getTimeOfDayGreetingKey()),
+    name: displayName,
+  });
+
   return (
     <ScrollView
       style={styles.container}
@@ -387,40 +407,40 @@ export const HomeScreen: React.FC = () => {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <Text style={styles.greeting}>Good morning, Sarah {'\u{1F44B}'}</Text>
-        <Text style={styles.subtitle}>Ready for today's coaching session?</Text>
+        <Text style={styles.greeting}>{greeting}</Text>
+        <Text style={styles.subtitle}>{t('home_ready_subtitle')}</Text>
       </View>
 
       <View style={styles.tipCard}>
         <View style={styles.tipIconBubble}>
-          <MaterialIcons name="lightbulb-outline" size={24} color={COLORS.tipIcon} />
+          <MaterialIcons name="lightbulb-outline" size={24} color={COLORS.warning} />
         </View>
         <View style={styles.tipCopy}>
-          <Text style={styles.tipTitle}>Tip of the day</Text>
-          <Text style={styles.tipText}>Use 'I feel...' statements instead of 'You always...'</Text>
+          <Text style={styles.tipTitle}>{t('home_tip_title')}</Text>
+          <Text style={styles.tipText}>{tipOfDay || t('home_default_tip')}</Text>
         </View>
       </View>
 
       <View style={[styles.statsGrid, isDesktop && styles.statsGridDesktop]}>
         <StatCard
           icon="event"
-          iconColor={COLORS.indigo}
+          iconColor={COLORS.primaryDark}
           value="12"
-          label="Sessions"
+          label={t('home_stats_sessions')}
           desktop={isDesktop}
         />
         <StatCard
           icon="speed"
-          iconColor={COLORS.purple}
+          iconColor={COLORS.primary}
           value="78"
-          label="Avg Score"
+          label={t('home_stats_avg_score')}
           desktop={isDesktop}
         />
         <StatCard
           icon="local-fire-department"
-          iconColor={COLORS.orange}
-          value="Current Streak"
-          label="5🔥"
+          iconColor={COLORS.warning}
+          value="5🔥"
+          label={t('home_stats_current_streak')}
           wide={!isDesktop}
           desktop={isDesktop}
         />
@@ -432,8 +452,8 @@ export const HomeScreen: React.FC = () => {
           activeOpacity={0.88}
           onPress={() => router.push('/(drawer)/coaching' as any)}
         >
-          <MaterialIcons name="play-circle-outline" size={24} color="#FFFFFF" />
-          <Text style={styles.actionButtonText}>Start Live Coaching</Text>
+          <MaterialIcons name="play-circle-outline" size={24} color={COLORS.onPrimary} />
+          <Text style={styles.actionButtonText}>{t('home_start_live_coaching')}</Text>
         </TouchableOpacity>
 
         <View style={[styles.backgroundCoachGroup, isDesktop && styles.actionButtonDesktop]}>
@@ -447,11 +467,11 @@ export const HomeScreen: React.FC = () => {
             disabled={isBackgroundProcessing}
           >
             {isBackgroundProcessing ? (
-              <ActivityIndicator color={COLORS.purple} />
+              <ActivityIndicator color={COLORS.primary} />
             ) : isBackgroundRecording ? (
               <Animated.View style={[styles.recordingPulse, { opacity: pulseValue }]} />
             ) : (
-              <MaterialIcons name="settings-voice" size={24} color={COLORS.purple} />
+              <MaterialIcons name="settings-voice" size={24} color={COLORS.primary} />
             )}
             <Text
               style={[
@@ -460,50 +480,50 @@ export const HomeScreen: React.FC = () => {
               ]}
             >
               {isBackgroundProcessing
-                ? 'Analyzing Background Coach'
+                ? t('home_background_processing')
                 : isBackgroundRecording
-                ? 'Stop Background Coach'
-                : 'Enable Background Coach'}
+                ? t('home_background_stop')
+                : t('home_background_enable')}
             </Text>
           </TouchableOpacity>
 
           <View style={styles.privacyNote}>
-            <MaterialIcons name="lock-outline" size={14} color="#767586" />
+            <MaterialIcons name="lock-outline" size={14} color={COLORS.textFaint} />
             <Text style={styles.privacyText}>
-              Audio is securely analyzed and never stored permanently.
+              {t('home_background_privacy')}
             </Text>
           </View>
         </View>
       </View>
 
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Recent Sessions</Text>
+        <Text style={styles.sectionTitle}>{t('home_recent_sessions')}</Text>
         <TouchableOpacity onPress={() => router.push('/(drawer)/history' as any)} activeOpacity={0.78}>
-          <Text style={styles.viewAllText}>View all</Text>
+          <Text style={styles.viewAllText}>{t('home_view_all')}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.sessionsList}>
         {recentLoading ? (
           <View style={styles.sessionSkeleton}>
-            <ActivityIndicator color={COLORS.purple} />
-            <Text style={styles.emptySessionsText}>Loading recent sessions...</Text>
+            <ActivityIndicator color={COLORS.primary} />
+            <Text style={styles.emptySessionsText}>{t('home_loading_recent')}</Text>
           </View>
         ) : recentSessions.length === 0 ? (
           <View style={styles.sessionSkeleton}>
-            <MaterialIcons name="history" size={28} color={COLORS.purple} />
-            <Text style={styles.emptySessionsText}>No sessions yet</Text>
+            <MaterialIcons name="history" size={28} color={COLORS.primary} />
+            <Text style={styles.emptySessionsText}>{t('home_no_sessions')}</Text>
           </View>
         ) : (
           recentSessions.map((session, index) => (
             <SessionCard
               key={session.id}
               initial={session.childName.trim()[0]?.toUpperCase() || 'S'}
-              avatarColor={index % 2 === 0 ? COLORS.leo : COLORS.mia}
+              avatarColor={index % 2 === 0 ? COLORS.accent : COLORS.primary}
               title={session.title}
               date={session.dateLabel}
               score={String(session.score)}
-              scoreColor={index % 2 === 0 ? COLORS.indigo : COLORS.purple}
+              scoreColor={index % 2 === 0 ? COLORS.primaryDark : COLORS.primary}
               onPress={() =>
                 router.push({
                   pathname: '/(drawer)/report-detail' as any,
@@ -544,14 +564,14 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   greeting: {
-    color: COLORS.text,
+    color: COLORS.textPrimary,
     fontSize: 32,
     fontWeight: '800',
     letterSpacing: -0.7,
     lineHeight: 39,
   },
   subtitle: {
-    color: COLORS.subtext,
+    color: COLORS.textSecondary,
     fontSize: 16,
     fontWeight: '400',
     lineHeight: 24,
@@ -561,10 +581,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 14,
-    backgroundColor: COLORS.tipBg,
-    borderColor: COLORS.tipBorder,
+    backgroundColor: COLORS.warningBg,
+    borderColor: COLORS.border,
     borderWidth: 1,
-    borderRadius: 18,
+    borderRadius: radius.xl,
     padding: 16,
     marginBottom: 22,
     ...shadowSm,
@@ -574,20 +594,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFFBEB',
+    borderRadius: radius.full,
+    backgroundColor: COLORS.surfaceContainerHigh,
   },
   tipCopy: {
     flex: 1,
   },
   tipTitle: {
-    color: COLORS.tipTitle,
+    color: COLORS.warning,
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 4,
   },
   tipText: {
-    color: COLORS.tipText,
+    color: COLORS.warning,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '500',
@@ -607,8 +627,8 @@ const styles = StyleSheet.create({
     flexBasis: '46%',
     minWidth: 150,
     minHeight: 146,
-    backgroundColor: COLORS.card,
-    borderRadius: 22,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: radius.xl,
     padding: 18,
     justifyContent: 'space-between',
     ...shadowSm,
@@ -632,31 +652,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: '#F5F3FF',
+    borderRadius: radius.xl,
+    backgroundColor: COLORS.surfaceContainer,
   },
   statValue: {
-    color: COLORS.text,
+    color: COLORS.textPrimary,
     fontSize: 36,
     lineHeight: 42,
-    fontWeight: '800',
+    fontWeight: '900',
     marginTop: 18,
   },
   statLabel: {
-    color: COLORS.muted,
+    color: COLORS.textSecondary,
     fontSize: 14,
     fontWeight: '600',
   },
   streakLabel: {
-    flex: 1,
-    color: COLORS.text,
-    fontSize: 17,
-    fontWeight: '800',
+    color: COLORS.textPrimary,
+    fontSize: 36,
+    fontWeight: '900',
+    lineHeight: 42,
   },
   streakValue: {
-    color: COLORS.streak,
-    fontSize: 28,
-    fontWeight: '800',
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    fontWeight: '600',
   },
   actionArea: {
     gap: 16,
@@ -674,7 +694,7 @@ const styles = StyleSheet.create({
   actionButton: {
     width: '100%',
     minHeight: 60,
-    borderRadius: 999,
+    borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -687,48 +707,48 @@ const styles = StyleSheet.create({
     width: 'auto',
   },
   primaryActionButton: {
-    backgroundColor: COLORS.purple,
+    backgroundColor: COLORS.primary,
     ...shadowButton,
   },
   secondaryActionButton: {
-    backgroundColor: '#EFECF8',
-    borderColor: '#D8B4FE',
+    backgroundColor: COLORS.surfaceContainer,
+    borderColor: COLORS.outline,
     borderWidth: 1,
   },
   backgroundCoachButton: {
     width: '100%',
     minHeight: 60,
-    borderRadius: 999,
+    borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 10,
     paddingHorizontal: 22,
     paddingVertical: 16,
-    backgroundColor: '#EFECF8',
-    borderColor: '#D8B4FE',
+    backgroundColor: COLORS.surfaceContainer,
+    borderColor: COLORS.outline,
     borderWidth: 1,
   },
   backgroundCoachButtonActive: {
-    backgroundColor: COLORS.danger,
-    borderColor: COLORS.danger,
+    backgroundColor: COLORS.error,
+    borderColor: COLORS.error,
     ...shadowSm,
   },
   backgroundCoachButtonTextActive: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
   },
   recordingPulse: {
     width: 14,
     height: 14,
-    borderRadius: 7,
-    backgroundColor: '#FFFFFF',
+    borderRadius: radius.full,
+    backgroundColor: COLORS.onPrimary,
     borderWidth: 3,
-    borderColor: COLORS.dangerSoft,
+    borderColor: COLORS.errorBg,
   },
   backgroundToggleCard: {
     width: '100%',
     minHeight: 60,
-    borderRadius: 999,
+    borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'space-between',
     flexDirection: 'row',
@@ -743,12 +763,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   actionButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
     fontSize: 17,
     fontWeight: '800',
   },
   secondaryActionButtonText: {
-    color: COLORS.purple,
+    color: COLORS.primary,
     fontSize: 17,
     fontWeight: '800',
   },
@@ -762,7 +782,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   privacyText: {
-    color: '#767586',
+    color: COLORS.textFaint,
     fontSize: 12,
     fontWeight: '500',
     textAlign: 'center',
@@ -774,13 +794,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    color: COLORS.text,
+    color: COLORS.textPrimary,
     fontSize: 25,
     fontWeight: '800',
     letterSpacing: -0.35,
   },
   viewAllText: {
-    color: COLORS.purple,
+    color: COLORS.primary,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -789,14 +809,14 @@ const styles = StyleSheet.create({
   },
   sessionSkeleton: {
     alignItems: 'center',
-    backgroundColor: COLORS.card,
-    borderRadius: 22,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: radius.xl,
     gap: 8,
     padding: 22,
     ...shadowSm,
   },
   emptySessionsText: {
-    color: COLORS.muted,
+    color: COLORS.textSecondary,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -804,8 +824,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    backgroundColor: COLORS.card,
-    borderRadius: 22,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: radius.xl,
     padding: 16,
     ...shadowSm,
   },
@@ -814,10 +834,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 52,
     height: 52,
-    borderRadius: 26,
+    borderRadius: radius.full,
   },
   sessionAvatarText: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
     fontSize: 20,
     fontWeight: '800',
   },
@@ -826,13 +846,13 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   sessionTitle: {
-    color: COLORS.text,
+    color: COLORS.textPrimary,
     fontSize: 17,
     fontWeight: '800',
     lineHeight: 22,
   },
   sessionDate: {
-    color: COLORS.muted,
+    color: COLORS.textSecondary,
     fontSize: 14,
     fontWeight: '500',
     marginTop: 4,
@@ -847,7 +867,7 @@ const styles = StyleSheet.create({
     lineHeight: 32,
   },
   scoreLabel: {
-    color: COLORS.muted,
+    color: COLORS.textSecondary,
     fontSize: 12,
     fontWeight: '700',
     marginTop: 2,

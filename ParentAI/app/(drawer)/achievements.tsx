@@ -5,6 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase-config';
 import { reportScoreFromData, toReportDate } from '../../src/utils/reportUtils';
+import { useTranslation } from 'react-i18next';
 
 type Report = {
   id: string;
@@ -37,6 +38,39 @@ const lockedIcons: React.ComponentProps<typeof MaterialIcons>['name'][] = [
   'calendar-month',
   'workspace-premium',
 ];
+
+const badgeTitleKeys: Record<string, string> = {
+  'first-step': 'achievement_first_step_title',
+  'three-day-streak': 'achievement_three_day_streak_title',
+  'calm-voice': 'achievement_calm_voice_title',
+  'role-model': 'achievement_role_model_title',
+  'active-listener': 'achievement_active_listener_title',
+  'zen-master': 'achievement_zen_master_title',
+  'consistent-routine': 'achievement_consistent_routine_title',
+  'expert-parent': 'achievement_expert_parent_title',
+};
+
+const badgeEarnedKeys: Record<string, string> = {
+  'first-step': 'achievement_first_step_earned',
+  'three-day-streak': 'achievement_three_day_streak_earned',
+  'calm-voice': 'achievement_calm_voice_earned',
+  'role-model': 'achievement_role_model_earned',
+  'active-listener': 'achievement_active_listener_earned',
+  'zen-master': 'achievement_zen_master_earned',
+  'consistent-routine': 'achievement_consistent_routine_earned',
+  'expert-parent': 'achievement_expert_parent_earned',
+};
+
+const badgeUnlockKeys: Record<string, string> = {
+  'first-step': 'achievement_first_step_unlock',
+  'three-day-streak': 'achievement_three_day_streak_unlock',
+  'calm-voice': 'achievement_calm_voice_unlock',
+  'role-model': 'achievement_role_model_unlock',
+  'active-listener': 'achievement_active_listener_unlock',
+  'zen-master': 'achievement_zen_master_unlock',
+  'consistent-routine': 'achievement_consistent_routine_unlock',
+  'expert-parent': 'achievement_expert_parent_unlock',
+};
 
 function getUnlockCondition(badge: Badge) {
   if (badge.id === 'first-step') return 'Unlock at 1 session';
@@ -131,6 +165,7 @@ function buildBadges(reports: Report[]): Badge[] {
 }
 
 export default function AchievementsScreen() {
+  const { t } = useTranslation();
   const [reports, setReports] = useState<Report[]>([]);
   const [filter, setFilter] = useState<'all' | 'earned' | 'locked'>('all');
   const [loading, setLoading] = useState(true);
@@ -163,7 +198,7 @@ export default function AchievementsScreen() {
     } catch (error) {
       console.error('Failed to load achievements:', error);
       setReports([]);
-      setLoadError('Could not load achievements. Please try again.');
+      setLoadError('achievements_load_failed');
     } finally {
       setLoading(false);
     }
@@ -187,20 +222,20 @@ export default function AchievementsScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <Text style={styles.title}>Your Achievements 🏆</Text>
-        <Text style={styles.subtitle}>Celebrate your milestones and see what's next on your journey.</Text>
+        <Text style={styles.title}>{t('achievements_title')}</Text>
+        <Text style={styles.subtitle}>{t('achievements_subtitle')}</Text>
       </View>
 
       {loading ? (
         <View style={styles.progressCard}>
-          <Text style={styles.progressTitle}>Loading achievements...</Text>
+          <Text style={styles.progressTitle}>{t('achievements_loading')}</Text>
         </View>
       ) : loadError ? (
         <View style={styles.progressCard}>
-          <Text style={styles.progressTitle}>Achievements unavailable</Text>
-          <Text style={styles.badgeDescription}>{loadError}</Text>
+          <Text style={styles.progressTitle}>{t('achievements_unavailable')}</Text>
+          <Text style={styles.badgeDescription}>{t(loadError)}</Text>
           <TouchableOpacity style={[styles.filterChip, styles.filterChipActive]} onPress={loadReports}>
-            <Text style={styles.filterTextActive}>Retry</Text>
+            <Text style={styles.filterTextActive}>{t('achievements_retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -208,12 +243,12 @@ export default function AchievementsScreen() {
       <View style={styles.progressCard}>
         <View style={styles.progressHeader}>
           <View>
-            <Text style={styles.labelCaps}>Current Status</Text>
+            <Text style={styles.labelCaps}>{t('achievements_current_status')}</Text>
             <Text style={styles.progressTitle}>
-              {earnedCount} of {badges.length} earned
+              {t('achievements_earned_count', { earned: earnedCount, total: badges.length })}
             </Text>
           </View>
-          <Text style={styles.progressCaption}>{completePercent}% Complete</Text>
+          <Text style={styles.progressCaption}>{t('achievements_complete', { percent: completePercent })}</Text>
         </View>
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: `${completePercent}%` }]} />
@@ -221,7 +256,7 @@ export default function AchievementsScreen() {
       </View>
 
       <View style={styles.badgeHeader}>
-        <Text style={styles.sectionTitle}>Your Badges</Text>
+        <Text style={styles.sectionTitle}>{t('achievements_your_badges')}</Text>
         <View style={styles.filterRow}>
           {(['all', 'earned', 'locked'] as const).map((item) => (
             <TouchableOpacity
@@ -230,7 +265,7 @@ export default function AchievementsScreen() {
               onPress={() => setFilter(item)}
             >
               <Text style={filter === item ? styles.filterTextActive : styles.filterText}>
-                {item[0].toUpperCase() + item.slice(1)}
+                {t(`achievements_filter_${item}`)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -265,9 +300,9 @@ export default function AchievementsScreen() {
                 </View>
               </View>
             )}
-            <Text style={[styles.badgeTitle, !badge.earned && styles.badgeTitleLocked]}>{badge.title}</Text>
+            <Text style={[styles.badgeTitle, !badge.earned && styles.badgeTitleLocked]}>{t(badgeTitleKeys[badge.id] || badge.title)}</Text>
             <Text style={[styles.badgeMeta, !badge.earned && styles.badgeMetaLocked]}>
-              {badge.earned ? badge.earnedLabel : getUnlockCondition(badge)}
+              {badge.earned ? t(badgeEarnedKeys[badge.id] || badge.earnedLabel) : t(badgeUnlockKeys[badge.id] || getUnlockCondition(badge))}
             </Text>
           </TouchableOpacity>
         ))}

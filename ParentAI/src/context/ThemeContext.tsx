@@ -12,11 +12,11 @@ const lightTheme = {
 };
 
 const darkTheme = {
-  background: COLORS.primaryDark,
-  card: COLORS.primary,
-  text: COLORS.onPrimary,
-  muted: COLORS.surfaceContainerHigh,
-  border: COLORS.borderStrong,
+  background: '#171022',
+  card: '#241733',
+  text: '#F8F5FF',
+  muted: '#D8CDF2',
+  border: '#4B3768',
 };
 
 type ThemeContextValue = {

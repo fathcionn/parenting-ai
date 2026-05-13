@@ -335,11 +335,9 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       });
     } catch (error) {
       console.error('Transcription error details:', error);
-      Alert.alert(
-        'Transcription Failed',
-        'Could not analyze your session. Please check your internet connection and try again.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert(t('coaching_transcription_failed'), t('coaching_transcription_failed_message'), [
+        { text: t('coaching_ok') },
+      ]);
       // Clear loading on error
       setIsLoading(false);
       setIsAnalyzing(false);
@@ -378,9 +376,9 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       const audioData = await stopRecording();
       if (audioData instanceof Blob && audioData.size < 10000) {
         Alert.alert(
-          'Recording Too Short',
-          'Please record for at least 5 seconds while speaking clearly.',
-          [{ text: 'Try Again' }]
+          t('coaching_too_short'),
+          t('coaching_too_short_message'),
+          [{ text: t('coaching_try_again') }]
         );
         setIsLoading(false);
         setIsAnalyzing(false);
@@ -393,9 +391,9 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
     } catch (err: any) {
       console.error('Analysis flow failed:', err);
       if (isConnectionError(err)) {
-        Alert.alert('Connection Issue', 'Could not reach the server. Please check your internet connection and try again.', [
-          { text: 'Retry', onPress: () => retryAnalysis() },
-          { text: 'Cancel', style: 'cancel' },
+        Alert.alert(t('coaching_connection_issue'), t('coaching_connection_message'), [
+          { text: t('coaching_retry'), onPress: () => retryAnalysis() },
+          { text: t('coaching_cancel'), style: 'cancel' },
         ]);
       } else {
         setError(`${t('error_analysis_failed')} ${err.message}`);
@@ -419,7 +417,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <Text style={styles.title}>Live Coaching</Text>
+        <Text style={styles.title}>{t('coaching_title')}</Text>
 
         <View style={styles.childSelectorPill}>
           <View style={styles.childAvatar}>
@@ -443,7 +441,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
         }}
         activeOpacity={0.8}
       >
-        <Text style={styles.categorySelectorLabel}>Category</Text>
+        <Text style={styles.categorySelectorLabel}>{t('coaching_category')}</Text>
         <Text style={styles.categorySelectorText} numberOfLines={1}>
           {selectedSessionTag.icon} {selectedSessionTag.label}
         </Text>
@@ -476,7 +474,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       ) : null}
 
       <Text style={styles.contextText}>
-        Place your device nearby. TalkWise will listen and provide guidance based on the interaction.
+        {t('coaching_context')}
       </Text>
 
       <View style={styles.timerSection}>
@@ -485,7 +483,11 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
           <Text style={styles.timerText}>{formatRecordingTime(recordingSeconds)}</Text>
         </View>
         <Text style={styles.timerSubtitle}>
-          {isRecording ? 'RECORDING SESSION' : isLoading ? 'PROCESSING SESSION' : 'READY TO RECORD'}
+          {isRecording
+            ? t('coaching_recording_session')
+            : isLoading
+            ? t('coaching_processing_session')
+            : t('coaching_ready_to_record')}
         </Text>
       </View>
 
@@ -536,23 +538,23 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
           color={isRecording ? '#BA1A1A' : '#FFFFFF'}
         />
         <Text style={[styles.stopButtonText, !isRecording && styles.startButtonText]}>
-          {isRecording ? 'Stop Session' : 'Start Session'}
+          {isRecording ? t('coaching_stop_session') : t('coaching_start_session')}
         </Text>
       </TouchableOpacity>
 
       {isLoading ? (
         <View style={styles.processingStatus}>
           <ActivityIndicator color="#6366F1" size="small" />
-          <Text style={styles.processingText}>Processing your session...</Text>
+          <Text style={styles.processingText}>{t('coaching_processing')}</Text>
         </View>
       ) : null}
 
       {isLoading ? (
         <View style={styles.processingSteps}>
           {[
-            { id: 'done', label: 'Recording complete' },
-            { id: 'transcribing', label: 'Transcribing audio' },
-            { id: 'insights', label: 'Generating insights' },
+            { id: 'done', label: t('coaching_step_recording_complete') },
+            { id: 'transcribing', label: t('coaching_step_transcribing') },
+            { id: 'insights', label: t('coaching_step_insights') },
           ].map((step, index) => {
             const done =
               step.id === 'done' ||
@@ -597,7 +599,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
         <View style={styles.loadingBox}>
           <ActivityIndicator color="#6366F1" size="large" />
           <Text style={styles.loadingText}>
-            Analyzing your session... This may take up to 30 seconds on first use.
+            {t('coaching_loading_message')}
           </Text>
         </View>
       )}
