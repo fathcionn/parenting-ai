@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../../src/config/firebase-config';
+import { COLORS } from '../../src/theme/colors';
 import { reportScoreFromData, toReportDate } from '../../src/utils/reportUtils';
 import { useTranslation } from 'react-i18next';
 
@@ -27,10 +28,10 @@ const earnedBadgeStyles: Record<
   string,
   { backgroundColor: string; icon: React.ComponentProps<typeof MaterialIcons>['name'] }
 > = {
-  'first-step': { backgroundColor: '#6366F1', icon: 'celebration' },
-  'three-day-streak': { backgroundColor: '#B55D00', icon: 'local-fire-department' },
-  'calm-voice': { backgroundColor: '#4648D4', icon: 'star' },
-  'role-model': { backgroundColor: '#4648D4', icon: 'workspace-premium' },
+  'first-step': { backgroundColor: COLORS.primary, icon: 'celebration' },
+  'three-day-streak': { backgroundColor: '#FDBA74', icon: 'local-fire-department' },
+  'calm-voice': { backgroundColor: '#67E8F9', icon: 'star' },
+  'role-model': { backgroundColor: COLORS.primary, icon: 'workspace-premium' },
 };
 
 const lockedIcons: React.ComponentProps<typeof MaterialIcons>['name'][] = [
@@ -279,13 +280,13 @@ export default function AchievementsScreen() {
               <View
                 style={[
                   styles.badgeIconCircle,
-                  { backgroundColor: earnedBadgeStyles[badge.id]?.backgroundColor || '#6366F1' },
+                  { backgroundColor: earnedBadgeStyles[badge.id]?.backgroundColor || COLORS.primary },
                 ]}
               >
                 <MaterialIcons
                   name={earnedBadgeStyles[badge.id]?.icon || 'emoji-events'}
                   size={40}
-                  color="#FFFFFF"
+                  color={COLORS.onPrimary}
                 />
               </View>
             ) : (
@@ -293,10 +294,10 @@ export default function AchievementsScreen() {
                 <MaterialIcons
                   name={lockedIcons[visibleBadges.indexOf(badge) % lockedIcons.length]}
                   size={40}
-                  color="#767586"
+                  color={COLORS.textFaint}
                 />
                 <View style={styles.lockOverlay}>
-                  <MaterialIcons name="lock" size={13} color="#464554" />
+                  <MaterialIcons name="lock" size={13} color={COLORS.textSecondary} />
                 </View>
               </View>
             )}
@@ -314,7 +315,7 @@ export default function AchievementsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FCF8FF',
+    backgroundColor: COLORS.background,
   },
   content: {
     paddingHorizontal: 24,
@@ -326,7 +327,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   title: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 32,
     lineHeight: 39,
     fontWeight: '900',
@@ -334,24 +335,24 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
-    color: '#464554',
+    color: COLORS.textSecondary,
     fontSize: 16,
     lineHeight: 24,
   },
   progressCard: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E4E1ED',
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
     borderRadius: 16,
     borderWidth: 1,
     padding: 20,
-    shadowColor: '#312E81',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
     shadowRadius: 22,
     elevation: 4,
     ...Platform.select({
       web: {
-        boxShadow: '0px 16px 32px rgba(49, 46, 129, 0.10)',
+        boxShadow: '0px 16px 32px rgba(0, 0, 0, 0.24)',
       } as any,
     }),
   },
@@ -363,7 +364,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   labelCaps: {
-    color: '#767586',
+    color: COLORS.textFaint,
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 1.2,
@@ -371,23 +372,23 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   progressTitle: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 18,
     fontWeight: '900',
   },
   progressCaption: {
-    color: '#767586',
+    color: COLORS.textFaint,
     fontSize: 13,
     fontWeight: '700',
   },
   progressTrack: {
-    backgroundColor: '#E4E1ED',
+    backgroundColor: COLORS.surfaceContainerHigh,
     borderRadius: 999,
     height: 10,
     overflow: 'hidden',
   },
   progressFill: {
-    backgroundColor: '#6366F1',
+    backgroundColor: COLORS.primary,
     borderRadius: 999,
     height: 10,
   },
@@ -395,7 +396,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   sectionTitle: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 20,
     fontWeight: '900',
   },
@@ -405,26 +406,26 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   filterChip: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E4E1ED',
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
     borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 13,
     paddingVertical: 8,
   },
   filterChipActive: {
-    backgroundColor: '#6366F1',
-    borderColor: '#6366F1',
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   filterText: {
-    color: '#464554',
+    color: COLORS.textSecondary,
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 0.9,
     textTransform: 'uppercase',
   },
   filterTextActive: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 0.9,
@@ -438,22 +439,22 @@ const styles = StyleSheet.create({
   badgeCard: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E4E1ED',
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
     borderRadius: 16,
     borderWidth: 1,
     flexBasis: '47%',
     flexGrow: 1,
     minHeight: 210,
     padding: 20,
-    shadowColor: '#312E81',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
     shadowRadius: 22,
     elevation: 4,
     ...Platform.select({
       web: {
-        boxShadow: '0px 16px 32px rgba(49, 46, 129, 0.10)',
+        boxShadow: '0px 16px 32px rgba(0, 0, 0, 0.24)',
       } as any,
     }),
   },
@@ -473,7 +474,7 @@ const styles = StyleSheet.create({
     borderRadius: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E4E1ED',
+    backgroundColor: COLORS.surfaceContainer,
     position: 'relative',
   },
   lockOverlay: {
@@ -485,22 +486,22 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E4E1ED',
+    backgroundColor: COLORS.surfaceContainerHigh,
     borderWidth: 4,
-    borderColor: '#FFFFFF',
+    borderColor: COLORS.cardBg,
   },
   badgeTitle: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 18,
     fontWeight: '900',
     marginTop: 16,
     textAlign: 'center',
   },
   badgeTitleLocked: {
-    color: '#464554',
+    color: COLORS.textSecondary,
   },
   badgeMeta: {
-    color: '#4648D4',
+    color: COLORS.primary,
     fontSize: 12,
     fontWeight: '800',
     lineHeight: 17,
@@ -508,10 +509,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   badgeMetaLocked: {
-    color: '#767586',
+    color: COLORS.textFaint,
   },
   badgeDescription: {
-    color: '#464554',
+    color: COLORS.textSecondary,
     fontSize: 14,
     lineHeight: 20,
     marginTop: 8,

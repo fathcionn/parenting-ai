@@ -1,11 +1,14 @@
-require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const dotenv = require('dotenv');
 const OpenAI = require('openai');
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
+
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+dotenv.config();
 
 const app = express();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });

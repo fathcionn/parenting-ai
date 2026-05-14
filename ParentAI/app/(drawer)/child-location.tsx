@@ -21,18 +21,18 @@ const MUTED_MAP_STYLE = [
 ];
 
 const UI = {
-  background: '#FCF8FF',
-  text: '#1B1B23',
-  subtext: '#464554',
-  muted: '#767586',
-  card: '#FFFFFF',
-  purple: '#6366F1',
-  purpleDark: '#4F46E5',
-  purpleSoft: '#F5F3FF',
-  purpleAccent: '#8B5CF6',
-  grayPill: '#F3F4F6',
-  danger: '#B91C1C',
-  border: '#E5E7EB',
+  background: COLORS.background,
+  text: COLORS.textPrimary,
+  subtext: COLORS.textSecondary,
+  muted: COLORS.textFaint,
+  card: COLORS.cardBg,
+  purple: COLORS.primary,
+  purpleDark: COLORS.primaryDark,
+  purpleSoft: COLORS.surfaceContainer,
+  purpleAccent: COLORS.accent,
+  grayPill: COLORS.surfaceContainer,
+  danger: COLORS.error,
+  border: COLORS.border,
 };
 
 const shadowSm = Platform.select({
@@ -382,12 +382,12 @@ export default function ChildLocationScreen() {
 
         <View pointerEvents="none" style={styles.customPinWrap}>
           <View style={styles.pinLabel}>
-            <Text style={styles.pinLabelText}>{selectedChild?.name || 'Sarah'}</Text>
+            <Text style={styles.pinLabelText}>{selectedChild?.name || t('history_default_child')}</Text>
             <MaterialIcons name="school" size={15} color={UI.purpleDark} />
           </View>
           <View style={styles.pinMarker}>
             <View style={styles.pinAvatar}>
-              <Text style={styles.pinAvatarText}>{getInitial(selectedChild?.name || 'Sarah')}</Text>
+              <Text style={styles.pinAvatarText}>{getInitial(selectedChild?.name || t('history_default_child'))}</Text>
             </View>
           </View>
           <View style={styles.pinPoint} />
@@ -421,7 +421,7 @@ export default function ChildLocationScreen() {
             <Text style={styles.shareButtonText}>{t('location_share')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.callButton} onPress={callParent} activeOpacity={0.82}>
-            <MaterialIcons name="phone" size={18} color="#FFFFFF" />
+          <MaterialIcons name="phone" size={18} color={COLORS.onPrimary} />
             <Text style={styles.callButtonText}>{t('location_call')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.shareButton} onPress={showSafeZoneInfo} activeOpacity={0.82}>
@@ -434,7 +434,7 @@ export default function ChildLocationScreen() {
       <View style={styles.insightsCard}>
         <Text style={styles.insightsTitle}>{t('location_coach_insights')}</Text>
         <Text style={styles.insightsText}>
-          {t('location_insight_text', { name: selectedChild?.name || 'Sarah' })}
+          {t('location_insight_text', { name: selectedChild?.name || t('history_default_child') })}
         </Text>
       </View>
     </ScrollView>
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
   },
   profileButton: {
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: UI.grayPill,
     borderRadius: 22,
     height: 44,
     justifyContent: 'center',
@@ -532,14 +532,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.24)',
   },
   pillAvatarInactive: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: UI.purpleSoft,
   },
   pillAvatarText: {
     fontSize: 12,
     fontWeight: '800',
   },
   pillAvatarTextActive: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
   },
   pillAvatarTextInactive: {
     color: UI.text,
@@ -549,14 +549,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   childPillTextActive: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
   },
   childPillTextInactive: {
     color: UI.text,
   },
   addPill: {
     alignItems: 'center',
-    borderColor: '#C7C8D2',
+    borderColor: '#6D5591',
     borderRadius: 999,
     borderStyle: 'dashed',
     borderWidth: 1.5,
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
   },
   mapControlButton: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: UI.card,
     borderRadius: 22,
     height: 44,
     justifyContent: 'center',
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   },
   pinLabel: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: UI.card,
     borderRadius: 999,
     flexDirection: 'row',
     gap: 5,
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
   pinMarker: {
     alignItems: 'center',
     backgroundColor: UI.purple,
-    borderColor: '#FFFFFF',
+    borderColor: UI.card,
     borderRadius: 26,
     borderWidth: 4,
     height: 52,
@@ -638,7 +638,7 @@ const styles = StyleSheet.create({
     width: 34,
   },
   pinAvatarText: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
     fontSize: 15,
     fontWeight: '900',
   },
@@ -650,7 +650,7 @@ const styles = StyleSheet.create({
     width: 14,
   },
   locationCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: UI.card,
     borderRadius: 26,
     marginHorizontal: 8,
     marginBottom: 20,
@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
   shareButton: {
     alignItems: 'center',
     backgroundColor: 'transparent',
-    borderColor: '#D1D5DB',
+    borderColor: UI.border,
     borderRadius: 16,
     borderWidth: 1,
     flexDirection: 'row',
@@ -735,7 +735,7 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
   },
   callButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   addButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '700',
   },

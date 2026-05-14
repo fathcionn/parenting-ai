@@ -7,19 +7,25 @@ export const getScoreColor = (score: number) => {
 };
 
 export const SESSION_TAGS = [
-  { id: 'bedtime', label: 'Bedtime routine', icon: '😴', color: COLORS.warningBg },
-  { id: 'homework', label: 'Homework help', icon: '📚', color: COLORS.successBg },
-  { id: 'tantrum', label: 'Tantrum management', icon: '😤', color: COLORS.errorBg },
-  { id: 'screen_time', label: 'Screen time limits', icon: '📱', color: COLORS.surfaceContainerHigh },
-  { id: 'mealtime', label: 'Mealtime behavior', icon: '🍽️', color: COLORS.warningBg },
-  { id: 'siblings', label: 'Sibling conflicts', icon: '🤝', color: COLORS.surfaceContainer },
-  { id: 'general', label: 'General coaching', icon: '✨', color: COLORS.surfaceContainer },
+  { id: 'bedtime', labelKey: 'tag_bedtime', label: 'Bedtime routine', icon: 'Zz', color: COLORS.warningBg },
+  { id: 'homework', labelKey: 'tag_homework', label: 'Homework help', icon: 'Hw', color: COLORS.successBg },
+  { id: 'tantrum', labelKey: 'tag_tantrum', label: 'Tantrum management', icon: '!', color: COLORS.errorBg },
+  { id: 'screen_time', labelKey: 'tag_screen_time', label: 'Screen time limits', icon: 'Tv', color: COLORS.surfaceContainerHigh },
+  { id: 'mealtime', labelKey: 'tag_mealtime', label: 'Mealtime behavior', icon: 'Ml', color: COLORS.warningBg },
+  { id: 'siblings', labelKey: 'tag_siblings', label: 'Sibling conflicts', icon: 'Sb', color: COLORS.surfaceContainer },
+  { id: 'background', labelKey: 'tag_background', label: 'Background coaching', icon: 'Bg', color: COLORS.surfaceContainerHigh },
+  { id: 'general', labelKey: 'tag_general', label: 'General coaching', icon: '*', color: COLORS.surfaceContainer },
 ] as const;
 
 export type SessionTagId = (typeof SESSION_TAGS)[number]['id'];
 
 export function getSessionTag(tagId?: string | null) {
-  return SESSION_TAGS.find((tag) => tag.id === tagId) || SESSION_TAGS[6];
+  return SESSION_TAGS.find((tag) => tag.id === tagId) || SESSION_TAGS[7];
+}
+
+export function getSessionTagLabel(tagId: string | null | undefined, t: (key: string) => string) {
+  const tag = getSessionTag(tagId);
+  return t(tag.labelKey) || tag.label;
 }
 
 export function toReportDate(value: any): Date {

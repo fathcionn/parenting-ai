@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Platform, SafeAreaView, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { getSessionTag } from '../../src/utils/reportUtils';
+import { getSessionTagLabel } from '../../src/utils/reportUtils';
 import { type ReportSafetyFlag } from '../../src/components/ReportPresentation';
 import Svg, { Circle } from 'react-native-svg';
 import { useCoachingStore } from '../../src/stores/coaching-store';
@@ -86,8 +86,8 @@ export default function SessionResultsScreen() {
   const hasConcern =
     params.safetyFlag === 'true' ||
     (typeof safetyFlag === 'object' && safetyFlag !== null && (safetyFlag as any).safe === false);
-  const tag = getSessionTag(params.sessionTag || 'general');
-  const subtitle = [params.childName || 'Sarah', tag.label || 'Bedtime Routine'].filter(Boolean).join(' · ');
+  const tagLabel = getSessionTagLabel(params.sessionTag || 'general', t);
+  const subtitle = [params.childName || t('history_default_child'), tagLabel].filter(Boolean).join(' - ');
 
   const shareReport = async () => {
     await Share.share({
@@ -96,12 +96,12 @@ export default function SessionResultsScreen() {
         score +
         '/100\n' +
         summary +
-        '\n\nStrengths:\n' +
-        strengths.map((item) => '• ' + item).join('\n') +
+        '\n\n' + t('results_strengths_plain') + ':\n' +
+        strengths.map((item) => '- ' + item).join('\n') +
         '\n\n' + t('results_areas_to_grow') + ':\n' +
-        improvements.map((item) => '• ' + item).join('\n') +
-        '\n\nTips:\n' +
-        tips.map((item) => '• ' + item).join('\n'),
+        improvements.map((item) => '- ' + item).join('\n') +
+        '\n\n' + t('results_tips_plain') + ':\n' +
+        tips.map((item) => '- ' + item).join('\n'),
     });
   };
 

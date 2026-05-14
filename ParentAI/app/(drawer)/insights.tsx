@@ -51,50 +51,57 @@ type AggregatedPattern = {
 
 const PATTERN_REPORT_LIMIT = 10;
 
-const badgeDefinitions = (reports: FirestoreReport[]): BadgeState[] => {
+function localeForLanguage(language?: string) {
+  if (language?.startsWith('ar')) return 'ar';
+  if (language?.startsWith('tr')) return 'tr-TR';
+  return 'en-US';
+}
+
+const badgeDefinitions = (reports: FirestoreReport[], t?: (key: string) => string): BadgeState[] => {
+  const translate = t || ((key: string) => key);
   const uniqueDays = new Set(reports.map((report) => report.date.toISOString().slice(0, 10)));
   return [
     {
       id: 'first_steps',
-      icon: '??',
-      name: 'First Steps',
+      icon: '*',
+      name: translate('achievement_first_step_title'),
       earned: reports.length >= 1,
-      requirement: 'Complete 1 session to unlock',
+      requirement: translate('achievement_first_step_unlock'),
     },
     {
       id: 'on_a_roll',
-      icon: '??',
-      name: 'On a Roll',
+      icon: '*',
+      name: translate('achievement_three_day_streak_title'),
       earned: reports.length >= 3,
-      requirement: 'Complete 3 sessions to unlock',
+      requirement: translate('achievement_three_day_streak_unlock'),
     },
     {
       id: 'committed_parent',
-      icon: '??',
-      name: 'Committed Parent',
+      icon: '*',
+      name: translate('achievement_active_listener_title'),
       earned: reports.length >= 10,
-      requirement: 'Complete 10 sessions to unlock',
+      requirement: translate('achievement_active_listener_unlock'),
     },
     {
       id: 'high_scorer',
-      icon: '?',
-      name: 'High Scorer',
+      icon: '*',
+      name: translate('achievement_calm_voice_title'),
       earned: reports.some((report) => report.score > 80),
-      requirement: 'Score above 80 to unlock',
+      requirement: translate('achievement_calm_voice_unlock'),
     },
     {
       id: 'consistent',
-      icon: '??',
-      name: 'Consistent',
+      icon: '*',
+      name: translate('achievement_consistent_routine_title'),
       earned: uniqueDays.size >= 3,
-      requirement: 'Complete sessions on 3 different days',
+      requirement: translate('achievement_three_day_streak_unlock'),
     },
     {
       id: 'excellence',
-      icon: '??',
-      name: 'Excellence',
+      icon: '*',
+      name: translate('achievement_role_model_title'),
       earned: reports.some((report) => report.score > 90),
-      requirement: 'Score above 90 to unlock',
+      requirement: translate('achievement_role_model_unlock'),
     },
   ];
 };
@@ -106,7 +113,7 @@ const topItem = (items: string[]) => {
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
-  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'No data yet';
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
 };
 
 function normalizePatternText(value: string) {
@@ -216,11 +223,19 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
-function ProgressLine({ reports }: { reports: FirestoreReport[] }) {
+function ProgressLine({
+  reports,
+  locale,
+  emptyText,
+}: {
+  reports: FirestoreReport[];
+  locale: string;
+  emptyText: string;
+}) {
   const chartReports = reports.slice(-7);
 
   if (chartReports.length === 0) {
-    return <Text style={styles.placeholderText}>Complete more sessions to see progress.</Text>;
+    return <Text style={styles.placeholderText}>{emptyText}</Text>;
   }
 
   return (
@@ -240,7 +255,7 @@ function ProgressLine({ reports }: { reports: FirestoreReport[] }) {
               />
             </View>
             <Text style={styles.chartLabel}>
-              {report.date.toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 1)}
+              {report.date.toLocaleDateString(locale, { weekday: 'short' }).slice(0, 1)}
             </Text>
           </View>
         );
@@ -328,19 +343,19 @@ function InsightCard({
   );
 }
 
-function AchievementsSection({ badges }: { badges: BadgeState[] }) {
+function AchievementsSection({ badges, title }: { badges: BadgeState[]; title: string }) {
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.iconBubble}>
           <MaterialIcons name="emoji-events" size={18} color={COLORS.primary} />
         </View>
-        <Text style={styles.sectionTitle}>Achievements</Text>
+        <Text style={styles.sectionTitle}>{title}</Text>
       </View>
       <View style={styles.badgeGrid}>
         {badges.map((badge) => (
           <View key={badge.id} style={[styles.badgeCard, !badge.earned && styles.badgeCardLocked]}>
-            <Text style={styles.badgeIcon}>{badge.earned ? badge.icon : '??'}</Text>
+            <Text style={styles.badgeIcon}>{badge.earned ? badge.icon : '-'}</Text>
             <Text style={styles.badgeName}>{badge.name}</Text>
             <Text style={styles.badgeDate}>
               {badge.earned && badge.earnedAt
@@ -355,17 +370,18 @@ function AchievementsSection({ badges }: { badges: BadgeState[] }) {
 }
 
 export default function ReportsScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
+  const locale = localeForLanguage(i18n.language);
   const [reports, setReports] = useState<FirestoreReport[]>([]);
   const [children, setChildren] = useState<ChildFilter[]>([]);
   const [selectedChildId, setSelectedChildId] = useState('all');
-  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | '3m'>('week');
-  const [badges, setBadges] = useState<BadgeState[]>(badgeDefinitions([]));
+  const [selectedPeriod, setSelectedPeriod] = useState<'all' | 'week' | 'month' | '3m'>('all');
+  const [badges, setBadges] = useState<BadgeState[]>(badgeDefinitions([], t));
   const [loading, setLoading] = useState(true);
 
   const updateBadges = useCallback(async (userId: string, sourceReports: FirestoreReport[]) => {
-    const definitions = badgeDefinitions(sourceReports);
+    const definitions = badgeDefinitions(sourceReports, t);
     const existingSnapshot = await getDocs(collection(db, 'users', userId, 'badges'));
     const existing = new Map(
       existingSnapshot.docs.map((item) => [item.id, item.data().earnedAt?.toDate?.() || new Date()])
@@ -389,7 +405,7 @@ export default function ReportsScreen() {
         earnedAt: existing.get(badge.id) || (badge.earned ? new Date() : null),
       }))
     );
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const user = getAuth().currentUser;
@@ -397,12 +413,12 @@ export default function ReportsScreen() {
       console.log('Fetched reports:', 0);
       setReports([]);
       setChildren([]);
-      setBadges(badgeDefinitions([]));
+      setBadges(badgeDefinitions([], t));
       setLoading(false);
       return;
     }
 
-    const reportsQuery = query(collection(db, 'users', user.uid, 'reports'), orderBy('createdAt', 'desc'));
+    const reportsQuery = query(collection(db, 'users', user.uid, 'reports'), orderBy('date', 'desc'));
     const childrenQuery = query(collection(db, 'users', user.uid, 'children'), orderBy('createdAt', 'desc'));
 
     const unsubscribeReports = onSnapshot(
@@ -440,7 +456,7 @@ export default function ReportsScreen() {
       (error) => {
         console.error('Failed to load insights:', error);
         setReports([]);
-        setBadges(badgeDefinitions([]));
+        setBadges(badgeDefinitions([], t));
         setLoading(false);
       }
     );
@@ -464,13 +480,18 @@ export default function ReportsScreen() {
       unsubscribeReports();
       unsubscribeChildren();
     };
-  }, [updateBadges]);
+  }, [t, updateBadges]);
 
   const visibleReports = useMemo(() => {
-    const now = Date.now();
-    const days = selectedPeriod === 'week' ? 7 : selectedPeriod === 'month' ? 30 : 90;
-    const cutoff = now - days * 24 * 60 * 60 * 1000;
-    const periodReports = reports.filter((report) => report.date.getTime() >= cutoff);
+    const periodReports =
+      selectedPeriod === 'all'
+        ? reports
+        : reports.filter((report) => {
+            const now = Date.now();
+            const days = selectedPeriod === 'week' ? 7 : selectedPeriod === 'month' ? 30 : 90;
+            const cutoff = now - days * 24 * 60 * 60 * 1000;
+            return report.date.getTime() >= cutoff;
+          });
     if (selectedChildId === 'all') return periodReports;
     return periodReports.filter((report) => report.childId === selectedChildId);
   }, [reports, selectedChildId, selectedPeriod]);
@@ -555,6 +576,7 @@ export default function ReportsScreen() {
 
       <View style={styles.periodTabs}>
         {[
+          { id: 'all', label: t('insights_all') },
           { id: 'week', label: t('insights_week') },
           { id: 'month', label: t('insights_month') },
           { id: '3m', label: t('insights_3m') },
@@ -562,7 +584,7 @@ export default function ReportsScreen() {
           <TouchableOpacity
             key={period.id}
             style={[styles.periodTab, selectedPeriod === period.id && styles.periodTabActive]}
-            onPress={() => setSelectedPeriod(period.id as 'week' | 'month' | '3m')}
+            onPress={() => setSelectedPeriod(period.id as 'all' | 'week' | 'month' | '3m')}
             activeOpacity={0.8}
           >
             <Text style={selectedPeriod === period.id ? styles.periodTabTextActive : styles.periodTabText}>
@@ -580,7 +602,7 @@ export default function ReportsScreen() {
       ) : visibleReports.length === 0 ? (
         <>
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>??</Text>
+            <Text style={styles.emptyIcon}>-</Text>
             <Text style={styles.emptyTitle}>{t('insights_empty_title')}</Text>
             <Text style={styles.placeholderText}>
               {t('insights_empty_text')}
@@ -589,7 +611,7 @@ export default function ReportsScreen() {
               <Text style={styles.emptyButtonText}>{t('insights_start_session')}</Text>
             </TouchableOpacity>
           </View>
-          <AchievementsSection badges={badges} />
+          <AchievementsSection badges={badges} title={t('insights_achievements')} />
         </>
       ) : (
         <>
@@ -623,14 +645,18 @@ export default function ReportsScreen() {
               icon="local-fire-department"
               iconBg={COLORS.warningBg}
               iconColor={COLORS.warning}
-              value={`${summary.streak}??`}
+              value={String(summary.streak)}
               label={t('insights_streak_days')}
             />
           </View>
 
           <View style={styles.chartCard}>
             <Text style={styles.chartTitle}>{t('insights_chart_last7')}</Text>
-            <ProgressLine reports={summary.chronologicalReports} />
+            <ProgressLine
+              reports={summary.chronologicalReports}
+              locale={locale}
+              emptyText={t('insights_no_data')}
+            />
           </View>
 
           <View style={styles.patternSection}>
@@ -663,9 +689,7 @@ export default function ReportsScreen() {
               <View style={styles.coachTextWrap}>
                 <Text style={styles.coachCardTitle}>{t('insights_top_strength')}</Text>
                 <Text style={styles.coachCardText}>
-                  {summary.topStrength === 'No data yet'
-                    ? 'Using calm voice tone during transitions.'
-                    : summary.topStrength}
+                  {summary.topStrength || t('insights_no_data_yet')}
                 </Text>
               </View>
             </View>
@@ -676,9 +700,7 @@ export default function ReportsScreen() {
               <View style={styles.coachTextWrap}>
                 <Text style={styles.coachCardTitle}>{t('insights_top_improvement')}</Text>
                 <Text style={styles.coachCardText}>
-                  {summary.topImprovement === 'No data yet'
-                    ? 'Reduce repetitive commands and pause for response.'
-                    : summary.topImprovement}
+                  {summary.topImprovement || t('insights_no_data_yet')}
                 </Text>
               </View>
             </View>
@@ -693,14 +715,13 @@ export default function ReportsScreen() {
                 </View>
                 <View style={styles.recentCopy}>
                   <Text style={styles.recentTitle}>
-                    {t('insights_last_session', { name: summary.lastSession.childName || 'Bedtime Negotiation' })}
+                    {t('insights_last_session', { name: summary.lastSession.childName || t('history_default_child') })}
                   </Text>
                   <Text style={styles.recentTime}>
-                    {summary.lastSession.date.toLocaleDateString(undefined, {
+                    {summary.lastSession.date.toLocaleDateString(locale, {
                       month: 'short',
                       day: 'numeric',
-                    })}{' '}
-                    · {summary.lastSession.score}/100
+                    })}{' '} - {summary.lastSession.score}/100
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -719,7 +740,7 @@ export default function ReportsScreen() {
             </View>
           )}
 
-          <AchievementsSection badges={badges} />
+          <AchievementsSection badges={badges} title={t('insights_achievements')} />
         </>
       )}
     </ScrollView>

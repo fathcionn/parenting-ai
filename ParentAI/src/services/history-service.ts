@@ -158,6 +158,7 @@ export const saveReportToFirestore = async (reportData: {
       durationSeconds: reportData.durationSeconds || 0,
       language: reportData.language || 'en',
       date: serverTimestamp(),
+      createdAt: serverTimestamp(),
     });
     console.log('Report saved to Firestore successfully');
   } catch (error) {

@@ -11,6 +11,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { setLanguage } from '../config/i18n';
+import { useAppTheme } from '../context/ThemeContext';
 import { getStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 import { COLORS } from '../theme/colors';
 
@@ -19,7 +20,7 @@ type SpeechLanguage = 'en' | 'ar' | 'tr';
 const languages = [
   { code: 'en', label: 'English', flagUrl: 'https://flagcdn.com/w40/us.png' },
   { code: 'ar', label: 'العربية', flagUrl: 'https://flagcdn.com/w40/sa.png' },
-  { code: 'tr', label: 'Türkçe', flagUrl: 'https://flagcdn.com/w40/tr.png' },
+  { code: 'tr', label: 'Turkce', flagUrl: 'https://flagcdn.com/w40/tr.png' },
 ];
 
 function normalizeLanguage(language: string | undefined): SpeechLanguage {
@@ -30,13 +31,17 @@ function normalizeLanguage(language: string | undefined): SpeechLanguage {
 
 function setDocumentLanguage(langCode: string) {
   if (typeof document !== 'undefined') {
-    document.documentElement.dir = langCode === 'ar' ? 'rtl' : 'ltr';
+    const direction = langCode === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.dir = direction;
     document.documentElement.lang = langCode;
+    document.body.dir = direction;
+    document.body.lang = langCode;
   }
 }
 
 export function HeaderLanguageButton() {
   const { t, i18n } = useTranslation();
+  const appTheme = useAppTheme();
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<SpeechLanguage>(
     normalizeLanguage(i18n.language)
@@ -63,9 +68,9 @@ export function HeaderLanguageButton() {
         accessibilityLabel={t('lang_change')}
         activeOpacity={0.75}
         onPress={() => setModalVisible(true)}
-        style={styles.globeButton}
+        style={[styles.globeButton, { backgroundColor: appTheme.colors.surface }]}
       >
-        <MaterialIcons name="translate" size={24} color="#464554" />
+        <MaterialIcons name="translate" size={24} color={appTheme.colors.text} />
       </TouchableOpacity>
 
       <Modal
@@ -75,8 +80,8 @@ export function HeaderLanguageButton() {
         onRequestClose={() => setModalVisible(false)}
       >
         <Pressable style={styles.backdrop} onPress={() => setModalVisible(false)}>
-          <Pressable style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{t('lang_select')}</Text>
+          <Pressable style={[styles.modalCard, { backgroundColor: appTheme.colors.card }]}>
+            <Text style={[styles.modalTitle, { color: appTheme.colors.text }]}>{t('lang_select')}</Text>
             {languages.map(({ code, label, flagUrl }) => {
               const isSelected = selectedLanguage === code;
               return (
@@ -84,17 +89,27 @@ export function HeaderLanguageButton() {
                   key={code}
                   activeOpacity={0.78}
                   onPress={() => selectLanguage(code as SpeechLanguage)}
-                  style={[styles.languageRow, isSelected && styles.languageRowSelected]}
+                  style={[
+                    styles.languageRow,
+                    { backgroundColor: appTheme.colors.surface },
+                    isSelected && { backgroundColor: appTheme.colors.primary },
+                  ]}
                 >
                   <Image
                     source={{ uri: flagUrl }}
                     style={styles.languageFlag}
                     resizeMode="cover"
                   />
-                  <Text style={[styles.languageText, isSelected && styles.languageTextSelected]}>
+                  <Text
+                    style={[
+                      styles.languageText,
+                      { color: appTheme.colors.text },
+                      isSelected && { color: appTheme.colors.onPrimary },
+                    ]}
+                  >
                     {label}
                   </Text>
-                  {isSelected && <Text style={styles.languageCheck}>✓</Text>}
+                  {isSelected && <MaterialIcons name="check" size={18} color={appTheme.colors.onPrimary} />}
                 </TouchableOpacity>
               );
             })}

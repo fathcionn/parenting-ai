@@ -1,22 +1,43 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { COLORS } from '../theme/colors';
+import { Platform } from 'react-native';
+import { colors as appColors } from '../theme/colors';
 import { useAppStore } from '../stores/app-store';
 
 const lightTheme = {
-  background: COLORS.background,
-  card: COLORS.cardBg,
-  text: COLORS.textPrimary,
-  muted: COLORS.textSecondary,
-  border: COLORS.border,
+  background: appColors.light.background,
+  card: appColors.light.card,
+  surface: appColors.light.surface,
+  surfaceHigh: appColors.light.surfaceHigh,
+  input: appColors.light.input,
+  primary: appColors.light.primary,
+  accent: appColors.light.accent,
+  text: appColors.light.text,
+  muted: appColors.light.textSecondary,
+  faint: appColors.light.muted,
+  border: appColors.light.border,
+  danger: appColors.light.danger,
+  warning: appColors.light.warning,
+  success: appColors.light.success,
+  onPrimary: appColors.light.onPrimary,
 };
 
 const darkTheme = {
-  background: '#171022',
-  card: '#241733',
-  text: '#F8F5FF',
-  muted: '#D8CDF2',
-  border: '#4B3768',
+  background: appColors.dark.background,
+  card: appColors.dark.card,
+  surface: appColors.dark.surface,
+  surfaceHigh: appColors.dark.surfaceHigh,
+  input: appColors.dark.input,
+  primary: appColors.dark.primary,
+  accent: appColors.dark.accent,
+  text: appColors.dark.text,
+  muted: appColors.dark.textSecondary,
+  faint: appColors.dark.muted,
+  border: appColors.dark.border,
+  danger: appColors.dark.danger,
+  warning: appColors.dark.warning,
+  success: appColors.dark.success,
+  onPrimary: appColors.dark.onPrimary,
 };
 
 type ThemeContextValue = {
@@ -33,6 +54,16 @@ const ThemeContext = createContext<ThemeContextValue>({
   toggleDarkMode: async () => {},
 });
 
+function applyDocumentTheme(isDarkMode: boolean) {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+
+  const theme = isDarkMode ? darkTheme : lightTheme;
+  document.documentElement.dataset.theme = isDarkMode ? 'dark' : 'light';
+  document.documentElement.style.backgroundColor = theme.background;
+  document.body.style.backgroundColor = theme.background;
+  document.body.style.color = theme.text;
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const setGlobalDarkMode = useAppStore((state) => state.setDarkMode);
@@ -42,12 +73,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const enabled = value === 'true';
       setIsDarkMode(enabled);
       setGlobalDarkMode(enabled);
+      applyDocumentTheme(enabled);
     });
   }, [setGlobalDarkMode]);
 
   const setDarkMode = async (value: boolean) => {
     setIsDarkMode(value);
     setGlobalDarkMode(value);
+    applyDocumentTheme(value);
     await AsyncStorage.setItem('darkMode', value ? 'true' : 'false');
   };
 

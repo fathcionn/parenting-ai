@@ -17,7 +17,8 @@ import {
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { auth, db } from '../../src/config/firebase-config';
-import { SESSION_TAGS, getSessionTag, reportScoreFromData, toReportDate } from '../../src/utils/reportUtils';
+import { COLORS } from '../../src/theme/colors';
+import { SESSION_TAGS, getSessionTag, getSessionTagLabel, reportScoreFromData, toReportDate } from '../../src/utils/reportUtils';
 import Svg, { Circle } from 'react-native-svg';
 
 type HistoryReport = {
@@ -36,17 +37,17 @@ type HistoryReport = {
   } | null;
 };
 
-const formatDate = (date: Date) => {
-  const datePart = date.toLocaleDateString(undefined, {
+const formatDate = (date: Date, locale: string) => {
+  const datePart = date.toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
-  const timePart = date.toLocaleTimeString(undefined, {
+  const timePart = date.toLocaleTimeString(locale, {
     hour: 'numeric',
     minute: '2-digit',
   });
-  return `${datePart} • ${timePart}`;
+  return `${datePart} - ${timePart}`;
 };
 
 function ScoreCircle({ score }: { score: number }) {
@@ -64,7 +65,7 @@ function ScoreCircle({ score }: { score: number }) {
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#E4E1ED"
+          stroke={COLORS.surfaceContainerHigh}
           strokeWidth={strokeWidth}
           fill="transparent"
         />
@@ -72,7 +73,7 @@ function ScoreCircle({ score }: { score: number }) {
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#6366F1"
+          stroke={COLORS.primary}
           strokeWidth={strokeWidth}
           fill="transparent"
           strokeDasharray={`${circumference} ${circumference}`}
@@ -88,12 +89,12 @@ function ScoreCircle({ score }: { score: number }) {
 }
 
 const tagPalette: Record<string, { bg: string; text: string }> = {
-  bedtime: { bg: '#E9DDFF', text: '#5516BE' },
-  homework: { bg: '#C0C1FF', text: '#07006C' },
-  tantrum: { bg: '#FFDCC5', text: '#703700' },
-  screen_time: { bg: '#FFE2C6', text: '#703700' },
-  mealtime: { bg: '#DCFCE7', text: '#166534' },
-  general: { bg: '#E4E1ED', text: '#464554' },
+  bedtime: { bg: COLORS.surfaceContainerHigh, text: '#C4B5FD' },
+  homework: { bg: '#123622', text: '#BBF7D0' },
+  tantrum: { bg: '#3B1822', text: '#FDA4AF' },
+  screen_time: { bg: '#3B2714', text: '#FDBA74' },
+  mealtime: { bg: '#123622', text: '#BBF7D0' },
+  general: { bg: COLORS.surfaceContainer, text: COLORS.textSecondary },
 };
 
 function SkeletonCards() {
@@ -123,7 +124,8 @@ function SkeletonCards() {
 }
 
 export default function HistoryScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language?.startsWith('tr') ? 'tr-TR' : i18n.language?.startsWith('ar') ? 'ar' : 'en-US';
   const router = useRouter();
   const [history, setHistory] = useState<HistoryReport[]>([]);
   const [queryText, setQueryText] = useState('');
@@ -195,10 +197,10 @@ export default function HistoryScreen() {
         item.tone.toLowerCase().includes(normalizedQuery) ||
         item.transcript?.toLowerCase().includes(normalizedQuery) ||
         item.childName?.toLowerCase().includes(normalizedQuery) ||
-        formatDate(item.date).toLowerCase().includes(normalizedQuery)
+        formatDate(item.date, locale).toLowerCase().includes(normalizedQuery)
       );
     });
-  }, [history, queryText, selectedTag]);
+  }, [history, locale, queryText, selectedTag]);
 
   const deleteRecord = (record: HistoryReport) => {
     const user = auth.currentUser;
@@ -239,12 +241,12 @@ export default function HistoryScreen() {
       </View>
 
       <View style={styles.searchBar}>
-        <MaterialIcons name="search" size={18} color="#767586" />
+        <MaterialIcons name="search" size={18} color={COLORS.textFaint} />
         <TextInput
           value={queryText}
           onChangeText={setQueryText}
           placeholder={t('history_search')}
-          placeholderTextColor="#767586"
+          placeholderTextColor={COLORS.textFaint}
           style={styles.searchInput}
         />
       </View>
@@ -268,7 +270,7 @@ export default function HistoryScreen() {
             onPress={() => setSelectedTag(tag.id)}
           >
             <Text style={selectedTag === tag.id ? styles.filterTextActive : styles.filterText}>
-              {tag.icon} {tag.label}
+              {tag.icon} {t(tag.labelKey)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -278,7 +280,7 @@ export default function HistoryScreen() {
         <SkeletonCards />
       ) : filteredHistory.length === 0 ? (
         <View style={styles.emptyState}>
-          <MaterialIcons name="history" size={58} color="#6366F1" />
+          <MaterialIcons name="history" size={58} color={COLORS.primary} />
           <Text style={styles.emptyTitle}>{t('history_empty_title')}</Text>
           <Text style={styles.emptyText}>{t('history_empty_text')}</Text>
           <TouchableOpacity style={styles.emptyButton} onPress={() => router.push('/(drawer)/coaching' as any)}>
@@ -306,12 +308,12 @@ export default function HistoryScreen() {
                     <Text style={styles.childText}>{record.childName || t('history_default_child')}</Text>
                     <View style={[styles.tagBadge, { backgroundColor: palette.bg }]}>
                       <Text style={[styles.tagBadgeText, { color: palette.text }]}>
-                        {tag.label}
+                        {getSessionTagLabel(record.tag, t)}
                       </Text>
                     </View>
                   </View>
 
-                  <Text style={styles.dateText}>{formatDate(record.date)}</Text>
+                  <Text style={styles.dateText}>{formatDate(record.date, locale)}</Text>
 
                   <Text style={styles.summaryText} numberOfLines={1}>
                     {record.summary || record.transcript || t('history_default_summary')}
@@ -342,7 +344,7 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FCF8FF',
+    backgroundColor: COLORS.background,
   },
   content: {
     paddingHorizontal: 24,
@@ -353,7 +355,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 32,
     lineHeight: 38,
     fontWeight: '900',
@@ -361,15 +363,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
-    color: '#464554',
+    color: COLORS.textSecondary,
     fontSize: 16,
     lineHeight: 24,
   },
   searchBar: {
     minHeight: 50,
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E4E1ED',
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
     borderRadius: 16,
     borderWidth: 1,
     flexDirection: 'row',
@@ -379,7 +381,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 15,
     paddingVertical: Platform.OS === 'web' ? 14 : 0,
     outlineStyle: 'none' as any,
@@ -393,45 +395,45 @@ const styles = StyleSheet.create({
     paddingRight: 24,
   },
   filterPill: {
-    backgroundColor: '#F8F9FA',
-    borderColor: '#E4E1ED',
+    backgroundColor: COLORS.surfaceContainer,
+    borderColor: COLORS.border,
     borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
   filterPillActive: {
-    backgroundColor: '#6366F1',
-    borderColor: '#6366F1',
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   filterText: {
-    color: '#464554',
+    color: COLORS.textSecondary,
     fontSize: 13,
     fontWeight: '800',
   },
   filterTextActive: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
     fontSize: 13,
     fontWeight: '900',
   },
   card: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E4E1ED',
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
     borderRadius: 16,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 14,
     marginBottom: 14,
     padding: 16,
-    shadowColor: '#312E81',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
     shadowRadius: 22,
     elevation: 4,
     ...Platform.select({
       web: {
-        boxShadow: '0px 16px 32px rgba(49, 46, 129, 0.10)',
+        boxShadow: '0px 16px 32px rgba(0, 0, 0, 0.24)',
       } as any,
     }),
   },
@@ -447,7 +449,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   childText: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 20,
     lineHeight: 25,
     fontWeight: '900',
@@ -464,13 +466,13 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   dateText: {
-    color: '#767586',
+    color: COLORS.textFaint,
     fontSize: 12,
     fontWeight: '700',
     marginBottom: 6,
   },
   summaryText: {
-    color: '#464554',
+    color: COLORS.textSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -509,7 +511,7 @@ const styles = StyleSheet.create({
   },
   scoreCircleText: {
     position: 'absolute',
-    color: '#6366F1',
+    color: COLORS.primary,
     fontSize: 16,
     fontWeight: '900',
   },
@@ -529,21 +531,21 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   skeletonCard: {
-    backgroundColor: '#EDEAF7',
+    backgroundColor: COLORS.surfaceContainer,
     borderRadius: 16,
     height: 100,
     marginBottom: 14,
     padding: 16,
   },
   skeletonLineWide: {
-    backgroundColor: '#DBD8E4',
+    backgroundColor: COLORS.surfaceContainerHigh,
     borderRadius: 8,
     height: 18,
     marginBottom: 14,
     width: '55%',
   },
   skeletonLine: {
-    backgroundColor: '#DBD8E4',
+    backgroundColor: COLORS.surfaceContainerHigh,
     borderRadius: 8,
     height: 13,
     width: '72%',
@@ -552,8 +554,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 14,
-    backgroundColor: '#F5F2FE',
-    borderColor: '#DBD8E4',
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
     borderRadius: 24,
     borderStyle: 'dashed',
     borderWidth: 1.5,
@@ -561,26 +563,26 @@ const styles = StyleSheet.create({
     paddingVertical: 56,
   },
   emptyTitle: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 22,
     fontWeight: '900',
     textAlign: 'center',
   },
   emptyText: {
-    color: '#464554',
+    color: COLORS.textSecondary,
     fontSize: 15,
     lineHeight: 22,
     textAlign: 'center',
   },
   emptyButton: {
-    backgroundColor: '#6366F1',
+    backgroundColor: COLORS.primary,
     borderRadius: 999,
     marginTop: 4,
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
   emptyButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
     fontSize: 14,
     fontWeight: '900',
   },

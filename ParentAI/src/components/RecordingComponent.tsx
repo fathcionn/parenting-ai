@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
@@ -14,6 +14,7 @@ import {
     View,
 } from 'react-native';
 import { auth, db } from '../config/firebase-config';
+import { useAppTheme } from '../context/ThemeContext';
 import {
     getMicStream,
     startRecording,
@@ -26,6 +27,7 @@ import { setMode } from '../services/recordingState';
 import { checkSessionSafety, notifySafetyFlag, saveSafetyFlag } from '../services/safety-service';
 import { getStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 import { useCoachingStore } from '../stores/coaching-store';
+import { COLORS as DEFAULT_COLORS, DARK_COLORS, LIGHT_COLORS } from '../theme/colors';
 import {
     calculateParentingScore,
     type CoachingReport,
@@ -85,6 +87,9 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
 }) => {
   const { t } = useTranslation();
   const router = useRouter();
+  const appTheme = useAppTheme();
+  const COLORS = useMemo(() => (appTheme.isDarkMode ? DARK_COLORS : LIGHT_COLORS), [appTheme.isDarkMode]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const { currentAnalysis, setCurrentAnalysis, setIsAnalyzing } = useCoachingStore();
   const animFrameRef = useRef<number>(0);
   const meteringIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -120,7 +125,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
         );
         const nextChildren = snapshot.docs.map((item) => {
           const data = item.data();
-          return { id: item.id, name: String(data.name || 'Child') };
+          return { id: item.id, name: String(data.name || t('history_default_child')) };
         });
         setChildren(nextChildren);
         if (!selectedChildId && nextChildren[0]) {
@@ -131,7 +136,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       }
     }
     loadChildren();
-  }, [selectedChildId]);
+  }, [selectedChildId, t]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
@@ -409,6 +414,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
 
   const selectedChild = children.find((item) => item.id === selectedChildId);
   const selectedSessionTag = SESSION_TAGS.find((tag) => tag.id === selectedTag) || SESSION_TAGS[0];
+  const selectedChildName = selectedChild?.name || t('history_default_child');
 
   return (
     <ScrollView
@@ -422,11 +428,11 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
         <View style={styles.childSelectorPill}>
           <View style={styles.childAvatar}>
             <Text style={styles.childAvatarText}>
-              {(selectedChild?.name || 'Sarah').charAt(0).toUpperCase()}
+              {selectedChildName.charAt(0).toUpperCase()}
             </Text>
           </View>
           <Text style={styles.childSelectorText} numberOfLines={1}>
-            {selectedChild?.name || 'Sarah'} {'\uD83D\uDC76'}
+            {selectedChildName} {'\uD83D\uDC76'}
           </Text>
           <MaterialIcons name="keyboard-arrow-down" size={18} color="#767586" />
         </View>
@@ -443,7 +449,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
       >
         <Text style={styles.categorySelectorLabel}>{t('coaching_category')}</Text>
         <Text style={styles.categorySelectorText} numberOfLines={1}>
-          {selectedSessionTag.icon} {selectedSessionTag.label}
+          {selectedSessionTag.icon} {t(selectedSessionTag.labelKey)}
         </Text>
         <MaterialIcons name="keyboard-arrow-down" size={20} color="#767586" />
       </TouchableOpacity>
@@ -597,7 +603,7 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
 
       {isLoading && (
         <View style={styles.loadingBox}>
-          <ActivityIndicator color="#6366F1" size="large" />
+          <ActivityIndicator color={COLORS.primary} size="large" />
           <Text style={styles.loadingText}>
             {t('coaching_loading_message')}
           </Text>
@@ -613,10 +619,10 @@ export const RecordingComponent: React.FC<RecordingComponentProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: typeof DEFAULT_COLORS) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FCF8FF',
+    backgroundColor: COLORS.background,
   },
   content: {
     alignItems: 'center',
@@ -642,13 +648,13 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.cardBg,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: COLORS.border,
   },
   title: {
     flex: 1,
-    color: '#4F46E5',
+    color: COLORS.primary,
     fontSize: 28,
     lineHeight: 34,
     fontWeight: '900',
@@ -662,9 +668,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.cardBg,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: COLORS.border,
     borderRadius: 999,
     paddingVertical: 7,
     paddingLeft: 7,
@@ -676,16 +682,16 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#6366F1',
+    backgroundColor: COLORS.primary,
   },
   childAvatarText: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
     fontSize: 12,
     fontWeight: '800',
   },
   childSelectorText: {
     flexShrink: 1,
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -697,23 +703,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.cardBg,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: COLORS.border,
     borderRadius: 999,
     paddingHorizontal: 16,
     paddingVertical: 10,
     marginBottom: 16,
   },
   categorySelectorLabel: {
-    color: '#767586',
+    color: COLORS.textFaint,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   categorySelectorText: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 15,
     fontWeight: '800',
   },
@@ -729,22 +735,22 @@ const styles = StyleSheet.create({
   childChip: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.cardBg,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
   childChipActive: {
-    backgroundColor: '#6366F1',
-    borderColor: '#6366F1',
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   childChipText: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 13,
     fontWeight: '700',
   },
   childChipTextActive: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
   },
   tagScroll: {
     width: '100%',
@@ -760,28 +766,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.cardBg,
     justifyContent: 'center',
     minHeight: 42,
     paddingHorizontal: 18,
     paddingVertical: 10,
   },
   tagPillActive: {
-    backgroundColor: '#6366F1',
-    borderColor: '#6366F1',
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   tagText: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 14,
     fontWeight: '700',
   },
   tagTextActive: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
   },
   contextText: {
     maxWidth: 430,
-    color: '#464554',
+    color: COLORS.textSecondary,
     fontSize: 16,
     lineHeight: 24,
     textAlign: 'center',
@@ -801,10 +807,10 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#BA1A1A',
+    backgroundColor: '#FB7185',
   },
   timerText: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 46,
     lineHeight: 52,
     fontWeight: '800',
@@ -812,7 +818,7 @@ const styles = StyleSheet.create({
   },
   timerSubtitle: {
     marginTop: 4,
-    color: '#767586',
+    color: COLORS.textFaint,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1.6,
@@ -880,10 +886,10 @@ const styles = StyleSheet.create({
   waveformBar: {
     width: 8,
     borderRadius: 999,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: COLORS.surfaceContainerHigh,
   },
   waveformBarActive: {
-    backgroundColor: '#BA1A1A',
+    backgroundColor: '#FB7185',
   },
   stopButton: {
     width: '100%',
@@ -893,9 +899,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: COLORS.surfaceContainer,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: COLORS.border,
     borderRadius: 999,
     marginBottom: 18,
     shadowColor: '#000000',
@@ -910,9 +916,9 @@ const styles = StyleSheet.create({
     }),
   },
   startButton: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#7C3AED',
-    shadowColor: '#7C3AED',
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+    shadowColor: COLORS.primary,
     shadowOpacity: 0.26,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 10 },
@@ -924,12 +930,12 @@ const styles = StyleSheet.create({
     }),
   },
   stopButtonText: {
-    color: '#BA1A1A',
+    color: COLORS.error,
     fontSize: 16,
     fontWeight: '800',
   },
   startButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
   },
   processingStatus: {
     width: '100%',
@@ -938,21 +944,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: COLORS.surfaceContainer,
     borderRadius: 14,
     padding: 14,
     marginBottom: 16,
   },
   processingText: {
-    color: '#464554',
+    color: COLORS.textSecondary,
     fontSize: 14,
     fontWeight: '700',
   },
   processingSteps: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E4E1ED',
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
     borderRadius: 16,
     borderWidth: 1,
     gap: 12,
@@ -965,7 +971,7 @@ const styles = StyleSheet.create({
   },
   processingStepIcon: {
     alignItems: 'center',
-    backgroundColor: '#E4E1ED',
+    backgroundColor: COLORS.surfaceContainerHigh,
     borderRadius: 14,
     height: 28,
     justifyContent: 'center',
@@ -975,32 +981,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#16A34A',
   },
   processingStepNumber: {
-    color: '#767586',
+    color: COLORS.textFaint,
     fontSize: 12,
     fontWeight: '900',
   },
   processingStepText: {
-    color: '#767586',
+    color: COLORS.textFaint,
     flex: 1,
     fontSize: 14,
     fontWeight: '700',
   },
   processingStepTextActive: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontWeight: '900',
   },
   errorBox: {
     width: '100%',
     maxWidth: 520,
-    backgroundColor: '#FDECEC',
-    borderColor: '#BA1A1A',
+    backgroundColor: COLORS.errorBg,
+    borderColor: COLORS.error,
     borderRadius: 14,
     borderWidth: 1,
     marginBottom: 16,
     padding: 14,
   },
   errorText: {
-    color: '#BA1A1A',
+    color: COLORS.error,
     fontSize: 14,
     fontWeight: '700',
     lineHeight: 20,
@@ -1008,15 +1014,15 @@ const styles = StyleSheet.create({
   transcriptCard: {
     width: '100%',
     maxWidth: 520,
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
+    backgroundColor: COLORS.cardBg,
+    borderColor: COLORS.border,
     borderRadius: 18,
     borderWidth: 1,
     marginBottom: 16,
     padding: 18,
   },
   transcriptLabel: {
-    color: '#767586',
+    color: COLORS.textFaint,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1.2,
@@ -1024,7 +1030,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   transcriptText: {
-    color: '#1B1B23',
+    color: COLORS.textPrimary,
     fontSize: 15,
     lineHeight: 23,
   },
@@ -1036,7 +1042,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   loadingText: {
-    color: '#464554',
+    color: COLORS.textSecondary,
     fontSize: 13,
     fontWeight: '600',
     lineHeight: 20,

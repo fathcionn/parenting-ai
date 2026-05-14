@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Image,
@@ -24,39 +24,72 @@ import {
 } from 'firebase/auth';
 import { auth } from '../config/firebase-config';
 import { setLanguage } from '../config/i18n';
+import { useAppTheme } from '../context/ThemeContext';
 import { useAuthStore } from '../stores/auth-store';
 import { getStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 
 const languages = [
   { code: 'en', label: 'English', flagUrl: 'https://flagcdn.com/w40/us.png' },
   { code: 'ar', label: 'العربية', flagUrl: 'https://flagcdn.com/w40/sa.png' },
-  { code: 'tr', label: 'Türkçe', flagUrl: 'https://flagcdn.com/w40/tr.png' },
+  { code: 'tr', label: 'Turkce', flagUrl: 'https://flagcdn.com/w40/tr.png' },
 ];
 
-const UI = {
-  background: '#FCF8FF',
-  card: '#FFFFFF',
-  primary: '#4F46E5',
-  primaryStrong: '#6366F1',
-  primaryText: '#4648D4',
-  activeTab: '#E1E0FF',
-  border: '#E4E1ED',
-  input: '#F1F5F9',
-  text: '#1B1B23',
-  muted: '#464554',
-  faint: '#767586',
+type AuthPalette = {
+  background: string;
+  card: string;
+  primary: string;
+  primaryStrong: string;
+  primaryText: string;
+  activeTab: string;
+  border: string;
+  input: string;
+  text: string;
+  muted: string;
+  faint: string;
+  onPrimary: string;
+  error: string;
+  errorBg: string;
 };
+
+const getAuthPalette = (
+  colors: ReturnType<typeof useAppTheme>['colors'],
+  isDarkMode: boolean
+): AuthPalette => ({
+  background: colors.background,
+  card: colors.card,
+  primary: colors.primary,
+  primaryStrong: colors.primary,
+  primaryText: colors.onPrimary,
+  activeTab: colors.primary,
+  border: colors.border,
+  input: colors.input,
+  text: colors.text,
+  muted: colors.muted,
+  faint: colors.faint,
+  onPrimary: colors.onPrimary,
+  error: colors.danger,
+  errorBg: isDarkMode ? '#3B1822' : '#FDECEA',
+});
 
 function setDocumentLanguage(langCode: string) {
   if (typeof document !== 'undefined') {
-    document.documentElement.dir = langCode === 'ar' ? 'rtl' : 'ltr';
+    const direction = langCode === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.dir = direction;
     document.documentElement.lang = langCode;
+    document.body.dir = direction;
+    document.body.lang = langCode;
   }
 }
 
 export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'login' }) => {
   const { t } = useTranslation();
   const router = useRouter();
+  const appTheme = useAppTheme();
+  const UI = useMemo(
+    () => getAuthPalette(appTheme.colors, appTheme.isDarkMode),
+    [appTheme.colors, appTheme.isDarkMode]
+  );
+  const styles = useMemo(() => createStyles(UI), [UI]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -135,27 +168,27 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
   };
 
   const getPasswordStrength = () => {
-    if (password.length < 6) return { label: 'Weak', color: '#DC2626', width: '33%' };
+    if (password.length < 6) return { label: t('auth_password_weak'), color: '#FCA5A5', width: '33%' };
     const types = [
       /[a-z]/.test(password),
       /[A-Z]/.test(password),
       /\d/.test(password),
       /[^A-Za-z0-9]/.test(password),
     ].filter(Boolean).length;
-    if (password.length >= 10 && types >= 2) return { label: 'Strong', color: '#16A34A', width: '100%' };
-    return { label: 'Fair', color: '#F97316', width: '66%' };
+    if (password.length >= 10 && types >= 2) return { label: t('auth_password_strong'), color: '#86EFAC', width: '100%' };
+    return { label: t('auth_password_fair'), color: '#FDBA74', width: '66%' };
   };
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email address first');
+      Alert.alert(t('common_error'), t('auth_enter_email_first'));
       return;
     }
     try {
       await sendPasswordResetEmail(auth, email.trim());
-      Alert.alert('Email Sent', 'Check your inbox for a password reset link.');
+      Alert.alert(t('auth_email_sent'), t('auth_password_reset_sent'));
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      Alert.alert(t('common_error'), error.message);
     }
   };
 
@@ -188,7 +221,7 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
                 <Text style={[styles.langLabel, currentLang === code && styles.langLabelSelected]}>
                   {label}
                 </Text>
-                {currentLang === code && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
+                {currentLang === code && <Ionicons name="checkmark" size={18} color={UI.onPrimary} />}
               </TouchableOpacity>
             ))}
           </View>
@@ -203,7 +236,7 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
       >
         <View style={styles.brandHeader}>
           <Text style={styles.logoText}>TalkWise</Text>
-          <Text style={styles.logoSubtitle}>Empowering parenting with AI</Text>
+          <Text style={styles.logoSubtitle}>{t('auth_brand_subtitle')}</Text>
         </View>
 
         <View style={styles.authCard}>
@@ -213,32 +246,32 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
               onPress={() => router.push('/login')}
               activeOpacity={0.8}
             >
-              <Text style={[styles.tabText, mode === 'login' && styles.tabTextActive]}>Login</Text>
+              <Text style={[styles.tabText, mode === 'login' && styles.tabTextActive]}>{t('auth_login')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tabButton, mode === 'signup' && styles.tabButtonActive]}
               onPress={() => router.push('/signup')}
               activeOpacity={0.8}
             >
-              <Text style={[styles.tabText, mode === 'signup' && styles.tabTextActive]}>Register</Text>
+              <Text style={[styles.tabText, mode === 'signup' && styles.tabTextActive]}>{t('auth_register')}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.formBody}>
-            <Text style={styles.formTitle}>{mode === 'login' ? 'Welcome back' : 'Create account'}</Text>
+            <Text style={styles.formTitle}>{mode === 'login' ? t('auth_welcome_back') : t('auth_signup')}</Text>
             <Text style={styles.formSubtitle}>
               {mode === 'login'
-                ? 'Please enter your details to sign in.'
-                : 'Enter your details to start using TalkWise.'}
+                ? t('auth_login_subtitle')
+                : t('auth_signup_subtitle')}
             </Text>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.inputLabel}>Email address</Text>
+              <Text style={styles.inputLabel}>{t('auth_email')}</Text>
               <View style={[styles.inputShell, errors.email && styles.inputShellError]}>
                 <Ionicons name="mail-outline" size={20} color={UI.faint} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Email address"
+                  placeholder={t('auth_email')}
                   placeholderTextColor={UI.faint}
                   value={email}
                   onChangeText={setEmail}
@@ -251,12 +284,12 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.inputLabel}>Password</Text>
+              <Text style={styles.inputLabel}>{t('auth_password')}</Text>
               <View style={[styles.inputShell, errors.password && styles.inputShellError]}>
                 <Ionicons name="lock-closed-outline" size={20} color={UI.faint} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Password"
+                  placeholder={t('auth_password')}
                   placeholderTextColor={UI.faint}
                   value={password}
                   onChangeText={setPassword}
@@ -287,12 +320,12 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
 
             {mode === 'signup' && (
               <View style={styles.fieldGroup}>
-                <Text style={styles.inputLabel}>Confirm password</Text>
+                <Text style={styles.inputLabel}>{t('auth_confirm_password')}</Text>
                 <View style={[styles.inputShell, errors.confirmPassword && styles.inputShellError]}>
                   <Ionicons name="lock-closed-outline" size={20} color={UI.faint} />
                   <TextInput
                     style={styles.input}
-                    placeholder="Confirm password"
+                    placeholder={t('auth_confirm_password')}
                     placeholderTextColor={UI.faint}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
@@ -312,17 +345,17 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
             <View style={styles.optionsRow}>
               <TouchableOpacity
                 style={styles.rememberRow}
-                onPress={() => Alert.alert('Remember me', 'Your session is already managed securely by TalkWise.')}
+                onPress={() => Alert.alert(t('auth_remember_me'), t('auth_session_managed'))}
                 activeOpacity={0.8}
               >
                 <View style={styles.checkbox} />
-                <Text style={styles.optionText}>Remember me</Text>
+                <Text style={styles.optionText}>{t('auth_remember_me')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleForgotPassword}
                 activeOpacity={0.8}
               >
-                <Text style={styles.forgotText}>Forgot password?</Text>
+                <Text style={styles.forgotText}>{t('auth_forgot_password')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -333,14 +366,14 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
               activeOpacity={0.85}
             >
               <Text style={styles.primaryButtonText}>
-                {loading ? 'Please wait...' : mode === 'login' ? 'Sign in' : 'Create account'}
+                {loading ? t('common_loading') : mode === 'login' ? t('auth_login') : t('auth_signup')}
               </Text>
-              <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+              <Ionicons name="arrow-forward" size={20} color={UI.onPrimary} />
             </TouchableOpacity>
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or continue with</Text>
+              <Text style={styles.dividerText}>{t('auth_or_continue')}</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -350,19 +383,19 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
                 style={styles.googleIcon}
                 resizeMode="contain"
               />
-              <Text style={styles.socialButtonText}>Continue with Google</Text>
+              <Text style={styles.socialButtonText}>{t('auth_google')}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <Text style={styles.footerText}>
-          By continuing, you agree to our{' '}
-          <Text style={styles.footerLink} onPress={() => Alert.alert('Terms of Service', 'Terms page coming soon.')}>
-            Terms of Service
+          {t('auth_terms_prefix')}{' '}
+          <Text style={styles.footerLink} onPress={() => Alert.alert(t('auth_terms'), t('auth_terms_soon'))}>
+            {t('auth_terms')}
           </Text>{' '}
-          and{' '}
-          <Text style={styles.footerLink} onPress={() => Alert.alert('Privacy Policy', 'Privacy page coming soon.')}>
-            Privacy Policy
+          {t('auth_terms_and')}{' '}
+          <Text style={styles.footerLink} onPress={() => Alert.alert(t('auth_privacy'), t('auth_privacy_soon'))}>
+            {t('auth_privacy')}
           </Text>
           .
         </Text>
@@ -371,7 +404,7 @@ export const AuthScreen: React.FC<{ mode: 'login' | 'signup' }> = ({ mode = 'log
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (UI: AuthPalette) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: UI.background,
@@ -442,7 +475,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   langLabelSelected: {
-    color: '#FFFFFF',
+    color: UI.onPrimary,
   },
   scroll: {
     flex: 1,
@@ -555,8 +588,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   inputShellError: {
-    borderColor: '#BA1A1A',
-    backgroundColor: '#FFF5F5',
+    borderColor: UI.error,
+    backgroundColor: UI.errorBg,
   },
   input: {
     flex: 1,
@@ -566,7 +599,7 @@ const styles = StyleSheet.create({
     outlineStyle: 'none' as any,
   },
   errorText: {
-    color: '#BA1A1A',
+    color: UI.error,
     fontSize: 12,
     fontWeight: '600',
     marginTop: 6,
@@ -612,7 +645,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     borderWidth: 1.5,
     borderColor: UI.border,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: UI.input,
   },
   optionText: {
     color: UI.muted,
@@ -648,7 +681,7 @@ const styles = StyleSheet.create({
     opacity: 0.72,
   },
   primaryButtonText: {
-    color: '#FFFFFF',
+    color: UI.onPrimary,
     fontSize: 16,
     fontWeight: '800',
   },
@@ -680,7 +713,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: UI.border,
     borderRadius: 999,
-    backgroundColor: UI.card,
+    backgroundColor: UI.input,
   },
   socialButtonText: {
     fontSize: 15,

@@ -1,9 +1,11 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export function SplashScreen() {
+  const { t } = useTranslation();
   return (
     <LinearGradient colors={['#4648D4', '#6B38D4']} style={styles.container}>
       <View style={styles.centerContent}>
@@ -11,12 +13,12 @@ export function SplashScreen() {
           <MaterialIcons name="family-restroom" size={64} color="#FFFFFF" />
         </View>
         <Text style={styles.title}>TalkWise</Text>
-        <Text style={styles.subtitle}>Your AI Parenting Coach</Text>
+        <Text style={styles.subtitle}>{t('splash_subtitle')}</Text>
       </View>
 
       <View style={styles.loadingWrap}>
         <ActivityIndicator color="#FFFFFF" size="large" />
-        <Text style={styles.loadingText}>Warming up...</Text>
+        <Text style={styles.loadingText}>{t('splash_loading')}</Text>
       </View>
     </LinearGradient>
   );

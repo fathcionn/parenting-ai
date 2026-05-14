@@ -1,9 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { DrawerContentComponentProps } from '@react-navigation/drawer';
 import { Drawer } from 'expo-router/drawer';
 import { useRouter } from 'expo-router';
-import { Colors } from '../../src/constants/theme';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { HeaderLanguageButton } from '../../src/components/HeaderLanguageButton';
 import { useAppTheme } from '../../src/context/ThemeContext';
@@ -33,21 +32,38 @@ function DrawerIcon({ name, color, size }: {
   );
 }
 
-const DRAWER_COLORS = {
-  background: '#FAF9FF',
-  border: '#F1ECFB',
-  text: '#1F2937',
-  muted: '#6B7280',
-  primary: '#5B21B6',
-  primaryDark: '#4C1D95',
-  active: '#5B21B6',
-  activePill: '#F3EEFF',
-  activePillText: '#5B21B6',
-  softLilac: '#F5F2FF',
-  danger: '#BA1A1A',
+type DrawerPalette = {
+  background: string;
+  border: string;
+  text: string;
+  muted: string;
+  primary: string;
+  primaryDark: string;
+  active: string;
+  activePill: string;
+  activePillText: string;
+  softLilac: string;
+  danger: string;
 };
 
-const styles = StyleSheet.create({
+function getDrawerPalette(appTheme: ReturnType<typeof useAppTheme>): DrawerPalette {
+  const { colors, isDarkMode } = appTheme;
+  return {
+    background: colors.background,
+    border: colors.border,
+    text: colors.text,
+    muted: colors.muted,
+    primary: isDarkMode ? colors.text : colors.primary,
+    primaryDark: colors.primary,
+    active: isDarkMode ? colors.surfaceHigh : colors.primary,
+    activePill: colors.surfaceHigh,
+    activePillText: isDarkMode ? colors.text : colors.onPrimary,
+    softLilac: colors.surface,
+    danger: colors.danger,
+  };
+}
+
+const createStyles = (DRAWER_COLORS: DrawerPalette) => StyleSheet.create({
   drawerSafeArea: {
     flex: 1,
     backgroundColor: DRAWER_COLORS.background,
@@ -166,7 +182,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   drawerItemTextActive: {
-    color: '#FFFFFF',
+    color: DRAWER_COLORS.activePillText,
     fontWeight: '700',
   },
   drawerFooter: {
@@ -219,6 +235,8 @@ function CustomDrawerContent({ navigation, state }: DrawerContentComponentProps)
   const { t } = useTranslation();
   const router = useRouter();
   const appTheme = useAppTheme();
+  const drawerColors = useMemo(() => getDrawerPalette(appTheme), [appTheme]);
+  const styles = useMemo(() => createStyles(drawerColors), [drawerColors]);
   const user = auth.currentUser;
   const profile = useAuthStore((store) => store.profile);
   const displayName = profile?.displayName || user?.displayName || t('drawer_parent_account');
@@ -254,7 +272,7 @@ function CustomDrawerContent({ navigation, state }: DrawerContentComponentProps)
           )}
           <View style={styles.headerInfo}>
             <Text style={styles.accountName}>{t('drawer_parent_account')}</Text>
-            <Text style={[styles.accountPlan, { color: DRAWER_COLORS.muted }]}>{t('drawer_premium')}</Text>
+            <Text style={[styles.accountPlan, { color: drawerColors.muted }]}>{t('drawer_premium')}</Text>
             <View style={styles.statusPill}>
               <Text style={styles.statusText}>{t('drawer_active_member')}</Text>
             </View>
@@ -279,21 +297,21 @@ function CustomDrawerContent({ navigation, state }: DrawerContentComponentProps)
                   <MaterialIcons
                     name={item.materialIcon}
                     size={28}
-                  color={isActive ? '#FFFFFF' : DRAWER_COLORS.text}
+                    color={isActive ? drawerColors.activePillText : drawerColors.text}
                     style={styles.drawerItemIcon}
                   />
                 ) : (
                   <Ionicons
                     name={item.icon}
                     size={28}
-                    color={isActive ? '#FFFFFF' : DRAWER_COLORS.text}
+                    color={isActive ? drawerColors.activePillText : drawerColors.text}
                     style={styles.drawerItemIcon}
                   />
                 )}
                 <Text
                   style={[
                     styles.drawerItemText,
-                    { color: DRAWER_COLORS.text },
+                    { color: drawerColors.text },
                     isActive && styles.drawerItemTextActive,
                   ]}
                 >
@@ -306,7 +324,7 @@ function CustomDrawerContent({ navigation, state }: DrawerContentComponentProps)
 
         <View style={[styles.drawerFooter, { borderTopColor: appTheme.colors.border }]}>
           <TouchableOpacity style={styles.logoutItem} onPress={handleLogout} activeOpacity={0.82}>
-            <Ionicons name="log-out-outline" size={30} color={DRAWER_COLORS.danger} />
+            <Ionicons name="log-out-outline" size={30} color={drawerColors.danger} />
             <Text style={styles.logoutText}>{t('common_logout')}</Text>
           </TouchableOpacity>
         </View>
@@ -318,6 +336,8 @@ function CustomDrawerContent({ navigation, state }: DrawerContentComponentProps)
 export default function DrawerLayout() {
   const { t } = useTranslation();
   const appTheme = useAppTheme();
+  const drawerColors = useMemo(() => getDrawerPalette(appTheme), [appTheme]);
+  const styles = useMemo(() => createStyles(drawerColors), [drawerColors]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -327,11 +347,11 @@ export default function DrawerLayout() {
         screenOptions={({ navigation }) => ({
           drawerType: 'front',
           headerShown: true,
-          overlayColor: 'rgba(31, 41, 55, 0.30)',
+          overlayColor: appTheme.isDarkMode ? 'rgba(0, 0, 0, 0.45)' : 'rgba(31, 41, 55, 0.30)',
           swipeEnabled: true,
-          drawerActiveTintColor: Colors.primary,
-          drawerInactiveTintColor: Colors.secondary,
-          drawerActiveBackgroundColor: Colors.primaryFaded,
+          drawerActiveTintColor: drawerColors.activePillText,
+          drawerInactiveTintColor: drawerColors.text,
+          drawerActiveBackgroundColor: drawerColors.active,
           drawerInactiveBackgroundColor: 'transparent',
           headerTitle: '',
           headerShadowVisible: false,
@@ -350,10 +370,10 @@ export default function DrawerLayout() {
               activeOpacity={0.82}
               onPress={() => navigation.openDrawer()}
             >
-              <MaterialIcons name="menu" size={24} color={DRAWER_COLORS.primary} />
+              <MaterialIcons name="menu" size={24} color={drawerColors.primary} />
             </TouchableOpacity>
           ),
-          headerTintColor: Colors.text,
+          headerTintColor: appTheme.colors.text,
           drawerStyle: {
             backgroundColor: appTheme.colors.background,
             borderBottomRightRadius: 32,

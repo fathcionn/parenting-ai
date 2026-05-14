@@ -38,7 +38,7 @@ export default function LeaderboardScreen() {
   const localLeaderboard: LeaderboardItem[] = myScore > 0 ? [
     {
       rank: 1,
-      name: 'You',
+      name: t('leaderboard_you'),
       score: myScore,
       isMe: true,
     },
@@ -46,8 +46,8 @@ export default function LeaderboardScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Community Benchmarks</Text>
-      <Text style={styles.subtitle}>Anonymous averages from the TalkWise community</Text>
+      <Text style={styles.title}>{t('leaderboard_title')}</Text>
+      <Text style={styles.subtitle}>{t('leaderboard_subtitle')}</Text>
 
       <View style={styles.settingsCard}>
         <View style={styles.settingRow}>

@@ -1,7 +1,7 @@
 ﻿import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -16,6 +16,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { auth, db } from '../config/firebase-config';
+import { useAppTheme } from '../context/ThemeContext';
 import { startRecording, stopRecording, transcribeAndAnalyze } from '../services/geminiAudio';
 import { saveToHistory } from '../services/history-service';
 import { setMode } from '../services/recordingState';
@@ -23,14 +24,14 @@ import { checkSessionSafety, notifySafetyFlag, saveSafetyFlag } from '../service
 import { getStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 import { useCoachingStore } from '../stores/coaching-store';
 import { useAuthStore } from '../stores/auth-store';
-import { COLORS } from '../theme/colors';
+import { COLORS as DEFAULT_COLORS, DARK_COLORS, LIGHT_COLORS } from '../theme/colors';
 import { radius, shadows } from '../theme/spacing';
 import {
   calculateParentingScore,
   type CoachingReport,
   type ParentingAnalysis,
 } from '../types/analysis';
-import { getSessionTag, reportScoreFromData, toReportDate } from '../utils/reportUtils';
+import { getSessionTagLabel, reportScoreFromData, toReportDate } from '../utils/reportUtils';
 
 const shadowSm = Platform.select({
   web: {
@@ -45,7 +46,7 @@ const shadowSm = Platform.select({
   default: {},
 }) as object;
 
-const shadowButton = Platform.select({
+const shadowButton = (COLORS: typeof DEFAULT_COLORS) => Platform.select({
   web: {
     boxShadow: '0 18px 36px rgba(91, 33, 182, 0.24)',
   },
@@ -100,6 +101,7 @@ function StatCard({
   label,
   wide = false,
   desktop = false,
+  styles,
 }: {
   icon: keyof typeof MaterialIcons.glyphMap;
   iconColor: string;
@@ -107,6 +109,7 @@ function StatCard({
   label: string;
   wide?: boolean;
   desktop?: boolean;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <View style={[styles.statCard, wide && styles.statCardWide, desktop && styles.statCardDesktop]}>
@@ -126,7 +129,9 @@ function SessionCard({
   date,
   score,
   scoreColor,
+  scoreLabel,
   onPress,
+  styles,
 }: {
   initial: string;
   avatarColor: string;
@@ -134,7 +139,9 @@ function SessionCard({
   date: string;
   score: string;
   scoreColor: string;
+  scoreLabel: string;
   onPress: () => void;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <TouchableOpacity style={styles.sessionCard} activeOpacity={0.82} onPress={onPress}>
@@ -149,7 +156,7 @@ function SessionCard({
 
       <View style={styles.scoreBlock}>
         <Text style={[styles.sessionScore, { color: scoreColor }]}>{score}</Text>
-        <Text style={styles.scoreLabel}>Score</Text>
+        <Text style={styles.scoreLabel}>{scoreLabel}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -157,7 +164,10 @@ function SessionCard({
 
 export const HomeScreen: React.FC = () => {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const appTheme = useAppTheme();
+  const COLORS = useMemo(() => (appTheme.isDarkMode ? DARK_COLORS : LIGHT_COLORS), [appTheme.isDarkMode]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const { width } = useWindowDimensions();
   const { setCurrentAnalysis } = useCoachingStore();
   const { user: storeUser, profile } = useAuthStore();
@@ -226,13 +236,13 @@ export const HomeScreen: React.FC = () => {
 
         const nextSessions = snapshot.docs.map((item) => {
           const data = item.data();
-          const tagInfo = getSessionTag(String(data.tag || 'general'));
+          const tagLabel = getSessionTagLabel(String(data.tag || 'general'), t);
           const date = toReportDate(data.date || data.createdAt);
           return {
             id: item.id,
-            childName: String(data.childName || 'Session'),
-            title: `${data.childName || 'Session'} (${tagInfo.label})`,
-            dateLabel: date.toLocaleString(undefined, {
+            childName: String(data.childName || t('history_session')),
+            title: `${data.childName || t('history_default_child')} (${tagLabel})`,
+            dateLabel: date.toLocaleString(i18n.language?.startsWith('tr') ? 'tr-TR' : i18n.language?.startsWith('ar') ? 'ar' : 'en-US', {
               month: 'short',
               day: 'numeric',
               hour: 'numeric',
@@ -260,7 +270,7 @@ export const HomeScreen: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [i18n.language, t]);
 
   const runBackgroundSafetyCheck = (report: CoachingReport) => {
     checkSessionSafety(report.transcript)
@@ -292,8 +302,8 @@ export const HomeScreen: React.FC = () => {
         setIsBackgroundRecording(true);
       } catch (error: any) {
         Alert.alert(
-          'Microphone Unavailable',
-          error?.message || 'Please allow microphone access and try again.'
+          t('home_mic_unavailable'),
+          error?.message || t('home_mic_permission')
         );
       }
       return;
@@ -306,7 +316,7 @@ export const HomeScreen: React.FC = () => {
       setMode('idle');
 
       if (typeof audioData !== 'string' && audioData.size < 1000) {
-        Alert.alert('Recording Too Short', 'Please record while speaking clearly, then try again.');
+        Alert.alert(t('coaching_too_short'), t('home_recording_too_short'));
         return;
       }
 
@@ -316,7 +326,7 @@ export const HomeScreen: React.FC = () => {
       const transcriptText = String(result?.transcript || '');
 
       if (transcriptText.trim().length < 2) {
-        Alert.alert('No Speech Detected', 'Speak clearly and try again.');
+        Alert.alert(t('error_no_speech_title'), t('error_no_speech'));
         return;
       }
 
@@ -350,7 +360,7 @@ export const HomeScreen: React.FC = () => {
           ? {
               severity: 'mild',
               detected: [],
-              recommendation: 'Review the coaching tips for this background session.',
+              recommendation: t('home_background_safety_recommendation'),
             }
           : null,
       };
@@ -369,14 +379,14 @@ export const HomeScreen: React.FC = () => {
           reportId,
           safetyFlag: String(result.safetyFlag ?? false),
           childName: '',
-          sessionTag: 'Background',
+          sessionTag: 'background',
           durationSeconds: String(report.durationSeconds),
         },
       });
     } catch (error: any) {
       Alert.alert(
-        'Background Coach Failed',
-        error?.message || 'Could not analyze your background recording. Please try again.'
+        t('home_background_failed'),
+        error?.message || t('home_background_failed_message')
       );
       setIsBackgroundRecording(false);
       setMode('idle');
@@ -428,6 +438,7 @@ export const HomeScreen: React.FC = () => {
           value="12"
           label={t('home_stats_sessions')}
           desktop={isDesktop}
+          styles={styles}
         />
         <StatCard
           icon="speed"
@@ -435,6 +446,7 @@ export const HomeScreen: React.FC = () => {
           value="78"
           label={t('home_stats_avg_score')}
           desktop={isDesktop}
+          styles={styles}
         />
         <StatCard
           icon="local-fire-department"
@@ -443,6 +455,7 @@ export const HomeScreen: React.FC = () => {
           label={t('home_stats_current_streak')}
           wide={!isDesktop}
           desktop={isDesktop}
+          styles={styles}
         />
       </View>
 
@@ -524,6 +537,8 @@ export const HomeScreen: React.FC = () => {
               date={session.dateLabel}
               score={String(session.score)}
               scoreColor={index % 2 === 0 ? COLORS.primaryDark : COLORS.primary}
+              scoreLabel={t('insights_score_label')}
+              styles={styles}
               onPress={() =>
                 router.push({
                   pathname: '/(drawer)/report-detail' as any,
@@ -538,7 +553,7 @@ export const HomeScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: typeof DEFAULT_COLORS) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -708,7 +723,7 @@ const styles = StyleSheet.create({
   },
   primaryActionButton: {
     backgroundColor: COLORS.primary,
-    ...shadowButton,
+    ...shadowButton(COLORS),
   },
   secondaryActionButton: {
     backgroundColor: COLORS.surfaceContainer,

@@ -17,8 +17,11 @@ const resources = {
 
 function setDocumentLanguage(lang: string) {
   if (typeof document !== 'undefined') {
-    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    const direction = lang === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.dir = direction;
     document.documentElement.lang = lang;
+    document.body.dir = direction;
+    document.body.lang = lang;
   }
 }
 

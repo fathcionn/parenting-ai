@@ -2,10 +2,12 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { RecordingComponent } from '../../src/components/RecordingComponent';
+import { useAppTheme } from '../../src/context/ThemeContext';
 import { useAppStore } from '../../src/stores/app-store';
 
 export default function RecordScreen() {
   const router = useRouter();
+  const appTheme = useAppTheme();
   const { selectedChildId } = useAppStore();
   const [reportId, setReportId] = useState<string | null>(null);
 
@@ -20,7 +22,7 @@ export default function RecordScreen() {
   }, [reportId, router]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: appTheme.colors.background }]}>
       <RecordingComponent childId={selectedChildId} onReportSaved={setReportId} />
     </View>
   );
@@ -28,7 +30,6 @@ export default function RecordScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FCF8FF',
     flex: 1,
   },
 });

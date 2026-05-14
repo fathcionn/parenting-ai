@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { deleteUser, signOut, updateProfile as updateFirebaseProfile } from 'firebase/auth';
 import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, setDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Alert,
@@ -31,7 +31,7 @@ import { useAppTheme } from '../context/ThemeContext';
 import { getStorageItem, setStorageItem, STORAGE_KEYS } from '../services/storageKeys';
 import { useAuthStore } from '../stores/auth-store';
 import { theme } from '../styles/theme';
-import { COLORS } from '../theme/colors';
+import { COLORS as DEFAULT_COLORS, DARK_COLORS, LIGHT_COLORS } from '../theme/colors';
 import { radius, shadows } from '../theme/spacing';
 import { reportScoreFromData, toReportDate } from '../utils/reportUtils';
 
@@ -55,10 +55,10 @@ const calculateDayStreak = (dates: Date[]) => {
 function ChildIcon({ size = 24 }: { size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="7" r="4" stroke={COLORS.primary} strokeWidth="2" />
+      <Circle cx="12" cy="7" r="4" stroke={DEFAULT_COLORS.primary} strokeWidth="2" />
       <Path
         d="M4 20C4 16 7.58 13 12 13C16.42 13 20 16 20 20"
-        stroke={COLORS.primary}
+        stroke={DEFAULT_COLORS.primary}
         strokeWidth="2"
         strokeLinecap="round"
       />
@@ -70,7 +70,9 @@ export const ProfileScreen: React.FC = () => {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { profile, user, updateProfile } = useAuthStore();
-  const { isDarkMode, setDarkMode, colors } = useAppTheme();
+  const { isDarkMode, setDarkMode } = useAppTheme();
+  const COLORS = useMemo(() => (isDarkMode ? DARK_COLORS : LIGHT_COLORS), [isDarkMode]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
   const [selectedMicId, setSelectedMicId] = useState<string>('default');
   const [showChildModal, setShowChildModal] = useState(false);
@@ -95,12 +97,12 @@ export const ProfileScreen: React.FC = () => {
   const [currentLanguage, setCurrentLanguage] = useState('en');
 
   const displayName =
-    profile?.displayName || user?.displayName || user?.email?.split('@')[0] || 'TalkWise User';
+    profile?.displayName || user?.displayName || user?.email?.split('@')[0] || t('profile_default_user');
   const email = user?.email || profile?.email || '';
   const avatarUrl = profile?.photoURL || user?.photoURL || '';
   const avatarInitial = displayName.trim()[0]?.toUpperCase() || 'T';
   const micOptions = [
-    { id: 'default', name: 'This device' },
+    { id: 'default', name: t('profile_this_device') },
     ...microphones.map((mic, index) => ({
       id: mic.deviceId,
       name: mic.label || `${t('profile_microphone')} ${index + 1}`,
@@ -347,7 +349,7 @@ export const ProfileScreen: React.FC = () => {
       t('common_are_you_sure'),
       t('profile_delete_warning'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common_cancel'), style: 'cancel' },
         {
           text: t('profile_delete_everything'),
           style: 'destructive',
@@ -451,9 +453,11 @@ export const ProfileScreen: React.FC = () => {
               ) : (
                 <View style={styles.childCard}>
                   <View style={[styles.childAvatar, styles.childAvatarPurple]}>
-                    <Text style={styles.childAvatarText}>L</Text>
+                    <Text style={styles.childAvatarText}>
+                      {t('history_default_child').trim()[0]?.toUpperCase() || 'C'}
+                    </Text>
                   </View>
-                  <Text style={styles.childCardName}>Leo</Text>
+                  <Text style={styles.childCardName}>{t('history_default_child')}</Text>
                   <Text style={styles.childCardAge}>{t('profile_add_a_child')}</Text>
                 </View>
               )}
@@ -669,7 +673,7 @@ export const ProfileScreen: React.FC = () => {
 };
 
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: typeof DEFAULT_COLORS) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   container: { flex: 1, backgroundColor: COLORS.background },
   content: { paddingHorizontal: 24, paddingTop: 22, paddingBottom: 48, gap: 18 },
