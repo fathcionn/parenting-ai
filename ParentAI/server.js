@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const dotenv = require('dotenv');
+const Groq = require('groq-sdk');
+const { toFile } = require('groq-sdk');
 const OpenAI = require('openai');
 const express = require('express');
 const cors = require('cors');
@@ -11,6 +13,9 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config();
 
 const app = express();
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const OPENAI_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini';
 console.log('OPENAI KEY loaded:', process.env.OPENAI_API_KEY ? 'YES (length: ' + process.env.OPENAI_API_KEY.length + ')' : 'MISSING');
@@ -96,32 +101,81 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
       originalname: audioFile.originalname,
     });
 
-    const transcript = await transcribeAudioBuffer(audioFile.buffer, audioFile.originalname || 'audio.webm');
-    const raw = await analyzeTranscriptWithOpenAI(transcript);
-    console.log('OpenAI raw response:', raw);
+    const filename = audioFile.originalname || 'recording.mp4';
 
-    // Parse the JSON from OpenAI response
+    const groqFile = await toFile(audioFile.buffer, filename, {
+      type: audioFile.mimetype || 'audio/mp4',
+    });
+
+    const transcription = await groq.audio.transcriptions.create({
+      file: groqFile,
+      model: 'whisper-large-v3-turbo',
+      language: 'en',
+      response_format: 'json',
+      temperature: 0,
+    });
+
+    const transcriptText = transcription.text || '';
+    console.log('Transcript:', transcriptText);
+
+    if (!transcriptText.trim()) {
+      return res.status(200).json({
+        transcript: '',
+        score: 70,
+        summary: 'No clear speech was detected in this session.',
+        strengths: ['The session was recorded successfully.'],
+        improvements: ['Try speaking closer to the microphone.'],
+        tips: ['Check microphone permissions and reduce background noise.'],
+        safetyFlag: false,
+      });
+    }
+
+    const analysisResponse = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      messages: [
+        {
+          role: 'system',
+          content: `You are an expert parenting coach.
+Return ONLY valid JSON with exactly these keys:
+{
+  "score": number,
+  "summary": string,
+  "strengths": string[],
+  "improvements": string[],
+  "tips": string[],
+  "safetyFlag": boolean
+}`,
+        },
+        {
+          role: 'user',
+          content: `Analyze this conversation:\n\n${transcriptText}`,
+        },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.2,
+    });
+
+    const raw = analysisResponse.choices[0]?.message?.content || '{}';
+    console.log('Analysis raw:', raw);
+
     let analysis = {};
     try {
-      const jsonMatch = raw.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        analysis = JSON.parse(jsonMatch[0]);
-      }
+      analysis = JSON.parse(raw);
     } catch (err) {
-      console.error('JSON parse error:', err);
+      console.error('Analysis JSON parse failed:', raw);
     }
 
     return res.status(200).json({
-      transcript,
-      score: analysis.score ?? 70,
-      summary: analysis.summary ?? 'Session analyzed.',
+      transcript: transcriptText,
+      score: analysis.score ?? 75,
+      summary: analysis.summary ?? 'Session analyzed successfully.',
       strengths: analysis.strengths ?? [],
       improvements: analysis.improvements ?? [],
       tips: analysis.tips ?? [],
       safetyFlag: analysis.safetyFlag ?? false,
     });
   } catch (error) {
-    console.error('OpenAI error:', error);
+    console.error('Groq transcription/analysis error:', error);
     return res.status(500).json({
       error: 'Transcription failed',
       details: error.message,
